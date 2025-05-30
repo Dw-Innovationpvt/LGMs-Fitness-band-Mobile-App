@@ -1,192 +1,177 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
-  KeyboardAvoidingView, 
-  ScrollView, 
-  Platform, 
-  Keyboard, 
-  Animated, 
-  Dimensions 
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 
-const { height } = Dimensions.get('window');
+const SignUpScreen = ({ navigation }) => {
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-class SignUpScreen extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      keyboardHeight: new Animated.Value(0),
-    };
-  }
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  componentDidMount() {
-    this.keyboardWillShowSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      this.keyboardWillShow
-    );
-    this.keyboardWillHideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      this.keyboardWillHide
-    );
-  }
-
-  componentWillUnmount() {
-    this.keyboardWillShowSub.remove();
-    this.keyboardWillHideSub.remove();
-  }
-
-  keyboardWillShow = (event) => {
-    Animated.timing(this.state.keyboardHeight, {
-      duration: 250,
-      toValue: event.endCoordinates.height,
-      useNativeDriver: false,
-    }).start();
+  const colors = {
+    bg: isDarkMode ? '#000' : '#fff',
+    text: isDarkMode ? '#fff' : '#000',
+    placeholder: isDarkMode ? '#ddd' : '#555',
+    buttonBg: isDarkMode ? '#fff' : '#000',
+    buttonText: isDarkMode ? '#000' : '#fff',
+    formBg: isDarkMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.8)',
+    inputBorder: isDarkMode ? '#fff' : '#000',
   };
 
-  keyboardWillHide = () => {
-    Animated.timing(this.state.keyboardHeight, {
-      duration: 250,
-      toValue: 0,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  render() {
-    const { keyboardHeight } = this.state;
-    const { navigation } = this.props;
-
-    return (
-      <View style={styles.container}>
-        <Image 
-          source={require('../assets/LGM_3.jpg')} 
-          style={styles.logo} 
-          resizeMode="contain"
-        />
-
-        <Animated.View 
-          style={[
-            styles.formContainer,
-            {
-              transform: [{
-                translateY: keyboardHeight.interpolate({
-                  inputRange: [0, height],
-                  outputRange: [0, -height * 0.6],
-                }),
-              }],
-            },
-          ]}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
+  return (
+    <ImageBackground
+      source={require('../assets/9.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={-180}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <TouchableOpacity
+            style={styles.toggle}
+            onPress={toggleTheme}
           >
-            <Text style={styles.heading}>Get Rolling with Us!</Text>
-            <TextInput 
-              placeholder="Full Name" 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+            <Text style={{ color: colors.text }}>{isDarkMode ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+
+          <View style={[styles.formContainer, { backgroundColor: colors.formBg }]}>
+            <Text style={[styles.label, { color: colors.text }]}>Full Name</Text>
+            <TextInput
+              placeholder="Enter your full name"
+              placeholderTextColor={colors.placeholder}
+              style={[styles.input, {
+                backgroundColor: colors.bg,
+                borderColor: colors.inputBorder,
+                color: colors.text,
+              }]}
+              value={fullName}
+              onChangeText={setFullName}
             />
-            <TextInput 
-              placeholder="Email" 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+
+            <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
+            <TextInput
+              placeholder="Enter your email address"
+              placeholderTextColor={colors.placeholder}
+              style={[styles.input, {
+                backgroundColor: colors.bg,
+                borderColor: colors.inputBorder,
+                color: colors.text,
+              }]}
+              value={email}
+              onChangeText={setEmail}
             />
-            <TextInput 
-              placeholder="Password" 
-              secureTextEntry 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+            <TextInput
+              placeholder="Enter your password"
+              placeholderTextColor={colors.placeholder}
+              secureTextEntry
+              style={[styles.input, {
+                backgroundColor: colors.bg,
+                borderColor: colors.inputBorder,
+                color: colors.text,
+              }]}
+              value={password}
+              onChangeText={setPassword}
             />
-            <TextInput 
-              placeholder="Confirm Password" 
-              secureTextEntry 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+
+            <Text style={[styles.label, { color: colors.text }]}>Confirm Password</Text>
+            <TextInput
+              placeholder="Confirm your password"
+              placeholderTextColor={colors.placeholder}
+              secureTextEntry
+              style={[styles.input, {
+                backgroundColor: colors.bg,
+                borderColor: colors.inputBorder,
+                color: colors.text,
+              }]}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
             />
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Create Account</Text>
+
+            <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]}>
+              <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign Up</Text>
             </TouchableOpacity>
+
             <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-              <Text style={styles.link}>Already have an account? Sign In</Text>
+              <Text style={[styles.switchText, { color: colors.text }]}>
+                Already have an account? <Text style={{ color: colors.text }}>Sign In</Text>
+              </Text>
             </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      </View>
-    );
-  }
-}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
+  );
+};
+
+export default SignUpScreen;
+
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f5f5f5',
+  background: {
+    flex: 1,
+    width: width,
   },
-  logo: {
-    position: 'absolute',
-    top: 21,
-    left: 36,
-    right: 0,
-    bottom: -21,
-    height: '50%',
-    width: '80%',
-    resizeMode: 'contain',
+  container: {
+    flex: 1,
+  },
+  toggle: {
+    marginTop: 50,
+    marginRight: 20,
+    alignSelf: 'flex-end',
   },
   formContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#002856',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingTop: 30,
-    paddingBottom: 40,
-    height: '50%',
-  },
-  scrollContainer: {
-    flexGrow: 2,
-    alignItems: 'center',
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    padding: 24,
+    marginTop: 'auto',
+    paddingTop: 40,
     paddingBottom: 80,
+    width: width,
   },
-  heading: {
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#fff', 
-    marginBottom: 20,
+  label: {
+    fontSize: 14,
+    marginBottom: 6,
   },
   input: {
-    width: '80%',
+    borderRadius: 25,
+    height: 50,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    color: '#fff',
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   button: {
-    width: '80%',
-    backgroundColor: '#f58220',
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 25,
     alignItems: 'center',
     marginTop: 10,
   },
-  buttonText: { 
-    color: '#fff', 
+  buttonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  link: { 
-    marginTop: 20, 
-    color: '#f58220',
-    fontWeight: 'bold',
+  switchText: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 13,
   },
 });
-
-export default SignUpScreen;

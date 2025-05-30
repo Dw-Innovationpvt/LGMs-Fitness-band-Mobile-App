@@ -1,184 +1,149 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
-  KeyboardAvoidingView, 
-  ScrollView,
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  Dimensions,
+  KeyboardAvoidingView,
   Platform,
-  Keyboard,
-  Animated,
-  Dimensions
+  ScrollView,
 } from 'react-native';
 
-const { height } = Dimensions.get('window');
+const SignInScreen = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-class SignInScreen extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      keyboardHeight: new Animated.Value(0),
-    };
-  }
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  componentDidMount() {
-    this.keyboardWillShowSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      this.keyboardWillShow
-    );
-    this.keyboardWillHideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      this.keyboardWillHide
-    );
-  }
-
-  componentWillUnmount() {
-    this.keyboardWillShowSub.remove();
-    this.keyboardWillHideSub.remove();
-  }
-
-  keyboardWillShow = (event) => {
-    Animated.timing(this.state.keyboardHeight, {
-      duration: 250,
-      toValue: event.endCoordinates.height,
-      useNativeDriver: false,
-    }).start();
+  const colors = {
+    bg: isDarkMode ? '#000' : '#fff',
+    text: isDarkMode ? '#fff' : '#000',
+    placeholder: isDarkMode ? '#ddd' : '#555',
+    buttonBg: isDarkMode ? '#fff' : '#000',
+    buttonText: isDarkMode ? '#000' : '#fff',
   };
 
-  keyboardWillHide = () => {
-    Animated.timing(this.state.keyboardHeight, {
-      duration: 250,
-      toValue: 0,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  render() {
-    const { keyboardHeight } = this.state;
-    const { navigation } = this.props;
-
-    return (
-      <View style={styles.container}>
-        {/* Background Image */}
-        <Image 
-          source={require('../assets/LGM_3.jpg')} 
-          style={styles.logo} 
-          resizeMode="contain"
-        />
-        
-        {/* Animated Form Container */}
-        <Animated.View 
-          style={[
-            styles.formContainer,
-            {
-              transform: [{
-                translateY: keyboardHeight.interpolate({
-                  inputRange: [0, height],
-                  outputRange: [0, -height * 0.3], // Adjust this value for how much you want it to move up
-                }),
-              }],
-            },
-          ]}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
+  return (
+    <ImageBackground
+      source={require('../assets/9.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={-150}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <TouchableOpacity
+            style={styles.toggle}
+            onPress={toggleTheme}
           >
-            <Text style={styles.heading}>Welcome Back!</Text>
-            <TextInput 
-              placeholder="Email" 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+            <Text style={{ color: colors.text }}>{isDarkMode ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+
+          <View style={[styles.formContainer, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)' }]}>
+            <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
+            <TextInput
+              placeholder="Enter your email address"
+              placeholderTextColor={colors.placeholder}
+              style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.text, color: colors.text }]}
+              value={email}
+              onChangeText={setEmail}
             />
-            <TextInput 
-              placeholder="Password" 
-              secureTextEntry 
-              style={styles.input} 
-              placeholderTextColor="#ccc" 
+
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+            <TextInput
+              placeholder="Enter your password"
+              placeholderTextColor={colors.placeholder}
+              secureTextEntry
+              style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.text, color: colors.text }]}
+              value={password}
+              onChangeText={setPassword}
             />
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Sign In</Text>
+
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={[styles.forgotText, { color: colors.text }]}>Forgot password</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]}>
+              <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign in</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.link}>Don't have an account? Sign Up</Text>
+              <Text style={[styles.switchText, { color: colors.text }]}>
+                Don't have an account? <Text style={{ color: colors.text }}>Sign Up</Text>
+              </Text>
             </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      </View>
-    );
-  }
-}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
+  );
+};
+
+export default SignInScreen;
+
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f5f5f5',
+  background: {
+    flex: 1,
+    width: width,
   },
-  logo: {
-    position: 'absolute',
-     top: 21,
-    left: 36,
-    right: 0,
-    bottom: -21,
-    height: '50%', // Adjust this to control how much of the image is visible
-    width: '80%',
-
-    resizeMode: 'contain',
+  container: {
+    flex: 1,
+  },
+  toggle: {
+    marginTop: 50,
+    marginRight: 20,
+    alignSelf: 'flex-end',
   },
   formContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#002856',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingTop: 30,
-    paddingBottom: 40,
-    height: '50%', // Adjust this to control the initial height of the form
-  },
-  scrollContainer: {
-    flexGrow: 2,
-    alignItems: 'center',
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    padding: 24,
+    marginTop: 'auto',
+    paddingTop: 40,
     paddingBottom: 80,
+    width: width,
   },
-  heading: {
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#fff', 
-    marginBottom: 20,
+  label: {
+    fontSize: 14,
+    marginBottom: 6,
   },
   input: {
-    width: '80%',
+    borderRadius: 25,
+    height: 50,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    color: '#fff',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  forgotPassword: {
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  forgotText: {
+    fontSize: 13,
   },
   button: {
-    width: '80%',
-    backgroundColor: '#f58220',
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 25,
     alignItems: 'center',
     marginTop: 10,
   },
-  buttonText: { 
-    color: '#fff', 
+  buttonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  link: { 
-    marginTop: 20, 
-    color: '#f58220',
-    fontWeight: 'bold',
+  switchText: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 13,
   },
 });
-
-export default SignInScreen;
