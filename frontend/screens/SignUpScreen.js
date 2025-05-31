@@ -33,7 +33,7 @@ const SignUpScreen = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../assets/9.png')}
+      source={require('../assets/88.png')}
       style={styles.background}
       resizeMode="cover"
     >

@@ -12,10 +12,15 @@ import {
   ScrollView,
 } from 'react-native';
 
-const SignInScreen = ({ navigation }) => {
+const SignInScreen = ({ navigation, route }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Get setIsSignedIn from route params
+const onSignInPress = () => {
+  navigation.replace('Main'); // Changed from 'Home'
+};
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -29,7 +34,7 @@ const SignInScreen = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../assets/9.png')}
+      source={require('../assets/88.png')}
       style={styles.background}
       resizeMode="cover"
     >
@@ -39,14 +44,16 @@ const SignInScreen = ({ navigation }) => {
         keyboardVerticalOffset={-150}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <TouchableOpacity
-            style={styles.toggle}
-            onPress={toggleTheme}
-          >
+          <TouchableOpacity style={styles.toggle} onPress={toggleTheme}>
             <Text style={{ color: colors.text }}>{isDarkMode ? '☀️' : '🌙'}</Text>
           </TouchableOpacity>
 
-          <View style={[styles.formContainer, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)' }]}>
+          <View
+            style={[
+              styles.formContainer,
+              { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)' },
+            ]}
+          >
             <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
             <TextInput
               placeholder="Enter your email address"
@@ -70,8 +77,8 @@ const SignInScreen = ({ navigation }) => {
               <Text style={[styles.forgotText, { color: colors.text }]}>Forgot password</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]}>
-              <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign in</Text>
+            <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]} onPress={onSignInPress}>
+              <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign In</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>

@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Dimensions }
 const SplashScreen = ({ navigation }) => {
   return (
     <ImageBackground
-      source={require('../assets/9.png')}
+      source={require('../assets/88.png')}
       style={styles.background}
       resizeMode="cover"
     >
@@ -39,11 +39,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    backgroundColor: '#000',
+    backgroundColor: '#042c5b',
     paddingVertical: 14,
     paddingHorizontal: 80,
     borderRadius: 30,
     marginVertical: 10,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',
