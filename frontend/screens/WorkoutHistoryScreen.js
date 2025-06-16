@@ -1,67 +1,333 @@
-import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  Modal,
+  TextInput,
+  ScrollView,
+  Dimensions,
+  Image,useWindowDimensions
+} from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const dummyWorkoutData = [
-  {
-    id: '1',
-    date: '2025-06-01',
-    time: '6:30 AM',
-    type: 'Running',
-    duration: '45 mins',
-    calories: '275 kcal',
-    distance: '5.2 km',
-    steps: '6000 steps',
-    pace: '8:00 min/km',
-    notes: 'Felt great today!',
-  },
-  {
-    id: '2',
-    date: '2025-05-30',
-    time: '7:00 AM',
-    type: 'Cycling',
-    duration: '30 mins',
-    calories: '200 kcal',
-    distance: '10.5 km',
-    steps: '—',
-    pace: '21 km/h',
-    notes: 'Good weather for a ride.',
-  },
-  {
-    id: '3',
-    date: '2025-05-29',
-    time: '6:45 AM',
-    type: 'Strength Training',
-    duration: '40 mins',
-    calories: '180 kcal',
-    distance: '—',
-    steps: '2500 steps',
-    pace: '—',
-    notes: 'Focused on core today.',
-  }
-];
+const { width } = Dimensions.get('window');
 
-const WorkoutHistoryScreen = () => {
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.date}>{item.date} at {item.time}</Text>
-      <Text style={styles.text}>Type: {item.type}</Text>
-      <Text style={styles.text}>Duration: {item.duration}</Text>
-      <Text style={styles.text}>Calories: {item.calories}</Text>
-      <Text style={styles.text}>Distance: {item.distance}</Text>
-      <Text style={styles.text}>Steps: {item.steps}</Text>
-      <Text style={styles.text}>Pace: {item.pace}</Text>
-      <Text style={styles.notes}>"{item.notes}"</Text>
-    </View>
+const workoutCategories = {
+  '🏋️ Strength': ['Weight Lifting', 'Bodyweight', 'Resistance Bands', 'CrossFit'],
+  '🏃 Cardio': ['Running', 'Cycling', 'Swimming', 'HIIT'],
+  '🧘 Flexibility': ['Yoga', 'Pilates', 'Stretching'],
+  '🛹 Skating': ['Speed Skating', 'Distance Skating', 'Freestyle'],
+  '🥊 Combat': ['Boxing', 'MMA', 'Kickboxing']
+};
+
+const WorkoutHistoryScreen = ({ navigation }) => {
+    const { width, height } = useWindowDimensions();
+
+  const [workouts, setWorkouts] = useState([
+    {
+      id: '1',
+      type: 'Speed Skating',
+      duration: '45',
+      calories: '320',
+      distance: '5.2',
+      date: '2023-06-15',
+      time: '07:30 AM',
+      notes: 'Morning session at the park'
+    },
+    {
+      id: '2',
+      type: 'Weight Lifting',
+      duration: '30',
+      calories: '240',
+      date: '2023-06-14',
+      time: '06:00 PM',
+      notes: 'Upper body focus'
+    },
+    {
+      id: '3',
+      type: 'Yoga',
+      duration: '60',
+      calories: '180',
+      date: '2023-06-13',
+      time: '07:00 AM',
+      notes: 'Vinyasa flow'
+    }
+  ]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [form, setForm] = useState({ 
+    type: '', 
+    duration: '', 
+    calories: '', 
+    distance: '', 
+    notes: '' 
+  });
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
+
+  const handleAddWorkout = () => {
+    setSelectedCategory(null);
+    setSelectedWorkout(null);
+    setForm({ type: '', duration: '', calories: '', distance: '', notes: '' });
+    setModalVisible(true);
+  };
+
+  const handleSelectCategory = (category) => {
+    setSelectedCategory(category);
+  };
+
+  const handleSelectWorkout = (workout) => {
+    setSelectedWorkout(workout);
+    setForm(prev => ({ ...prev, type: workout }));
+  };
+
+  const handleSubmit = () => {
+    const newWorkout = {
+      id: Date.now().toString(),
+      type: selectedWorkout || form.type,
+      duration: form.duration,
+      calories: form.calories,
+      distance: form.distance,
+      notes: form.notes,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setWorkouts([newWorkout, ...workouts]);
+    setForm({ type: '', duration: '', calories: '', distance: '', notes: '' });
+    setModalVisible(false);
+    setSelectedCategory(null);
+    setSelectedWorkout(null);
+  };
+
+  const renderWorkoutItem = ({ item }) => (
+    <TouchableOpacity style={styles.workoutCard}>
+      <View style={styles.workoutHeader}>
+        <View style={styles.workoutIcon}>
+          <MaterialCommunityIcons 
+            name={getWorkoutIcon(item.type)} 
+            size={24} 
+            color="#4B6CB7" 
+          />
+        </View>
+        <View style={styles.workoutTitleContainer}>
+          <Text style={styles.workoutType}>{item.type}</Text>
+          <Text style={styles.workoutDate}>{item.date} • {item.time}</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#999" />
+      </View>
+      
+      <View style={styles.workoutStats}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{item.duration}</Text>
+          <Text style={styles.statLabel}>min</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{item.calories}</Text>
+          <Text style={styles.statLabel}>cal</Text>
+        </View>
+        {item.distance && (
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{item.distance}</Text>
+            <Text style={styles.statLabel}>km</Text>
+          </View>
+        )}
+      </View>
+      
+      {item.notes && (
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesText}>"{item.notes}"</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
+
+  const getWorkoutIcon = (type) => {
+    if (type.includes('Skating')) return 'skate';
+    if (type.includes('Yoga') || type.includes('Pilates')) return 'yoga';
+    if (type.includes('Running') || type.includes('Cycling')) return 'run';
+    if (type.includes('Weight') || type.includes('Bodyweight')) return 'dumbbell';
+    return 'arm-flex';
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Workout History</Text>
+      {/* Header */}
+      <LinearGradient
+        colors={['#4B6CB7', '#182848']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Workout History</Text>
+        <TouchableOpacity onPress={handleAddWorkout}>
+          <Feather name="plus" size={24} color="#fff" />
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* Stats Summary */}
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="calendar-month" size={24} color="#4B6CB7" />
+          <Text style={styles.summaryValue}>{workouts.length}</Text>
+          <Text style={styles.summaryLabel}>Workouts</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="clock-outline" size={24} color="#4B6CB7" />
+          <Text style={styles.summaryValue}>
+            {workouts.reduce((sum, w) => sum + parseInt(w.duration), 0)}
+          </Text>
+          <Text style={styles.summaryLabel}>Minutes</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="fire" size={24} color="#4B6CB7" />
+          <Text style={styles.summaryValue}>
+            {workouts.reduce((sum, w) => sum + parseInt(w.calories), 0)}
+          </Text>
+          <Text style={styles.summaryLabel}>Calories</Text>
+        </View>
+      </View>
+
+      {/* Workout List */}
       <FlatList
-        data={dummyWorkoutData}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        data={workouts}
+        renderItem={renderWorkoutItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Image 
+              source={require('../assets/88.png')} 
+              style={styles.emptyImage}
+            />
+            <Text style={styles.emptyText}>No workouts recorded yet</Text>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={handleAddWorkout}
+            >
+              <Text style={styles.addButtonText}>Add Your First Workout</Text>
+            </TouchableOpacity>
+          </View>
+        }
       />
+
+      {/* Add Workout Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Workout</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScrollContent}>
+              {!selectedCategory ? (
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.sectionTitle}>Select Category</Text>
+                  {Object.keys(workoutCategories).map(category => (
+                    <TouchableOpacity
+                      key={category}
+                      style={styles.categoryCard}
+                      onPress={() => handleSelectCategory(category)}
+                    >
+                      <Text style={styles.categoryText}>{category}</Text>
+                      <Feather name="chevron-right" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : !selectedWorkout ? (
+                <View style={styles.workoutSelection}>
+                  <TouchableOpacity 
+                    style={styles.backButton}
+                    onPress={() => setSelectedCategory(null)}
+                  >
+                    <Feather name="chevron-left" size={20} color="#4B6CB7" />
+                    <Text style={styles.backText}>{selectedCategory}</Text>
+                  </TouchableOpacity>
+                  
+                  <Text style={styles.sectionTitle}>Select Workout</Text>
+                  {workoutCategories[selectedCategory].map(workout => (
+                    <TouchableOpacity
+                      key={workout}
+                      style={styles.workoutOption}
+                      onPress={() => handleSelectWorkout(workout)}
+                    >
+                      <Text style={styles.workoutOptionText}>{workout}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <View>
+                  <TouchableOpacity 
+                    style={styles.backButton}
+                    onPress={() => setSelectedWorkout(null)}
+                  >
+                    <Feather name="chevron-left" size={20} color="#4B6CB7" />
+                    <Text style={styles.backText}>{selectedWorkout}</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.inputLabel}>Duration (minutes)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 45"
+                    keyboardType="numeric"
+                    value={form.duration}
+                    onChangeText={(text) => setForm({ ...form, duration: text })}
+                  />
+
+                  <Text style={styles.inputLabel}>Calories burned</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 320"
+                    keyboardType="numeric"
+                    value={form.calories}
+                    onChangeText={(text) => setForm({ ...form, calories: text })}
+                  />
+
+                  {(selectedWorkout.includes('Skating') || selectedWorkout.includes('Running') || selectedWorkout.includes('Cycling')) && (
+                    <>
+                      <Text style={styles.inputLabel}>Distance (km)</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g. 5.2"
+                        keyboardType="numeric"
+                        value={form.distance}
+                        onChangeText={(text) => setForm({ ...form, distance: text })}
+                      />
+                    </>
+                  )}
+
+                  <Text style={styles.inputLabel}>Notes</Text>
+                  <TextInput
+                    style={[styles.input, styles.notesInput]}
+                    placeholder="Any notes about your workout"
+                    multiline
+                    value={form.notes}
+                    onChangeText={(text) => setForm({ ...form, notes: text })}
+                  />
+                </View>
+              )}
+            </ScrollView>
+
+            {selectedWorkout && (
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSubmit}
+                disabled={!form.duration || !form.calories}
+              >
+                <Text style={styles.saveButtonText}>Save Workout</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -69,34 +335,256 @@ const WorkoutHistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    marginTop: 50,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F7FB',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
+  header: {
+    paddingTop: Dimensions.get('window').height * 0.06,
+    paddingHorizontal: '5%',
+    paddingBottom: '5%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  card: {
-    backgroundColor: '#f2f2f2',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  date: {
-    fontSize: 16,
+  headerTitle: {
+    fontSize: width * 0.055,
     fontWeight: '600',
-    marginBottom: 4,
+    color: '#fff',
   },
-  text: {
-    fontSize: 14,
-    marginBottom: 2,
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: '5%',
+    paddingVertical: '4%',
+    backgroundColor: '#fff',
+    marginTop: -10,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 1,
   },
-  notes: {
+  summaryCard: {
+    alignItems: 'center',
+    width: width / 3.5,
+  },
+  summaryValue: {
+    fontSize: width * 0.05,
+    fontWeight: 'bold',
+    color: '#333',
+    marginVertical: '1%',
+  },
+  summaryLabel: {
+    fontSize: width * 0.035,
+    color: '#666',
+  },
+  listContent: {
+    paddingHorizontal: '5%',
+    paddingTop: '5%',
+    paddingBottom: '10%',
+  },
+  workoutCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  workoutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: '3%',
+  },
+  workoutIcon: {
+    backgroundColor: 'rgba(75, 108, 183, 0.1)',
+    width: width * 0.1,
+    height: width * 0.1,
+    borderRadius: width * 0.05,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: '3%',
+  },
+  workoutTitleContainer: {
+    flex: 1,
+  },
+  workoutType: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#333',
+  },
+  workoutDate: {
+    fontSize: width * 0.035,
+    color: '#666',
+    marginTop: '1%',
+  },
+  workoutStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: '2%',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: width * 0.045,
+    fontWeight: 'bold',
+    color: '#4B6CB7',
+  },
+  statLabel: {
+    fontSize: width * 0.03,
+    color: '#666',
+    marginTop: '1%',
+  },
+  notesContainer: {
+    marginTop: '2%',
+    paddingTop: '2%',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  notesText: {
+    fontSize: width * 0.035,
+    color: '#666',
     fontStyle: 'italic',
-    marginTop: 8,
-    color: '#555',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: '10%',
+  },
+  emptyImage: {
+    width: width * 0.5,
+    height: width * 0.5,
+    marginBottom: '5%',
+  },
+  emptyText: {
+    fontSize: width * 0.045,
+    color: '#666',
+    marginBottom: '5%',
+  },
+  addButton: {
+    backgroundColor: '#4B6CB7',
+    padding: '4%',
+    borderRadius: 12,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: width * 0.04,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '4%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: width * 0.05,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalScrollContent: {
+    padding: '4%',
+  },
+  categoryContainer: {
+    paddingBottom: '4%',
+  },
+  sectionTitle: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '4%',
+  },
+  categoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '4%',
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    marginBottom: '3%',
+  },
+  categoryText: {
+    fontSize: width * 0.04,
+    color: '#333',
+  },
+  workoutSelection: {
+    paddingBottom: '4%',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: '5%',
+  },
+  backText: {
+    fontSize: width * 0.04,
+    color: '#4B6CB7',
+    marginLeft: '2%',
+    fontWeight: '500',
+  },
+  workoutOption: {
+    padding: '4%',
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    marginBottom: '3%',
+  },
+  workoutOptionText: {
+    fontSize: width * 0.04,
+    color: '#333',
+  },
+  inputLabel: {
+    fontSize: width * 0.035,
+    color: '#666',
+    marginBottom: '2%',
+    marginTop: '4%',
+  },
+  input: {
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    padding: '3.5%',
+    fontSize: width * 0.04,
+  },
+  notesInput: {
+    height: width * 0.2,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: '#4B6CB7',
+    padding: '4%',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: width * 0.04,
+    fontWeight: '600',
   },
 });
 

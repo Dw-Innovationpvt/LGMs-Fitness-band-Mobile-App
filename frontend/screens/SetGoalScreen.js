@@ -4,340 +4,409 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   StyleSheet,
-  Modal,
+  Alert,
+  Animated,
+  Easing,
+  Dimensions,
+  useWindowDimensions
 } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/Feather';
-import { ProgressCircle } from 'react-native-svg-charts';
+import { Circle } from 'react-native-progress';
 
 const goalTypes = [
-  { key: 'time', title: 'Time Duration', colors: ['#FFA17F', '#00223E'], icon: 'clock' },
-  { key: 'speed', title: 'Speed', colors: ['#89CFF0', '#005f99'], icon: 'fast-forward' },
-  { key: 'calories', title: 'Calorie Burn', colors: ['#FF6B6B', '#C44D58'], icon: 'activity' },
-  { key: 'cadence', title: 'Cadence', colors: ['#A3D977', '#009933'], icon: 'trending-up' },
-  { key: 'distance', title: 'Distance', colors: ['#B19CD9', '#5D3FD3'], icon: 'map-pin' },
+  { 
+    key: 'time', 
+    title: 'Time Duration', 
+    color: '#FF6B6B', 
+    icon: 'clock',
+    unit: 'min'
+  },
+  { 
+    key: 'speed', 
+    title: 'Speed', 
+    color: '#4B6CB7', 
+    icon: 'speedometer',
+    unit: 'km/h'
+  },
+  { 
+    key: 'calories', 
+    title: 'Calorie Burn', 
+    color: '#FFA500', 
+    icon: 'fire',
+    unit: 'kcal'
+  },
+  { 
+    key: 'distance', 
+    title: 'Distance', 
+    color: '#32CD32', 
+    icon: 'map-marker-distance',
+    unit: 'km'
+  },
+  { 
+    key: 'cadence', 
+    title: 'Stride Rate', 
+    color: '#9370DB', 
+    icon: 'repeat',
+    unit: 'spm'
+  },
+  { 
+    key: 'steps', 
+    title: 'Step Count', 
+    color: '#00BFFF', 
+    icon: 'walk',
+    unit: 'steps'
+  },
 ];
 
-const SetGoalScreen = () => {
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [selectedGoal, setSelectedGoal] = useState(null);
+const SetGoalScreen = ({ navigation }) => {
+  const { width, height } = useWindowDimensions();
+  const [selectedTab, setSelectedTab] = useState('daily');
   const [goals, setGoals] = useState({
-    time: { value: '', unit: 'minutes', note: '', completed: false },
-    speed: { avg: '', max: '', unit: 'km/h', note: '', completed: false },
-    calories: { value: '', unit: 'cal', note: '', completed: false },
-    cadence: { value: '', unit: 'pushes/min', note: '', completed: false },
-    distance: { value: '', unit: 'km', note: '', completed: false },
+    time: { target: 30, finished: 12 },
+    speed: { target: 20, finished: 8 },
+    calories: { target: 500, finished: 320 },
+    distance: { target: 10, finished: 6.5 },
+    cadence: { target: 90, finished: 75 },
+    steps: { target: 10000, finished: 6500 },
   });
+  const [animation] = useState(new Animated.Value(0));
 
-  const handleReset = (key) => {
-    const initial = {
-      note: '', completed: false,
-      ...(key === 'speed'
-        ? { avg: '', max: '', unit: 'km/h' }
-        : { value: '', unit: goals[key].unit }),
-    };
-    setGoals((prevGoals) => ({
-      ...prevGoals,
-      [key]: initial,
-    }));
+  const animateProgress = () => {
+    Animated.timing(animation, {
+      toValue: 1,
+      duration: 800,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true
+    }).start();
   };
 
- 
-
-  const handleInputChange = (key, field, value) => {
-    setGoals({
-      ...goals,
-      [key]: {
-        ...goals[key],
-        [field]: value,
-      },
-    });
+  const handleCategoryPress = (key) => {
+    Alert.prompt(
+      `Set ${goalTypes.find(g => g.key === key).title} Goal`,
+      `Enter your ${selectedTab} target:`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Set Goal',
+          onPress: (text) => {
+            const value = parseInt(text);
+            if (!isNaN(value) && value > 0) {
+              setGoals(prev => ({
+                ...prev,
+                [key]: { ...prev[key], target: value }
+              }));
+              animateProgress();
+            }
+          },
+        },
+      ],
+      'plain-text',
+      '',
+      'numeric'
+    );
   };
 
-  const filteredGoalTypes = goalTypes.filter(({ key }) => {
-    if (selectedTab === 'completed') return goals[key].completed;
-    if (selectedTab === 'ongoing') return !goals[key].completed && (goals[key].value || goals[key].avg || goals[key].max);
-    return true;
-  });
+  const filteredGoalTypes = selectedTab === 'all' 
+    ? goalTypes 
+    : goalTypes.filter(({ key }) => selectedTab === 'daily' || selectedTab === 'weekly');
 
   return (
     <View style={styles.container}>
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {['all', 'ongoing', 'completed'].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setSelectedTab(tab)}
-            style={[styles.tab, tab === 'all' ? styles.blueTab : tab === 'ongoing' ? styles.orangeTab : styles.greenTab, selectedTab === tab && styles.activeTab]}
-          >
-            <Text style={styles.tabText}>{tab.toUpperCase()}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Goal Mini Cards */}
-      <View style={styles.miniCardRow}>
-        {goalTypes.map(({ key, icon, title }) => (
-          <TouchableOpacity
-            key={key}
-            style={styles.miniCard}
-            onPress={() => setSelectedGoal(key)}
-          >
-            <Icon name={icon} size={18} color="#333" />
-            <Text style={styles.miniCardText}>{title}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Goal Full Cards */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-       {filteredGoalTypes.map(({ key, icon, title, colors }) => (
-  <LinearGradient key={key} colors={colors} style={styles.fullCard}>
-    <View style={styles.cardHeader}>
-      <Icon name={icon} size={20} color="#fff" />
-      <Text style={styles.cardTitle}>{title}</Text>
-    </View>
-
-    <View style={styles.cardBody}>
-      <View style={{ flex: 1 }}>
-        {key === 'speed' ? (
-          <>
-            <TextInput
-              style={styles.input}
-              placeholder="Avg Speed"
-              placeholderTextColor="#ddd"
-              keyboardType="numeric"
-              value={goals[key].avg}
-              onChangeText={(text) => handleInputChange(key, 'avg', text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Max Speed"
-              placeholderTextColor="#ddd"
-              keyboardType="numeric"
-              value={goals[key].max}
-              onChangeText={(text) => handleInputChange(key, 'max', text)}
-            />
-          </>
-        ) : (
-          <TextInput
-            style={styles.input}
-            placeholder={`Enter ${title}`}
-            placeholderTextColor="#ddd"
-            keyboardType="numeric"
-            value={goals[key].value}
-            onChangeText={(text) => handleInputChange(key, 'value', text)}
-          />
-        )}
-
-        <TextInput
-          style={styles.note}
-          placeholder="Add a note (optional)"
-          placeholderTextColor="#ccc"
-          value={goals[key].note}
-          onChangeText={(text) => handleInputChange(key, 'note', text)}
-        />
-      </View>
-
-      <View style={{ marginLeft: 12, justifyContent: 'center', alignItems: 'center' }}>
-        <ProgressCircle
-          style={{ height: 60, width: 60 }}
-          progress={goals[key].completed ? 1 : 0.4}
-          progressColor="#fff"
-        />
-        <Text style={{ color: '#fff', marginTop: 4 }}>
-          {goals[key].completed ? '✓' : '40%'}
-        </Text>
-      </View>
-    </View>
-
-    <View style={styles.actionRow}>
-      <TouchableOpacity onPress={() => handleReset(key)} style={styles.button}>
-        <Icon name="rotate-ccw" size={16} color="#fff" />
-        <Text style={styles.buttonText}>Reset</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => {
-          setGoals({ ...goals, [key]: { ...goals[key], completed: !goals[key].completed } });
-        }}
-        style={[styles.button, { backgroundColor: '#4CAF50' }]}
+      {/* Header */}
+      <LinearGradient
+        colors={['#4B6CB7', '#182848']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
       >
-        <Icon name="check-circle" size={16} color="#fff" />
-        <Text style={styles.buttonText}>
-          {goals[key].completed ? 'Undo Complete' : 'Mark Complete'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </LinearGradient>
-))}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Set Goals</Text>
+        <View style={{ width: 24 }} />
+      </LinearGradient>
 
-      </ScrollView>
-
-      {/* Modal for Input */}
-      <Modal visible={!!selectedGoal} animationType="slide" transparent>
-        <View style={styles.modalWrapper}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Goal for {selectedGoal && goalTypes.find(g => g.key === selectedGoal)?.title}</Text>
-
-            {/* Close */}
-            <TouchableOpacity onPress={() => setSelectedGoal(null)} style={styles.closeBtn}>
-              <Text style={styles.closeText}>Close</Text>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          {['daily', 'weekly', 'all'].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                setSelectedTab(tab);
+                animateProgress();
+              }}
+              style={[
+                styles.tabButton,
+                selectedTab === tab && styles.activeTabButton,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  selectedTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
             </TouchableOpacity>
+          ))}
+        </View>
 
-            {/* Same Input Fields */}
-            {/* You can reuse components here */}
+        {/* Goals Grid */}
+        <View style={styles.goalsGrid}>
+          {filteredGoalTypes.map(({ key, title, color, icon, unit }) => {
+            const progress = goals[key].finished / goals[key].target;
+            const percentage = Math.round(progress * 100);
+            
+            return (
+              <TouchableOpacity
+                key={key}
+                style={styles.goalCard}
+                onPress={() => handleCategoryPress(key)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.goalHeader}>
+                  <View style={[styles.goalIcon, { backgroundColor: `${color}20` }]}>
+                    <MaterialCommunityIcons 
+                      name={icon} 
+                      size={20} 
+                      color={color} 
+                    />
+                  </View>
+                  <Text style={styles.goalTitle}>{title}</Text>
+                </View>
+                
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressCircleContainer}>
+                    <Circle
+                      size={width * 0.25}
+                      progress={progress}
+                      color={color}
+                      thickness={6}
+                      unfilledColor="#f0f0f0"
+                      borderWidth={0}
+                      strokeCap="round"
+                    />
+                    <View style={styles.progressTextContainer}>
+                      <Text style={styles.progressText}>{percentage}%</Text>
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.goalStats}>
+                  <Text style={styles.currentValue}>
+                    {goals[key].finished}{unit}
+                  </Text>
+                  <Text style={styles.targetValue}>
+                    / {goals[key].target}{unit}
+                  </Text>
+                </View>
+                
+                <View style={styles.progressBarContainer}>
+                  <View 
+                    style={[
+                      styles.progressBar,
+                      { 
+                        width: `${Math.min(percentage, 100)}%`,
+                        backgroundColor: color
+                      }
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Tips Section */}
+        <View style={styles.tipsCard}>
+          <Text style={styles.tipsTitle}>Goal Setting Tips</Text>
+          <View style={styles.tipItem}>
+            <MaterialCommunityIcons name="lightbulb-on" size={20} color="#FFD700" />
+            <Text style={styles.tipText}>Set realistic, achievable targets</Text>
+          </View>
+          <View style={styles.tipItem}>
+            <MaterialCommunityIcons name="lightbulb-on" size={20} color="#FFD700" />
+            <Text style={styles.tipText}>Increase goals gradually by 10-15% weekly</Text>
+          </View>
+          <View style={styles.tipItem}>
+            <MaterialCommunityIcons name="lightbulb-on" size={20} color="#FFD700" />
+            <Text style={styles.tipText}>Focus on consistency over intensity</Text>
           </View>
         </View>
-      </Modal>
+      </ScrollView>
     </View>
   );
 };
 
-export default SetGoalScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
-    paddingTop: 20,
-            marginTop: 50,
-
+    backgroundColor: '#F5F7FB',
   },
-  tabs: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  cardBody: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 10,
-},
-actionRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-},
-button: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#888',
-  padding: 8,
-  borderRadius: 10,
-  marginHorizontal: 4,
-},
-buttonText: {
-  color: '#fff',
-  marginLeft: 6,
-  fontWeight: 'bold',
-},
-
-  tab: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  blueTab: {
-    backgroundColor: '#007bff',
-  },
-  orangeTab: {
-    backgroundColor: '#ffa500',
-  },
-  greenTab: {
-    backgroundColor: '#28a745',
-  },
-  activeTab: {
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  tabText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  miniCardRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  miniCard: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 10,
-    margin: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 3,
-  },
-  miniCardText: {
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  fullCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    color: '#fff',
-    fontSize: 18,
-    marginLeft: 10,
-    fontWeight: 'bold',
-  },
-  input: {
-    backgroundColor: '#ffffff99',
-    borderRadius: 10,
-    padding: 10,
-    color: '#000',
-    marginVertical: 6,
-  },
-  note: {
-    backgroundColor: '#ffffffaa',
-    borderRadius: 10,
-    padding: 10,
-    color: '#000',
-    marginTop: 8,
-  },
-  noteText: {
-    color: '#fff',
-  },
-  bottomRow: {
+  header: {
+    paddingTop: Dimensions.get('window').height * 0.06,
+    paddingHorizontal: '5%',
+    paddingBottom: '5%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  modalWrapper: {
+  headerTitle: {
+    fontSize: Dimensions.get('window').width * 0.055,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  scrollContainer: {
+    padding: '5%',
+    paddingBottom: '10%',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: '5%',
+  },
+  tabButton: {
     flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#00000088',
+    paddingVertical: '3%',
+    alignItems: 'center',
   },
-  modalContent: {
-    margin: 20,
+  activeTabButton: {
+    backgroundColor: '#4B6CB7',
+  },
+  tabText: {
+    fontSize: Dimensions.get('window').width * 0.035,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  goalsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  goalCard: {
+    width: Dimensions.get('window').width > 400 ? '48%' : '100%',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  modalTitle: {
-    fontSize: 18,
+  goalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: '3%',
+  },
+  goalIcon: {
+    width: Dimensions.get('window').width * 0.09,
+    height: Dimensions.get('window').width * 0.09,
+    borderRadius: Dimensions.get('window').width * 0.045,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: '2%',
+  },
+  goalTitle: {
+    fontSize: Dimensions.get('window').width * 0.04,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  progressContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: Dimensions.get('window').width * 0.25,
+    marginVertical: '2%',
+  },
+  progressCircleContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressText: {
+    fontSize: Dimensions.get('window').width * 0.045,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#333',
   },
-  closeBtn: {
-    marginTop: 10,
-    alignSelf: 'flex-end',
+  goalStats: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: '2%',
   },
-  closeText: {
-    color: '#007bff',
+  currentValue: {
+    fontSize: Dimensions.get('window').width * 0.05,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  targetValue: {
+    fontSize: Dimensions.get('window').width * 0.04,
+    color: '#666',
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  tipsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '4%',
+    marginTop: '2%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  tipsTitle: {
+    fontSize: Dimensions.get('window').width * 0.045,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: '3%',
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: '2%',
+  },
+  tipText: {
+    fontSize: Dimensions.get('window').width * 0.035,
+    color: '#666',
+    marginLeft: '2%',
+    flex: 1,
   },
 });
 
+export default SetGoalScreen;

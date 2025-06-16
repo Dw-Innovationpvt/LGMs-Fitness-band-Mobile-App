@@ -1,4 +1,3 @@
-// Enhanced Water Intake Tracker with Circular Progress and Averages
 import React, { useState } from 'react';
 import {
   View,
@@ -8,26 +7,49 @@ import {
   TextInput,
   FlatList,
   Modal,
+  ScrollView,
+  Dimensions,
+  Animated,
+  Easing,
+  useWindowDimensions
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Dimensions } from 'react-native';
 import { Circle } from 'react-native-progress';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const WaterIntakeScreen = ({ navigation }) => {
-  const [waterIntake, setWaterIntake] = useState(0);
-  const [dailyGoal, setDailyGoal] = useState(2000);
+  const { width, height } = useWindowDimensions();
+  const styles = createStyles(width);
+
+  const [waterIntake, setWaterIntake] = useState(1200);
+  const [dailyGoal, setDailyGoal] = useState(3000);
   const [inputValue, setInputValue] = useState('');
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState([
+    { amount: 400, timestamp: new Date(Date.now() - 3600000) },
+    { amount: 300, timestamp: new Date(Date.now() - 7200000) },
+    { amount: 500, timestamp: new Date(Date.now() - 10800000) },
+  ]);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState('');
+  const [animation] = useState(new Animated.Value(0));
+
+  const animateProgress = () => {
+    Animated.timing(animation, {
+      toValue: 1,
+      duration: 1000,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true
+    }).start();
+  };
 
   const addWater = (amount = null) => {
     const parsedAmount = amount || parseInt(inputValue);
     if (parsedAmount > 0) {
       const timestamp = new Date();
       setWaterIntake(prev => prev + parsedAmount);
-      setHistory(prev => [...prev, { amount: parsedAmount, timestamp }]);
+      setHistory(prev => [{ amount: parsedAmount, timestamp }, ...prev]);
       setInputValue('');
+      animateProgress();
     }
   };
 
@@ -37,6 +59,7 @@ const WaterIntakeScreen = ({ navigation }) => {
       setDailyGoal(parsedGoal);
       setGoalInput('');
       setGoalModalVisible(false);
+      animateProgress();
     }
   };
 
@@ -56,98 +79,166 @@ const WaterIntakeScreen = ({ navigation }) => {
   };
 
   const progress = Math.min(waterIntake / dailyGoal, 1);
+  const percentage = Math.round(progress * 100);
+  const quickAmounts = [200, 250, 300, 500];
 
   return (
     <View style={styles.container}>
-      
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={28} color="#000" />
+      <LinearGradient
+        colors={['#4B6CB7', '#182848']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Water Intake</Text>
         <TouchableOpacity onPress={() => setGoalModalVisible(true)}>
-          <Feather name="settings" size={28} color="#000" />
+          <Feather name="settings" size={24} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
-    <View style={styles.progressSection}>
-  <Circle
-    size={150}
-    progress={progress}
-    showsText={true}
-    formatText={() => `${Math.round(progress * 100)}%`}
-    color="#007AFF"
-    thickness={10}
-    unfilledColor="#E0E0E0"
-    borderWidth={0}
-  />
-  <Text style={styles.progressLabel}>{waterIntake}ml / {dailyGoal}ml</Text>
-</View>
-
-
-
-      {/* Averages */}
-      <View style={styles.averagesContainer}>
-        <Text style={styles.averageText}>Daily Avg: {getAverage(1).toFixed(0)}ml</Text>
-        <Text style={styles.averageText}>Weekly Avg: {getAverage(7).toFixed(0)}ml</Text>
-        <Text style={styles.averageText}>Monthly Avg: {getAverage(30).toFixed(0)}ml</Text>
-      </View>
-
-      {/* Input Section */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter amount (ml)"
-          keyboardType="numeric"
-          value={inputValue}
-          onChangeText={setInputValue}
-        />
-        <View style={styles.quickButtonsContainer}>
-          {[250, 500, 1000].map(val => (
-            <TouchableOpacity key={val} style={styles.quickButton} onPress={() => addWater(val)}>
-              <Text style={styles.quickButtonText}>{val}ml</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity style={styles.addButton} onPress={() => addWater()}>
-          <MaterialCommunityIcons name="cup-water" size={24} color="#fff" />
-          <Text style={styles.addButtonText}>Add Water</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* History */}
-      <FlatList
-        data={history.slice().reverse()}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.historyItem}>
-            <Text>{item.amount} ml at {new Date(item.timestamp).toLocaleTimeString()}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Progress Section */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressCircleContainer}>
+            <Circle
+              size={width * 0.6}
+              progress={progress}
+              color="#00BFFF"
+              thickness={15}
+              unfilledColor="#E0F7FA"
+              borderWidth={0}
+              strokeCap="round"
+            />
+            <View style={styles.progressTextContainer}>
+              <Text style={styles.progressPercentage}>{percentage}%</Text>
+              <Text style={styles.progressAmount}>
+                {waterIntake}ml / {dailyGoal}ml
+              </Text>
+            </View>
           </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 80 }}
-      />
+        </View>
 
-      {/* Goal Modal */}
+        {/* Quick Add Buttons */}
+        <View style={styles.quickAddContainer}>
+          <Text style={styles.sectionTitle}>Quick Add</Text>
+          <View style={styles.quickButtonsRow}>
+            {quickAmounts.map((amount) => (
+              <TouchableOpacity
+                key={amount}
+                style={styles.quickButton}
+                onPress={() => addWater(amount)}
+              >
+                <Text style={styles.quickButtonText}>+{amount}ml</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Custom Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.sectionTitle}>Custom Amount</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter amount in ml"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              value={inputValue}
+              onChangeText={setInputValue}
+            />
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => addWater()}
+              disabled={!inputValue}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="calendar-today" size={24} color="#4B6CB7" />
+            <Text style={styles.statValue}>{getAverage(1).toFixed(0)}ml</Text>
+            <Text style={styles.statLabel}>Today's Avg</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="calendar-week" size={24} color="#4B6CB7" />
+            <Text style={styles.statValue}>{getAverage(7).toFixed(0)}ml</Text>
+            <Text style={styles.statLabel}>Weekly Avg</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="calendar-month" size={24} color="#4B6CB7" />
+            <Text style={styles.statValue}>{getAverage(30).toFixed(0)}ml</Text>
+            <Text style={styles.statLabel}>Monthly Avg</Text>
+          </View>
+        </View>
+
+        {/* History Section */}
+        <View style={styles.historyContainer}>
+          <Text style={styles.sectionTitle}>Recent Intakes</Text>
+          {history.length > 0 ? (
+            <FlatList
+              data={history.slice(0, 5)}
+              keyExtractor={(_, index) => index.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.historyItem}>
+                  <View style={styles.historyIcon}>
+                    <MaterialCommunityIcons name="cup-water" size={20} color="#00BFFF" />
+                  </View>
+                  <Text style={styles.historyAmount}>{item.amount} ml</Text>
+                  <Text style={styles.historyTime}>
+                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              )}
+              scrollEnabled={false}
+            />
+          ) : (
+            <Text style={styles.emptyHistory}>No recent water intake recorded</Text>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Goal Setting Modal */}
       <Modal
         visible={goalModalVisible}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setGoalModalVisible(false)}
       >
-        <View style={styles.modalBackground}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Set Daily Goal</Text>
+            <Text style={styles.modalTitle}>Set Daily Water Goal</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter goal (ml)"
+              style={styles.modalInput}
+              placeholder="Enter goal in ml"
+              placeholderTextColor="#999"
               keyboardType="numeric"
               value={goalInput}
               onChangeText={setGoalInput}
+              autoFocus={true}
             />
-            <TouchableOpacity style={styles.addButton} onPress={updateGoal}>
-              <Text style={styles.addButtonText}>Save Goal</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setGoalModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={updateGoal}
+                disabled={!goalInput}
+              >
+                <Text style={styles.saveButtonText}>Save Goal</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -155,31 +246,246 @@ const WaterIntakeScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#F5F9FF'  },
-  header: {         marginTop: 50,
-flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: '#007AFF' },
-  progressSection: { alignItems: 'center', marginBottom: 20 },
-  progressLabel: { marginTop: 10, fontSize: 18, fontWeight: '500', color: '#000' },
-  averagesContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
-  averageText: { fontSize: 14, color: '#333', backgroundColor: '#e0f7ff', padding: 8, borderRadius: 8 },
-  inputContainer: { alignItems: 'center', marginBottom: 20 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 12, padding: 10, width: '80%', marginBottom: 10 },
-  addButton: { backgroundColor: '#007AFF', padding: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  addButtonText: { color: '#fff', fontWeight: '600', marginLeft: 5 },
-  quickButtonsContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-  quickButton: { backgroundColor: '#D0E8FF', padding: 10, borderRadius: 10, marginHorizontal: 5 },
-  quickButtonText: { fontWeight: '500', color: '#007AFF' },
-  historyItem: { padding: 10, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 10, marginBottom: 5 },
-  cardBody: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-},
-
-  modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContainer: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 12 },
-  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
+const createStyles = (width) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
+  header: {
+    paddingTop: Dimensions.get('window').height * 0.06,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: width * 0.055,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  progressContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  progressCircleContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  progressPercentage: {
+    fontSize: width * 0.08,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  progressAmount: {
+    fontSize: width * 0.04,
+    color: '#666',
+    marginTop: 4,
+  },
+  quickAddContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: width * 0.045,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  quickButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  quickButton: {
+    backgroundColor: '#E0F7FA',
+    padding: 14,
+    borderRadius: 12,
+    width: '48%',
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickButtonText: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#00BFFF',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: width * 0.04,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  addButton: {
+    backgroundColor: '#00BFFF',
+    width: width * 0.12,
+    height: width * 0.12,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  statCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    width: '30%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statValue: {
+    fontSize: width * 0.045,
+    fontWeight: 'bold',
+    color: '#333',
+    marginVertical: 4,
+  },
+  statLabel: {
+    fontSize: width * 0.03,
+    color: '#666',
+    textAlign: 'center',
+  },
+  historyContainer: {
+    marginBottom: 20,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  historyIcon: {
+    backgroundColor: '#E0F7FA',
+    width: width * 0.09,
+    height: width * 0.09,
+    borderRadius: width * 0.045,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  historyAmount: {
+    flex: 1,
+    fontSize: width * 0.04,
+    fontWeight: '500',
+    color: '#333',
+  },
+  historyTime: {
+    fontSize: width * 0.035,
+    color: '#666',
+  },
+  emptyHistory: {
+    textAlign: 'center',
+    color: '#999',
+    marginVertical: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '85%',
+  },
+  modalTitle: {
+    fontSize: width * 0.05,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: width * 0.04,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F5F7FB',
+    marginRight: 10,
+  },
+  saveButton: {
+    backgroundColor: '#4B6CB7',
+    marginLeft: 10,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
 });
 
 export default WaterIntakeScreen;

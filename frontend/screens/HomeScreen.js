@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Dimensions, TextInput, Modal
+  View, Text, StyleSheet, TouchableOpacity,Platform,
+  ScrollView, Dimensions, TextInput, Modal, Image, SafeAreaView
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
+const { width ,height} = Dimensions.get('window');
 
- const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation }) => {
   const userName = 'Charan';
-
   const [modalVisible, setModalVisible] = useState(null);
   const [meals, setMeals] = useState({
     breakfast: '',
@@ -19,10 +18,43 @@ const { width } = Dimensions.get('window');
     dinner: '',
   });
 
-  const [waterIntake, setWaterIntake] = useState(0); // in ml
+  const [dailyData, setDailyData] = useState({
+    meals: [
+      { id: '1', type: 'Breakfast', items: 'Oatmeal, Banana', calories: 350 },
+      { id: '2', type: 'Lunch', items: 'Grilled Chicken, Rice, Salad', calories: 550 },
+      { id: '3', type: 'Snack', items: 'Protein Shake', calories: 200 },
+    ],
+    waterIntake: [
+      { id: '1', amount: '500ml', time: '08:30 AM' },
+      { id: '2', amount: '250ml', time: '10:45 AM' },
+      { id: '3', amount: '750ml', time: '01:15 PM' },
+    ],
+    goals: [
+      { id: '1', title: 'Drink 2L water', completed: false },
+      { id: '2', title: '10,000 steps', completed: true },
+      { id: '3', title: '30 min workout', completed: true },
+    ],
+  });
+
+  const [waterIntake, setWaterIntake] = useState(0);
 
   const handleSaveMeal = () => {
-    console.log('Meals Saved:', meals);
+    const newMeals = [];
+    if (meals.breakfast)
+      newMeals.push({ id: Date.now() + '1', type: 'Breakfast', items: meals.breakfast, calories: 300 });
+    if (meals.lunch)
+      newMeals.push({ id: Date.now() + '2', type: 'Lunch', items: meals.lunch, calories: 500 });
+    if (meals.snacks)
+      newMeals.push({ id: Date.now() + '3', type: 'Snack', items: meals.snacks, calories: 200 });
+    if (meals.dinner)
+      newMeals.push({ id: Date.now() + '4', type: 'Dinner', items: meals.dinner, calories: 400 });
+
+    setDailyData(prev => ({
+      ...prev,
+      meals: [...prev.meals, ...newMeals],
+    }));
+    console.log(dailyData);
+    setMeals({ breakfast: '', lunch: '', snacks: '', dinner: '' });
     setModalVisible(null);
   };
 
@@ -30,117 +62,233 @@ const { width } = Dimensions.get('window');
     setWaterIntake(prev => prev + 400);
   };
 
-  return (
-    <LinearGradient colors={['#ffffff', '#e3e3e3']} style={styles.background}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+  const totalCalories = dailyData.meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const caloriesBurned = 600;
+  const totalWater = dailyData.waterIntake.reduce((sum, entry) => sum + parseInt(entry.amount), 0);
+  const completedGoals = dailyData.goals.filter(goal => goal.completed).length;
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Welcome, {userName}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-            <Feather name="user" size={28} color="#000" />
+  // Get current date
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header Gradient */}
+      <LinearGradient 
+        colors={['#4B6CB7', '#182848']} 
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        {/* Top Header */}
+        <View style={styles.headerSection}>
+          <View style={{ flex: 1 , flexDirection: 'row' , alignItems: 'baseline', justifyContent: 'flex-start', marginTop: 10 }}>
+            <Text style={styles.greetingText}>Good Morning,</Text>
+            <Text style={styles.headerText}>{userName}</Text>
+           </View>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.profileIcon}>
+              <Feather name="user" size={20} color="#1A2980" />
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* Pair Device Card */}
-     <TouchableOpacity style={[styles.card, styles.rowCard]}>
-  <Text style={styles.cardTitle}>Pair with Device</Text>
-  <Feather name="bluetooth" size={28} color="#007AFF" />
-</TouchableOpacity>
+        {/* Quick Actions */}
+        <View style={styles.topActions}>
+          <TouchableOpacity 
+            style={styles.actionCard} 
+            onPress={() => setModalVisible('meal')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
+              <MaterialCommunityIcons name="food" size={24} color="#1A2980" />
+            </View>
+            <Text style={styles.actionLabel}>Add Meal</Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity 
+            style={styles.actionCard} 
+            onPress={() => navigation.navigate('SetGoal')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
+              <MaterialCommunityIcons name="target" size={24} color="#1A2980" />
+            </View>
+            <Text style={styles.actionLabel}>Set Goal</Text>
+          </TouchableOpacity>
 
-       {/* Bubble Row (excluding Water) */}
-<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bubbleRow}>
-  <TouchableOpacity style={styles.bubbleCard} onPress={() => setModalVisible('meal')}>
-    <MaterialCommunityIcons name="food" size={36} color="#000" />
-    <Text style={styles.bubbleLabel}>Add Meal</Text>
-  </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionCard} 
+            onPress={() => navigation.navigate('PairDevice')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
+              <MaterialCommunityIcons name="watch" size={24} color="#1A2980" />
+            </View>
+            <Text style={styles.actionLabel}>Pair Device</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
-  <TouchableOpacity style={styles.bubbleCard} onPress={() => navigation.navigate('SetGoal')}>
-    <MaterialCommunityIcons name="target" size={36} color="#000" />
-    <Text style={styles.bubbleLabel}>Set Goal</Text>
-  </TouchableOpacity>
-</ScrollView>
-
-        {/* Water Card */}
-
-<TouchableOpacity
-  style={[styles.waterCard]}
-  onPress={() => navigation.navigate('WaterIntake')}>
-  <View style={styles.waterCardContent}>
-    <View>
-      <View style={styles.intakeRow}>
-      <MaterialCommunityIcons name="cup-water" size={24} color="#00BFFF" />
-        <Text style={styles.intakeText}>
-          <Text style={styles.intakeBold}>{waterIntake}</Text> /2,000 ml
-        </Text>
-      </View>
-      <TouchableOpacity style={styles.addButton} onPress={handleAddWater}>
-        <Text style={styles.addButtonText}>+ 250 ml</Text>
-      </TouchableOpacity>
+      {/* Main Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+  {/* Activity Card */}
+<View style={[styles.card, styles.cardElevated]}>
+  <View style={styles.cardHeader}>
+    <View style={styles.cardTitleContainer}>
+      <MaterialCommunityIcons name="chart-line" size={20} color="#1A2980" />
+      <Text style={styles.cardTitle}>Today's Activity</Text>
     </View>
-    <View style={styles.glassContainer}>
-      <View style={styles.glassOutline}>
-        <View style={[
-          styles.waterLevel,
-          { height: `${(waterIntake / 2000) * 100}%` }
-        ]} />
-      </View>
+    <TouchableOpacity onPress={() => navigation.navigate('ActivityTracking')}>
+      <Feather name="chevron-right" size={24} color="#666" />
+    </TouchableOpacity>
+  </View>
+  
+  <View style={styles.summaryRow}>
+    <View style={[styles.summaryCard, { backgroundColor: '#E3F2FD' }]}>
+      <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />
+      <Text style={styles.summaryValue}>
+        {dailyData.meals.reduce((sum, meal) => sum + meal.calories, 0)}
+      </Text>
+      <Text style={styles.summaryLabel}>Calories In</Text>
+    </View>
+    <View style={[styles.summaryCard, { backgroundColor: '#FFEBEE' }]}>
+      <MaterialCommunityIcons name="fire" size={24} color="#F44336" />
+      <Text style={styles.summaryValue}>{caloriesBurned}</Text>
+      <Text style={styles.summaryLabel}>Calories Out</Text>
+    </View>
+    <View style={[styles.summaryCard, { backgroundColor: '#FFF8E1' }]}>
+      <MaterialCommunityIcons name="target" size={24} color="#FF9800" />
+      <Text style={styles.summaryValue}>
+        {dailyData.goals.filter(goal => goal.completed).length}/{dailyData.goals.length}
+      </Text>
+      <Text style={styles.summaryLabel}>Goals</Text>
     </View>
   </View>
-</TouchableOpacity>
+</View>
 
+        {/* Water Card */}
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <MaterialCommunityIcons name="cup-water" size={20} color="#00B0FF" />
+              <Text style={styles.cardTitle}>Water Intake</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('WaterIntake')}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.waterCardContent}>
+            <View style={styles.waterInfo}>
+              <View style={styles.intakeRow}>
+                <Text style={styles.intakeText}>
+                  <Text style={styles.intakeBold}>{waterIntake}</Text> /4,000 ml
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.addButton} 
+                onPress={handleAddWater}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>+ 400 ml</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.waterBottleContainer}>
+              <View style={styles.waterBottle}>
+                <View style={[
+                  styles.waterFill,
+                  { height: `${Math.min((waterIntake / 4000) * 100, 100)}%` }
+                ]} />
+              </View>
+            </View>
+          </View>
+        </View>
 
         {/* Skating Tracking */}
-        <TouchableOpacity 
-       style={[styles.card, ]} onPress={() => navigation.navigate('SkatingTracking')}>
-          <Text style={styles.cardTitle}>Skating Tracking</Text>
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
+              <Text style={styles.cardTitle}>Skating Tracking</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('SkatingTracking')}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
           <View style={styles.subCardRow}>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#EDE7F6' }]}>
+              <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
               <Text style={styles.subCardValue}>10.2</Text>
-              <Feather name="wind" size={24} color="black" />
               <Text style={styles.subCardLabel}>Avg Speed</Text>
             </View>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#F3E5F5' }]}>
+              <Feather name="repeat" size={24} color="#FF8C00" />
               <Text style={styles.subCardValue}>3,800</Text>
-              <Feather name="repeat" size={24} color="black" />
               <Text style={styles.subCardLabel}>Strides</Text>
             </View>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#E8F5E9' }]}>
+              <Feather name="zap" size={24} color="#FF2D55" />
               <Text style={styles.subCardValue}>89</Text>
-              <Feather name="zap" size={24} color="black" />
               <Text style={styles.subCardLabel}>Stride Rate</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Step Count */}
-        <TouchableOpacity 
-       style={[styles.card, ]}         onPress={() => navigation.navigate('StepCount')}>
-          <Text style={styles.cardTitle}>Step Count</Text>
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <Feather name="activity" size={20} color="#00C853" />
+              <Text style={styles.cardTitle}>Step Count</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
           <View style={styles.subCardRow}>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#E8F5E9' }]}>
+              <Feather name="activity" size={24} color="#00C853" />
               <Text style={styles.subCardValue}>3,205</Text>
-              <Feather name="activity" size={24} color="black" />
               <Text style={styles.subCardLabel}>Steps</Text>
             </View>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#F3E5F5' }]}>
+              <Feather name="repeat" size={24} color="#5856D6" />
               <Text style={styles.subCardValue}>1,024</Text>
-              <Feather name="repeat" size={24} color="black" />
               <Text style={styles.subCardLabel}>Strides</Text>
             </View>
-            <View style={styles.subCard}>
+            <View style={[styles.subCard, { backgroundColor: '#FFEBEE' }]}>
+              <MaterialCommunityIcons name="fire" size={24} color="#F44336" />
               <Text style={styles.subCardValue}>145</Text>
-              <Feather name="fire" size={24} color="black" />
               <Text style={styles.subCardLabel}>Calories</Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Workout History */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('WorkoutHistory')}>
-          <Feather name="bar-chart-2" size={28} color="#000" />
-          <Text style={styles.cardTitle}>Workout History</Text>
+        <TouchableOpacity 
+          style={[styles.card, styles.workoutCard, styles.cardElevated]}
+          onPress={() => navigation.navigate('WorkoutHistory')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.workoutContent}>
+            <MaterialCommunityIcons name="dumbbell" size={28} color="#FF2D55" />
+            <Text style={styles.workoutText}>Workout History</Text>
+            <Feather name="chevron-right" size={24} color="#666" />
+          </View>
         </TouchableOpacity>
       </ScrollView>
 
@@ -155,279 +303,336 @@ const { width } = Dimensions.get('window');
               style={styles.input}
               value={meals.breakfast}
               onChangeText={(text) => setMeals({ ...meals, breakfast: text })}
+              placeholderTextColor="#999"
             />
-
             <TextInput
               placeholder="Lunch"
               style={styles.input}
               value={meals.lunch}
               onChangeText={(text) => setMeals({ ...meals, lunch: text })}
+              placeholderTextColor="#999"
             />
-
             <TextInput
               placeholder="Snacks"
               style={styles.input}
               value={meals.snacks}
               onChangeText={(text) => setMeals({ ...meals, snacks: text })}
+              placeholderTextColor="#999"
             />
-
             <TextInput
               placeholder="Dinner"
               style={styles.input}
               value={meals.dinner}
               onChangeText={(text) => setMeals({ ...meals, dinner: text })}
+              placeholderTextColor="#999"
             />
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveMeal}>
-              <Text style={styles.saveText}>Save Meal</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setModalVisible(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton} 
+                onPress={handleSaveMeal}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.saveText}>Save Meal</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </SafeAreaView>
   );
 };
 
-export default HomeScreen;
-
-// styles remain unchanged
-
 const styles = StyleSheet.create({
-  background: {
+  safeArea: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    paddingBottom: Platform.OS === 'ios' ? 0 : 60,
+    backgroundColor: '#F5F7FB',
+   },
+   headerGradient: {
+    marginTop: Platform.OS === 'ios' ? -60 : -10,
+    paddingHorizontal: '6%',
+    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
+    paddingBottom: height * 0.02,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+
+    // iOS shadow
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
+    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
+
+    // Android elevation
+    elevation: Platform.OS === 'android' ? 10 : 0,
   },
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginTop: 50,
+  headerSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    marginBottom: '8%',
   },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
+  greetingText: {
+    fontSize: width * 0.045,
+    marginRight: '2%',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  headerText: {
+    fontSize: width * 0.055,
+    color: '#fff',
+    marginTop: '1%',
+  },
+  dateText: {
+    fontSize: width * 0.035,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: '1%',
+  },
+  profileIcon: {
+    width: width * 0.1,
+    height: width * 0.1,
+    borderRadius: width * 0.05,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  topActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: '-2%',
+  },
+  actionCard: {
+    alignItems: 'center',
+    width: '30%',
+    paddingHorizontal: '2%',
+  },
+  actionIconContainer: {
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  actionIconShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  actionLabel: {
+    color: '#fff',
+    fontSize: width * 0.033,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: '4%',
+    paddingBottom: '8%',
   },
   card: {
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 15,
-    alignItems: 'center',
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+  },
+  cardElevated: {
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#bbb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  
-  waterText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#007AFF',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4%',
   },
-  tapToAdd: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 4,
+  cardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    marginTop: 10,
-    color: '#000',
+    fontSize: width * 0.045,
+    color: '#333',
+    marginLeft: '2%',
+  },
+  workoutCard: {
+    marginBottom: '8%',
+  },
+  workoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  workoutText: {
+    fontSize: width * 0.04,
+    color: '#333',
+    marginLeft: '3%',
+    flex: 1,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  summaryCard: {
+    borderRadius: 12,
+    padding: '4%',
+    width: '30%',
+    alignItems: 'center',
+  },
+  summaryValue: {
+    fontSize: width * 0.05,
+    marginVertical: '4%',
+    color: '#333',
+  },
+  summaryLabel: {
+    fontSize: width * 0.03,
+    color: '#666',
+  },
+  waterCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  waterInfo: {
+    flex: 1,
+  },
+  intakeRow: {
+    marginBottom: '4%',
+  },
+  intakeText: {
+    color: '#333',
+    fontSize: width * 0.04,
+  },
+  intakeBold: {
+    fontSize: width * 0.05,
+    color: '#333',
+  },
+  addButton: {
+    backgroundColor: '#1A2980',
+    borderRadius: 24,
+    paddingVertical: '2.5%',
+    paddingHorizontal: '5%',
+    alignSelf: 'flex-start',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: width * 0.035,
+  },
+  waterBottleContainer: {
+    marginLeft: '4%',
+    alignItems: 'center',
+  },
+  waterBottle: {
+    width: width * 0.15,
+    height: width * 0.25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'flex-end',
+  },
+  waterFill: {
+    backgroundColor: '#00B0FF',
+    width: '100%',
   },
   subCardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 15,
-    width: '100%',
   },
   subCard: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    padding: 10,
-    marginHorizontal: 5,
     borderRadius: 12,
+    padding: '4%',
+    width: '30%',
     alignItems: 'center',
   },
   subCardValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: width * 0.05,
+    marginVertical: '4%',
+    color: '#333',
   },
   subCardLabel: {
-    fontSize: 12,
-    color: '#333',
-    marginTop: 4,
-  },
-  barGraphImage: {
-    width: '100%',
-    height: 150,
-    marginTop: 10,
-  },
-  bubbleRow: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
-bubbleCard: {
-  backgroundColor: '#fff', // You can customize this per card below if needed
-  paddingVertical: 20,
-   borderRadius: 25,
-  marginRight: 12,
-  marginHorizontal: 40,
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 120, // Increased width
-  height: 120, // Increased height
-   shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-},
- 
- 
- 
-
- waterCard: {
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  padding: 20,
-  marginVertical: 10,
-   shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#bbb',
-},
-
-waterCardContent: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-},
-
-intakeRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 12,
-},
-
-iconCircle: {
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  backgroundColor: '#000',
-  marginRight: 10,
-},
-
-intakeText: {
-  color: '#000',
-  fontSize: 16,
-  paddingLeft: 10,
-},
-
-intakeBold: {
-  color: '#000',
-  fontWeight: 'bold',
-  fontSize: 18,
-},
-
-addButton: {
-  backgroundColor: '#444',
-  borderRadius: 20,
-  paddingVertical: 6,
-  paddingHorizontal: 16,
-  alignSelf: 'flex-start',
-},
-
-addButtonText: {
-  color: '#fff',
-  fontSize: 16,
-},
-
-glassContainer: {
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-glassOutline: {
-  width: 40,
-  height: 80,
-  borderWidth: 2,
-  borderColor: '#444',
-  borderBottomLeftRadius: 8,
-  borderBottomRightRadius: 8,
-  overflow: 'hidden',
-  backgroundColor: '#fff',
-  justifyContent: 'flex-end',
-},
-
-waterLevel: {
-  backgroundColor: '#00BFFF',
-  width: '100%',
-}
-,
-
-  rowCard: {
-    backgroundColor: '#fff',
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  paddingHorizontal: 40,
-  alignItems: 'center',
-},
-
-  bubbleLabel: {
-    color: '#000',
-    fontSize: 12,
-    marginTop: 5,
-    textAlign: 'center',
+    fontSize: width * 0.03,
+    color: '#666',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    elevation: 10,
+    borderRadius: 16,
+    padding: '6%',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 15,
+    fontSize: width * 0.05,
+    marginBottom: '5%',
+    color: '#333',
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#E0E0E0',
     borderRadius: 12,
-    padding: 10,
-    marginBottom: 15,
+    padding: '3.5%',
+    marginBottom: '4%',
+    fontSize: width * 0.04,
+    color: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: '2%',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
+    backgroundColor: '#1A2980',
+    padding: '3.5%',
+    borderRadius: 12,
+    flex: 1,
+    marginLeft: '2%',
   },
   saveText: {
     color: '#fff',
-    fontWeight: '600',
+    textAlign: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: '3.5%',
+    borderRadius: 12,
+    flex: 1,
+    marginRight: '2%',
+  },
+  cancelText: {
+    color: '#666',
+    textAlign: 'center',
   },
 });
+
+export default HomeScreen;

@@ -1,491 +1,385 @@
 import React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
-  Alert
+  Image,
+  Dimensions,
+  Animated
+  ,useWindowDimensions,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
-const colorPalette = [
-  '#F44336', // Red
-  '#E91E63', // Pink
-  '#9C27B0', // Purple
-  '#3F51B5', // Indigo
-  '#2196F3', // Blue
-  '#009688', // Teal
-  '#4CAF50', // Green
-  '#FF9800', // Orange
-  '#795548', // Brown
-  '#607D8B', // Blue Grey
-];
-
-const getColorFromName = (name) => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash % colorPalette.length);
-  return colorPalette[index];
-};
-
-const getInitials = (name) => {
-  const names = name.trim().split(' ');
-  if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + names[1].charAt(0).toUpperCase();
-};
-
-const profileOptions = [
-  { icon: 'account-circle', text: 'Account' },
-  { icon: 'lock', text: 'Privacy' },
-  { icon: 'star', text: 'Skating Level' },
-  { icon: 'history', text: 'Tracking History' },
-];
+const { width } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation }) => {
-  const colors = {
-    background: '#f2f2f2',
-    card: '#fff',
-    text: '#000',
-    icon: '#000',
-    secondary: '#555',
+    const { width, height } = useWindowDimensions();
+
+  const [activeTab, setActiveTab] = useState('personal');
+  const animation = new Animated.Value(0);
+
+  const userData = {
+    name: 'Charan Dusary',
+    email: 'charandusary@gmail.com',
+    bio: 'Fitness enthusiast and professional skater',
+    stats: {
+      workouts: 42,
+      challenges: 18,
+      streak: 7
+    },
+    achievements: [
+      { id: '1', name: 'Skate Master', icon: 'skate', date: '2023-06-01' },
+      { id: '2', name: 'Early Bird', icon: 'weather-sunny', date: '2023-05-15' },
+      { id: '3', name: 'Hydration Hero', icon: 'cup-water', date: '2023-04-28' }
+    ]
+  };
+
+  const profileOptions = [
+    { icon: 'account-circle', text: 'Account Settings' },
+    { icon: 'bell', text: 'Notifications' },
+    { icon: 'shield', text: 'Privacy' },
+    { icon: 'help-circle', text: 'Help & Support' },
+    { icon: 'logout', text: 'Sign Out' }
+  ];
+
+  const animateTabChange = () => {
+    Animated.spring(animation, {
+      toValue: 1,
+      friction: 5,
+      useNativeDriver: true
+    }).start(() => animation.setValue(0));
+  };
+
+  const handleTabPress = (tab) => {
+    setActiveTab(tab);
+    animateTabChange();
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        { 
-          text: 'Sign Out', 
-          onPress: () => navigation.replace('SignIn'),
-          style: 'destructive'
-        }
-      ]
+    // Sign out logic here
+    navigation.replace('Auth');
+  };
+
+  const renderAchievementBadge = (achievement) => {
+    return (
+      <View key={achievement.id} style={styles.achievementBadge}>
+        <View style={styles.achievementIcon}>
+          <MaterialCommunityIcons 
+            name={achievement.icon} 
+            size={24} 
+            color="#4B6CB7" 
+          />
+        </View>
+        <View>
+          <Text style={styles.achievementTitle}>{achievement.name}</Text>
+          <Text style={styles.achievementDate}>Earned: {achievement.date}</Text>
+        </View>
+      </View>
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
-      {/* Header with back button, title, and sign out icon */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Feather name="chevron-left" size={24} color="#000" />
+    <View style={styles.container}>
+      {/* Header */}
+      <LinearGradient
+        colors={['#4B6CB7', '#182848']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={handleSignOut}>
-          <Feather name="log-out" size={24} color="#FF3B30" />
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Feather name="settings" size={24} color="#fff" />
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* Profile Header */}
+      <View style={styles.profileHeader}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {userData.name.split(' ').map(n => n[0]).join('')}
+            </Text>
+          </View>
+        </View>
+        
+        <Text style={styles.userName}>{userData.name}</Text>
+        <Text style={styles.userEmail}>{userData.email}</Text>
+        <Text style={styles.userBio}>{userData.bio}</Text>
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{userData.stats.workouts}</Text>
+          <Text style={styles.statLabel}>Workouts</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{userData.stats.challenges}</Text>
+          <Text style={styles.statLabel}>Challenges</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{userData.stats.streak}</Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]}
+          onPress={() => handleTabPress('personal')}
+        >
+          <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
+            Personal
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'achievements' && styles.activeTabButton]}
+          onPress={() => handleTabPress('achievements')}
+        >
+          <Text style={[styles.tabText, activeTab === 'achievements' && styles.activeTabText]}>
+            Achievements
+          </Text>
         </TouchableOpacity>
       </View>
 
-
-
-
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-
-
-
-      <View style={{ flex: 1, backgroundColor: '#042c5c',marginHorizontal: 10  ,  borderTopLeftRadius: 80, borderTopRightRadius: 80, marginTop: 80 }}> 
-
-  
-        {/* Profile Header */}
-
-        <View style={styles.profileHeader}>
-               
-                  <View style={styles.outerCircle2}>
-
-   <View style={[styles.initialsContainer, { backgroundColor: getColorFromName('Charan Dusary') }]}>
-    <Text style={styles.initialsText}>{getInitials('Charan Dusary')}</Text>
- </View>
-</View>
-
-          <Text style={styles.name}>Charan</Text>
-          <Text style={styles.subtitle}>
-            Confidence, Not ego.
-          </Text>
-        </View>
-
-        {/* Achievements Card */}
-        <View style={styles.achievementsCard}>
-          <Text style={styles.achievementsTitle}>Achievements</Text>
-          <Text style={styles.achievementsText}>
-            Your progress and achievements will be displayed here
-          </Text>
-        </View>
-
-        {/* Options List */}
-        <View style={styles.optionsContainer}>
-          {profileOptions.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.optionRow}>
-              <MaterialIcons name={item.icon} size={24} color={colors.icon} />
-              <Text style={styles.optionText}>{item.text}</Text>
-              <Feather name="chevron-right" size={20} color={colors.secondary} />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-      </View>
+      {/* Content */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {activeTab === 'personal' ? (
+          <View style={styles.personalContent}>
+            {profileOptions.map((option, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.optionItem}
+                onPress={option.text === 'Sign Out' ? handleSignOut : null}
+              >
+                <MaterialCommunityIcons 
+                  name={option.icon} 
+                  size={24} 
+                  color="#4B6CB7" 
+                />
+                <Text style={styles.optionText}>{option.text}</Text>
+                <Feather name="chevron-right" size={20} color="#999" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.achievementsContent}>
+            {userData.achievements.length > 0 ? (
+              userData.achievements.map(renderAchievementBadge)
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons 
+                  name="trophy-outline" 
+                  size={60} 
+                  color="#E0E0E0" 
+                />
+                <Text style={styles.emptyText}>No achievements yet</Text>
+                <Text style={styles.emptySubtext}>
+                  Complete challenges to earn achievements!
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
+    backgroundColor: '#F5F7FB',
   },
   header: {
+    paddingTop: Dimensions.get('window').height * 0.06,
+    paddingHorizontal: '5%',
+    paddingBottom: '5%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: width * 0.055,
     fontWeight: '600',
-    textAlign: 'center',
-  },
-  backButton: {
-    padding: 8,
+    color: '#fff',
   },
   profileHeader: {
-    flex: 2,
-     alignItems: 'center',
-    paddingTop: 10,
-     marginTop: -80,
-     marginBottom: 0,
+    alignItems: 'center',
+    padding: '5%',
+    marginTop: '5%',
   },
-  name: {
- 
-    fontSize: 36,
-    fontWeight: '600',
-    color: '#fff',
-    marginTop: 10,
+  avatarContainer: {
+    marginBottom: '4%',
   },
-  subtitle: {
-        flex: 2,
-
-    fontSize: 20,
-    textAlign: 'center',
-    color: '#fff',
-    marginTop: 4,
-    paddingHorizontal: 30,
-  },
-  achievementsCard: {
-        flex: 2,
-marginTop: -60,
-height: 20,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-     borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  achievementsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  achievementsText: {
-    fontSize: 14,
-    color: '#555',
-  },
-  optionsContainer: {
-        flex: 2,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    backgroundColor: '#fff',
-    marginTop: 20,
+  avatar: {
+    width: width * 0.3,
+    height: width * 0.3,
+    borderRadius: width * 0.15,
+    backgroundColor: '#4B6CB7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 80,
-    height: 124 ,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  optionRow: {
+  avatarText: {
+    fontSize: width * 0.1,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  userName: {
+    fontSize: width * 0.06,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: '1%',
+  },
+  userEmail: {
+    fontSize: width * 0.04,
+    color: '#666',
+    marginBottom: '2%',
+  },
+  userBio: {
+    fontSize: width * 0.04,
+    color: '#4B6CB7',
+    textAlign: 'center',
+    paddingHorizontal: '10%',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: '10%',
+    marginTop: '5%',
+  },
+  statCard: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: width * 0.06,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statLabel: {
+    fontSize: width * 0.035,
+    color: '#666',
+    marginTop: '1%',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: '5%',
+    marginTop: '5%',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: '3%',
+    alignItems: 'center',
+  },
+  activeTabButton: {
+    backgroundColor: '#4B6CB7',
+  },
+  tabText: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  scrollContent: {
+    paddingBottom: '10%',
+  },
+  personalContent: {
+    paddingHorizontal: '5%',
+    marginTop: '5%',
+  },
+  optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    paddingVertical: '4%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   optionText: {
     flex: 1,
-    fontSize: 16,
-    marginLeft: 12,
-    color: '#000',
+    fontSize: width * 0.04,
+    marginLeft: '4%',
+    color: '#333',
   },
-  initialsContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  achievementsContent: {
+    paddingHorizontal: '5%',
+    marginTop: '5%',
+  },
+  achievementBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: '4%',
+    marginBottom: '3%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  achievementIcon: {
+    backgroundColor: 'rgba(75, 108, 183, 0.1)',
+    width: width * 0.12,
+    height: width * 0.12,
+    borderRadius: width * 0.06,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: '#fff',
+    marginRight: '4%',
   },
- 
-  outerCircle2: {
-  width: 140,
-  height: 140,
-  borderRadius: 70,
-  backgroundColor: '#042c5b',
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginBottom: 10,
-}
-,
-  initialsText: {
-    fontSize: 40,
-    color: '#fff',
-    fontWeight: 'bold',
+  achievementTitle: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#333',
+  },
+  achievementDate: {
+    fontSize: width * 0.035,
+    color: '#666',
+    marginTop: '1%',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '10%',
+  },
+  emptyText: {
+    fontSize: width * 0.045,
+    color: '#666',
+    marginTop: '4%',
+    marginBottom: '2%',
+  },
+  emptySubtext: {
+    fontSize: width * 0.035,
+    color: '#999',
+    textAlign: 'center',
   },
 });
 
 export default ProfileScreen;
-
- 
-
-
-
-
-
-
-
-
-// import React from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   SafeAreaView,
-//   ScrollView,
-//   Alert
-// } from 'react-native';
-// import { MaterialIcons, Feather } from '@expo/vector-icons';
-
-// const colorPalette = [
-//   '#F44336', '#E91E63', '#9C27B0', '#3F51B5', '#2196F3',
-//   '#009688', '#4CAF50', '#FF9800', '#795548', '#607D8B',
-// ];
-
-// const getColorFromName = (name) => {
-//   let hash = 0;
-//   for (let i = 0; i < name.length; i++) {
-//     hash = name.charCodeAt(i) + ((hash << 5) - hash);
-//   }
-//   const index = Math.abs(hash % colorPalette.length);
-//   return colorPalette[index];
-// };
-
-// const getInitials = (name) => {
-//   const names = name.trim().split(' ');
-//   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-//   return names[0].charAt(0).toUpperCase() + names[1].charAt(0).toUpperCase();
-// };
-
-// const profileOptions = [
-//   { icon: 'account-circle', text: 'Account' },
-//   { icon: 'lock', text: 'Privacy' },
-//   { icon: 'star', text: 'Skating Level' },
-//   { icon: 'history', text: 'Tracking History' },
-// ];
-
-// const ProfileScreen = ({ navigation }) => {
-//   const handleSignOut = () => {
-//     Alert.alert(
-//       'Sign Out',
-//       'Are you sure you want to sign out?',
-//       [
-//         { text: 'Cancel', style: 'cancel' },
-//         { text: 'Sign Out', onPress: () => navigation.replace('SignIn'), style: 'destructive' }
-//       ]
-//     );
-//   };
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       {/* Header */}
-//       <View style={styles.header}>
-//         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-//           <Feather name="chevron-left" size={24} color="#000" />
-//         </TouchableOpacity>
-//         <Text style={styles.headerTitle}>Profile</Text>
-//         <TouchableOpacity onPress={handleSignOut}>
-//           <Feather name="log-out" size={24} color="#FF3B30" />
-//         </TouchableOpacity>
-//       </View>
-
-//       <ScrollView contentContainerStyle={styles.scrollContainer}>
-//         {/* Profile Section */}
-//         <View style={styles.profileSection}>
-//           <View style={styles.avatarWrapper}>
-//             <View style={[styles.avatar, { backgroundColor: getColorFromName('Charan Dusary') }]}>
-//               <Text style={styles.initialsText}>{getInitials('Charan Dusary')}</Text>
-//             </View>
-//           </View>
-//           <Text style={styles.name}>Charan</Text>
-//           <Text style={styles.subtitle}>Confidence, Not ego.</Text>
-//         </View>
-
-//         {/* Achievements */}
-//         <View style={styles.card}>
-//           <Text style={styles.cardTitle}>Achievements</Text>
-//           <Text style={styles.cardText}>Your progress and achievements will be displayed here.</Text>
-//         </View>
-
-//         {/* Profile Options */}
-//         <View style={styles.optionsContainer}>
-//           {profileOptions.map((item, index) => (
-//             <TouchableOpacity key={index} style={styles.optionRow}>
-//               <MaterialIcons name={item.icon} size={24} color="#333" />
-//               <Text style={styles.optionText}>{item.text}</Text>
-//               <Feather name="chevron-right" size={20} color="#aaa" />
-//             </TouchableOpacity>
-//           ))}
-//         </View>
-//       </ScrollView>
-//     </SafeAreaView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#fff',
-//   },
-//   scrollContainer: {
-//     paddingBottom: 30,
-//   },
-//   header: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//     paddingHorizontal: 16,
-//     paddingVertical: 14,
-//     borderBottomWidth: 0.5,
-//     borderBottomColor: '#ddd',
-//   },
-//   headerTitle: {
-//     fontSize: 18,
-//     fontWeight: '600',
-//   },
-//   backButton: {
-//     padding: 4,
-//   },
-//   profileSection: {
-//     alignItems: 'center',
-//     backgroundColor: '#042c5c',
-//     paddingVertical: 40,
-//     borderBottomLeftRadius: 50,
-//     borderBottomRightRadius: 50,
-//   },
-//   avatarWrapper: {
-//     width: 140,
-//     height: 140,
-//     borderRadius: 70,
-//     backgroundColor: '#042c5c',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     marginBottom: 12,
-//   },
-//   avatar: {
-//     width: 120,
-//     height: 120,
-//     borderRadius: 60,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     borderWidth: 3,
-//     borderColor: '#fff',
-//   },
-//   initialsText: {
-//     fontSize: 40,
-//     color: '#fff',
-//     fontWeight: 'bold',
-//   },
-//   name: {
-//     fontSize: 32,
-//     fontWeight: '700',
-//     color: '#fff',
-//     marginTop: 8,
-//   },
-//   subtitle: {
-//     fontSize: 16,
-//     color: '#e0e0e0',
-//     marginTop: 4,
-//     paddingHorizontal: 30,
-//     textAlign: 'center',
-//   },
-//   card: {
-//     backgroundColor: '#f9f9f9',
-//     marginHorizontal: 16,
-//     marginTop: 24,
-//     padding: 16,
-//     borderRadius: 12,
-//     borderWidth: 1,
-//     borderColor: '#e0e0e0',
-//   },
-//   cardTitle: {
-//     fontSize: 18,
-//     fontWeight: '600',
-//     color: '#000',
-//     marginBottom: 8,
-//   },
-//   cardText: {
-//     fontSize: 14,
-//     color: '#555',
-//   },
-//   optionsContainer: {
-//     backgroundColor: '#fff',
-//     marginHorizontal: 16,
-//     marginTop: 20,
-//     borderRadius: 12,
-//     overflow: 'hidden',
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 1 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 3,
-//     elevation: 2,
-//   },
-//   optionRow: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     paddingVertical: 16,
-//     paddingHorizontal: 16,
-//     borderBottomWidth: StyleSheet.hairlineWidth,
-//     borderBottomColor: '#eee',
-//   },
-//   optionText: {
-//     flex: 1,
-//     fontSize: 16,
-//     marginLeft: 12,
-//     color: '#333',
-//   },
-// });
-
-// export default ProfileScreen;
