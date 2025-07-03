@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import {
+import React, { useEffect, useState } from 'react';
+import {Alert,
   View,
   Text,
   StyleSheet,
@@ -16,7 +16,7 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Circle } from 'react-native-progress';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useAuthStore } from '../store/authStore';
 const WaterIntakeScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
   const styles = createStyles(width);
@@ -33,6 +33,14 @@ const WaterIntakeScreen = ({ navigation }) => {
   const [goalInput, setGoalInput] = useState('');
   const [animation] = useState(new Animated.Value(0));
 
+  // backend integration
+        const { user, isLoading, postWater, token } = useAuthStore();
+
+  useEffect(() => {
+    console.log('WaterIntakeScreen mounted');
+    console.log('User:', user);
+    console.log('Token:', token);
+  }, []);
   const animateProgress = () => {
     Animated.timing(animation, {
       toValue: 1,
@@ -42,7 +50,16 @@ const WaterIntakeScreen = ({ navigation }) => {
     }).start();
   };
 
-  const addWater = (amount = null) => {
+  const addWater = async(amount = null) => {
+    amount = 1000; // Default amount for testing
+    // const res_res =  postWater({ amount: 100 })
+    const date = new Date().now();
+            const result = await postWater(amount, date);
+                if (!result.success) Alert.alert("Error", result.error);
+                if (result.success) {
+                  Alert.alert("Success", "Account created successfully!");
+                  navigation.navigate('SignIn');
+                }
     const parsedAmount = amount || parseInt(inputValue);
     if (parsedAmount > 0) {
       const timestamp = new Date();
@@ -84,9 +101,9 @@ const WaterIntakeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header         colors={['#4B6CB7', '#182848']} */}
       <LinearGradient
-        colors={['#4B6CB7', '#182848']}
+        colors={['orange', 'yellow']}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

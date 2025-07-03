@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -9,21 +9,60 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    useWindowDimensions
+    useWindowDimensions,
+    Alert
 } from 'react-native';
+import { useAuthStore } from '../store/authStore';
 
 const SignInScreen = ({ navigation, route }) => {
     const { width, height } = useWindowDimensions();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [isDarkMode, setIsDarkMode] = useState(true);
+    // const [email, setEmail] = useState('');
+    // const [password, setPassword] = useState('');
+    // const [isDarkMode, setIsDarkMode] = useState(true);
 
-    const onSignInPress = () => {
-        navigation.replace('Main');
+    // const onSignInPress = () => {
+    //     navigation.replace('Main');
+    // };
+     const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+      // const { isLoading, login, isCheckingAuth, nothingtoworry } = useAuthStore();
+      const { nothingtoworry, login, isLoading } = useAuthStore();
+
+  // checking if backend is working
+  const onForgotPasswordPress = async () => {
+    try {
+      const response = await nothingtoworry();
+      if (response.success) {
+        // console.log('Backend is working:', response.data);
+      } else {
+        console.error('Error:', response.error);
+      }
+    } catch (error) {
+      console.error('Error checking backend:', error);
+    }
+  };
+
+  // Get setIsSignedIn from route params
+const onSignInPress = async () => {
+    // console.log('onSignInPress called with email:', email, 'and password:', password);
+       const result = await login(email, password);
+       // const result = await login(email, password);
+       if (!result.success) Alert.alert("Error", result.error);
+       if (result.success) { 
+        //  Alert.alert("Success", "Login successful!");
+          navigation.navigate('Main');
+      }
+      if (result){
+        console.log("Login result:", result);
+      }
+    //  navigation.replace('Main'); // Changed from 'Home'
     };
-
     const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
+    // useEffect(() => {
+    //     // console.log('SignInScreen mounted');
+    // }, [email, password, isDarkMode]);
     const colors = {
         bg: isDarkMode ? '#000' : '#fff',
         text: isDarkMode ? '#fff' : '#000',
@@ -131,7 +170,7 @@ const SignInScreen = ({ navigation, route }) => {
                             onChangeText={setPassword}
                         />
 
-                        <TouchableOpacity style={styles.forgotPassword}>
+                        <TouchableOpacity style={styles.forgotPassword} onPress={onForgotPasswordPress}>
                             <Text style={[styles.forgotText, { color: colors.text }]}>Forgot password</Text>
                         </TouchableOpacity>
 

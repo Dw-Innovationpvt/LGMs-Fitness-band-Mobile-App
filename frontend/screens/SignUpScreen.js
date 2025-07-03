@@ -9,8 +9,11 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Alert,
     useWindowDimensions
 } from 'react-native';
+import { useAuthStore } from '../store/authStore';
+
 
 const SignUpScreen = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
@@ -19,9 +22,28 @@ const SignUpScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-
+        const { user, isLoading, register, token } = useAuthStore();
     const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    
+  const handleSignUp = async () => {
+      const username = fullName.trim();
+      console.log(username, "unername");
+        console.log(username, email, password, confirmPassword);
+        if (password !== confirmPassword) {
+          Alert.alert("Passoword & Confirm password", "Passwords do not match");
+          return;
+        }
+        const result = await register(username, email, password);
 
+      // console.log("SignUpScreen: handleSignUp called");
+    //   console.log("SignUpScreen: handleSignUp user:", user);
+    //     console.log("SignUpScreen: handleSignUp result:", result);
+    if (!result.success) Alert.alert("Error", result.error);
+    if (result.success) {
+      Alert.alert("Success", "Account created successfully!");
+      navigation.navigate('SignIn');
+    }
+  };
     const colors = {
         bg: isDarkMode ? '#000' : '#fff',
         text: isDarkMode ? '#fff' : '#000',
@@ -157,7 +179,7 @@ const SignUpScreen = ({ navigation }) => {
                             onChangeText={setConfirmPassword}
                         />
 
-                        <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]}>
+                        <TouchableOpacity onPress={handleSignUp} style={[styles.button, { backgroundColor: colors.buttonBg }]}>
                             <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign Up</Text>
                         </TouchableOpacity>
 

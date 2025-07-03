@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width ,height} = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const userName = 'Charan';
+  const userName = 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
   const [meals, setMeals] = useState({
     breakfast: '',
@@ -76,9 +76,9 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header Gradient */}
+      {/* Header Gradient         colors={['#4B6CB7', '#182848'] */}
       <LinearGradient 
-        colors={['#4B6CB7', '#182848']} 
+        colors={['orange', 'gold']} 
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

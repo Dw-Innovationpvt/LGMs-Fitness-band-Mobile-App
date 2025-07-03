@@ -20,10 +20,9 @@ function validatePhoneNumber() {
 //   return emailRegex.test(email);
 // }
 
-
-function validateEmail(email, options = {}) {
-    // Check if email is provided and is a string
-        
+function validateEmail(email, options = {}) 
+{
+    // Check if email is provided and is a string       
     const firstChar = email.charAt(0);
     // 3. Check if the first character is a number
     // Using a regular expression to check if it's a digit (0-9)
@@ -174,15 +173,11 @@ function validateEmail(email, options = {}) {
     };
 }
 
-
-
-
-
 router.get("/", async (req, res) => {
-  console.log(validateEmail("madanpiske@gmail.com"));
-  console.log(validateEmail("madan@mail.@com"), 'this i');
-  console.log('nothing to worry');
-  return res.status(200).json({ message: "Nothing to worry RCB WIll win, we are working fine" });
+//   console.log(validateEmail("madanpiske@gmail.com"));
+//   console.log(validateEmail("madan@mail.@com"), 'this i');
+//   console.log('nothing to worry');
+  return res.status(200).json({ message: "Nothing to worry, backend is working" });
 })
 
 router.post("/register", async (req, res) => {

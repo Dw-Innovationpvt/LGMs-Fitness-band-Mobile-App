@@ -6,9 +6,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import HomeStack from './HomeStack';
 import ChallengesScreen from '../screens/ChallengesScreen';
 import DailyActivitiesScreen from '../screens/DailyActivitiesScreen';
+import BackendCodeCheck from '../screens/BackendCodeCheck';
+
+import StepsBackendCheck from '../screens/back/StepsBackendCheck';
+import { useAuthStore } from '../store/authStore';
+import TodaysActivityBack from '../screens/back/TodaysActivityBack';
+import SkatingTrackingCheck from '../screens/back/SkatingTrackingCheck';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
+
 
 const CustomTabBar = ({ state, descriptors, navigation }) => (
   <View style={styles.tabContainer}>
@@ -62,6 +69,8 @@ const TabButton = ({ iconName, isFocused, onPress, label }) => {
     }).start();
   }, [isFocused]);
 
+
+
   const scale = animated.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] });
   const translateY = animated.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
 
@@ -75,7 +84,41 @@ const TabButton = ({ iconName, isFocused, onPress, label }) => {
   );
 };
 
-const MainTabNavigator = () => (
+const MainTabNavigator = () => {
+            const { nothingtoworry, login, isLoading, user, token, checkAuth, isCheckingAuth } = useAuthStore();
+
+    useEffect(() => {
+  console.log("MaintabMounted");
+  const checkBackend = async () => {
+    try {
+      const response = await nothingtoworry();
+      if (response.success) {
+        // console.log('Backend is working:', response.data, user, "usr");
+        // console.log("Bearer", token);
+      } else {
+        console.error('Error:', response.error);
+      }
+    } catch (error) {
+      console.error('Error checking backend:', error);
+    }
+  };
+  checkBackend();
+  const checkAuth = async () => {
+    try {
+      const response = await checkAuth();
+      if (response.success) {
+        // console.log('User is authenticated:', response.data);
+      } else {
+        // console.error('Authentication failed:', response.error);
+      }
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+    }
+  };
+  if (isCheckingAuth) return;
+  checkAuth();
+  }, [])
+  return (
   <Tab.Navigator
     tabBar={(props) => <CustomTabBar {...props} />}
     screenOptions={{ headerShown: false }}
@@ -83,8 +126,13 @@ const MainTabNavigator = () => (
     <Tab.Screen name="Home" component={HomeStack} />
     <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
     <Tab.Screen name="Challenges" component={ChallengesScreen} />
+    <Tab.Screen name="Backend" component={BackendCodeCheck} />
+    <Tab.Screen name="Steps" component={StepsBackendCheck} />
+    {/* <Tab.Screen name="Activity" component={TodaysActivityBack} /> */}
+    <Tab.Screen name="Skating" component={SkatingTrackingCheck} />
   </Tab.Navigator>
 );
+}
 
 export default MainTabNavigator;
 
