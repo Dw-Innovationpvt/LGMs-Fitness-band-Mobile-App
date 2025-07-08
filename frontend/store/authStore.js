@@ -2,10 +2,12 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../constants/api";
 import axios from 'axios';
+import api from './api'; // Import the axios instance
 
 export const useAuthStore = create((set) => ({
   user: null,
   token: null,
+  setup: null, // to check if user is setup or not for BMI
   isLoading: false,
   loading: false,
   error: null,
@@ -20,6 +22,17 @@ export const useAuthStore = create((set) => ({
   stepsCaloriesBurned: 0,
   StepsActiveMinutes: 0,
   postStepsId: null,
+  // to store workout data
+  totalCaloriesBurned: 0,
+  totalDurantion: 0,
+  totalExercises: 0,
+  workoutData: [], // Array to store fetched workout entries
+  mealData:[],
+  totalCaloriesIn: 0,
+  // bmi
+  preferences: null,
+  setupComplete: false,
+
   setStepsData: (data) =>
     set({
       stepsTotalCount: data.stepCount,
@@ -42,7 +55,7 @@ export const useAuthStore = create((set) => ({
       if (!response.ok) throw new Error(data.message || "Something went wrong");
       return { success: true, data: data.message };
     } catch (error) {
-      console.log("Error in nothingtoworry:", error);
+      // console.log("Error in nothingtoworry:", error);
     }
 
   },
@@ -107,7 +120,31 @@ export const useAuthStore = create((set) => ({
       return { success: false, error: error.message };
     }
   },
+  changePassword: async (newPassword) => {
+    set({ isLoading: true });
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/auth/change-password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newPassword }),
+      });
 
+      const data = await response.json();
+      // console.log(data, "changePasswordData");
+
+      if (!response.ok) throw new Error(data.message || "Something went wrong");
+
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      set({ isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
   checkAuth: async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -115,6 +152,7 @@ export const useAuthStore = create((set) => ({
       const user = userJson ? JSON.parse(userJson) : null;
 
       set({ token, user });
+      // console.log(user, userJson, token);
     } catch (error) {
       console.log("Auth check failed", error);
     } finally {
@@ -175,7 +213,7 @@ export const useAuthStore = create((set) => ({
   try {
     // const { token } = useAuthStore.getState();
     const token = await AsyncStorage.getItem("token");
-    console.warn("🔐 Token from getWater:", token);
+    // console.warn("🔐 Token from getWater:", token);
 
     const response = await fetch(`${API_URL}/water`, {
       method: "GET",
@@ -323,9 +361,6 @@ const data = await response.json();
 
   // put todays steps data
 
-
-
-
   getSkatingTracking: async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -346,6 +381,228 @@ const data = await response.json();
     }
   },
 
+  // now work on workout related data.
+  postWorkout: async (workoutData) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/exercises`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(workoutData),
+      });
+      const data = await response.json();
+      // call getWorkoutCount to update the workout count after posting new data
+      await useAuthStore.getState().getWorkoutCount();
+      if (!response.ok) throw new Error(data.message || "Failed to post workout data");
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error posting workout data:", error);
+      return { success: false, error: error.message };
+    }
+  },
+  getWorkout: async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/exercises`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to fetch workout data");
+      console.log(data, "workoutData");
+      set({ workoutData: data });
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error fetching workout data:", error);
+      return { success: false, error: error.message };
+    }
+  },
+  getWorkoutCount: async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/exercises/summary`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      console.log(data, "workoutCountData");
+      set({
+        totalCaloriesBurned: data.totalCaloriesBurned || 0,
+        totalDurantion: data.totalDuration || 0,
+        totalExercises: data.totalExercises || 0,
+      });
+      if (!response.ok) throw new Error(data.message || "Failed to fetch workout count");
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error fetching workout count:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // meals related stuff
+  postMeals: async (mealData) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/meals`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(mealData),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to post meal data");
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error posting meal data:", error);
+      return { success: false, error: error.message };
+    }
+  },
+  getMeals: async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/meals/get`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to fetch meal data");
+      console.log(data, "mealData");
+      set({ mealData: data });
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error fetching meal data:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  checkSetup: async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/bmi/check-setup`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to check setup status");
+      // set({ setup: data.setup });
+      return { success: true, setup: data.setup };
+    } catch (error) {
+      console.error("Error checking setup status:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Save meal preferences and user data
+  savePreferences: async (userData) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.post('/bmi', userData);
+      set({ 
+        preferences: response.data.user.mealTimes,
+        setupComplete: response.data.user.setup,
+        setup: response.data.user.setup,
+        loading: false,
+        user: response.data.user,
+      });
+      // console.log("Preferences saved successfully:", response.data.user);
+      return { success: true, user: response.data.user };
+    } catch (err) {
+      set({ 
+        error: err.response?.data?.message || err.message,
+        loading: false 
+      });
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  },
+
+  // Check if setup is complete
+  checkSetupStatus: async () => {
+    set({ loading: true, error: null });
+    try {
+      // const response = await api.get('/bmi/check-setup');
+      const response = await fetch(`${API_URL}/bmi/check-setup`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Use the token from the store
+        },
+      });
+      // if (!response.ok) {
+
+      set({ 
+        setupComplete: response.data.setup,
+        loading: false
+      });
+      return response.data.setup;
+    } catch (err) {
+      set({ 
+        error: err.response?.data?.message || err.message,
+        loading: false 
+      });
+      return false;
+    }
+  },
+  updateHealtData: async (healthData) => {
+    set({ loading: true, error: null });
+    try {
+      const token = await AsyncStorage.getItem("token");
+      // const response = await api.put('/update-health', healthData);
+      const response = await fetch(`${API_URL}/bmi/update-health`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Use the token from the store
+        },
+        body: JSON.stringify(healthData),
+      });
+      // set({ 
+        // preferences: response.data.user.mealTimes,
+        // setupComplete: response.data.user.setup,
+        // setup: response.data.user.setup,
+        // loading: false,
+        // user: response.data.user,
+      // });
+      // console.log("Health data updated successfully:", response.data.user);
+      return { success: true, user: response.data.user };
+    } catch (err) {
+      set({ 
+        error: err.response?.data?.message || err.message,
+        loading: false 
+      });
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  },
+
+  // Get current preferences (if already loaded)
+  getPreferences: () => {
+    return get().preferences;
+  },
+
+  // Clear preferences (for logout)
+  clearPreferences: () => {
+    set({
+      preferences: null,
+      setupComplete: false,
+      error: null
+    });
+  }
 
 
 

@@ -9,6 +9,14 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String, required: true, unique: true,
     },
+    target: {
+      // for water intake purpose
+      type: Number, default: 2000,
+    },
+    setup: {
+      // for nhi page details if user has completed the setup
+      type: Boolean, default: false,
+    },
     password: {
       type: String, required: true, minlength: 6,
     },
@@ -30,6 +38,50 @@ const userSchema = new mongoose.Schema(
     profileImage: {
       type: String, default: "",
     },
+    gender: {
+      type: String,
+      enum: ["male", "female"],
+      default: "male",
+    },
+    age: {
+      type: Number, default: 0,
+    },
+    height: {
+      type: Number, default: 0,
+    },
+    heightUnit: {
+      type: String, default: "cm", // cm or inch
+    },
+    weight: {
+      type: Number, default: 0,
+    },
+    weightUnit: {
+      type: String, default: "kg", // kg or lb
+    },
+    bio: {
+      type: String,
+      default: "Fitness enthusiast & Professional skater",
+    },
+
+    // --- ADDED MEAL TIMES HERE ---
+    mealTimes: {
+      breakfast: {
+        type: String,
+        default: "07:00"
+      },
+      dinner: {
+        type: String,
+        default: "19:30"
+      },
+      lunch: {
+        type: String,
+        default: "12:00"
+      },
+      snack: {
+        type: String,
+        default: "16:30"
+      }
+    }
 
   },
   { timestamps: true }

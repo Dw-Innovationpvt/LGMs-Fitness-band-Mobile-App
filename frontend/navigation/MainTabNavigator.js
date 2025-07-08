@@ -12,6 +12,9 @@ import StepsBackendCheck from '../screens/back/StepsBackendCheck';
 import { useAuthStore } from '../store/authStore';
 import TodaysActivityBack from '../screens/back/TodaysActivityBack';
 import SkatingTrackingCheck from '../screens/back/SkatingTrackingCheck';
+import WorkoutHistoryBeckend from '../screens/back/WorkoutHistoryBeckend';
+import TempMealScreen from '../screens/back/TempMealScreen'; // Adjust the import path as necessary
+
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -126,10 +129,13 @@ const MainTabNavigator = () => {
     <Tab.Screen name="Home" component={HomeStack} />
     <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
     <Tab.Screen name="Challenges" component={ChallengesScreen} />
-    <Tab.Screen name="Backend" component={BackendCodeCheck} />
-    <Tab.Screen name="Steps" component={StepsBackendCheck} />
+    {/* <Tab.Screen name="Backend" component={BackendCodeCheck} /> */}
+    {/* <Tab.Screen name="Steps" component={StepsBackendCheck} /> */}
     {/* <Tab.Screen name="Activity" component={TodaysActivityBack} /> */}
-    <Tab.Screen name="Skating" component={SkatingTrackingCheck} />
+    {/* <Tab.Screen name="Skating" component={SkatingTrackingCheck} /> */}
+    {/* <Tab.Screen name="TodaysWorkout" component={WorkoutHistoryBeckend} /> */}
+    {/* <Tab.Screen name="TMeals" component={TempMealScreen} /> */}
+
   </Tab.Navigator>
 );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {Alert,
+import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -16,31 +17,44 @@ import {Alert,
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Circle } from 'react-native-progress';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../store/authStore';
+import useWaterStore from '../store/waterStore';
+
 const WaterIntakeScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
   const styles = createStyles(width);
 
-  const [waterIntake, setWaterIntake] = useState(1200);
-  const [dailyGoal, setDailyGoal] = useState(3000);
+  // Zustand store integration
+  const {
+    intakes,
+    todayTotal,
+    target,
+    loading,
+    error,
+    fetchTarget,
+    fetchTodayTotal,
+    addIntake,
+    updateTarget,
+    getProgress
+  } = useWaterStore();
+
   const [inputValue, setInputValue] = useState('');
-  const [history, setHistory] = useState([
-    { amount: 400, timestamp: new Date(Date.now() - 3600000) },
-    { amount: 300, timestamp: new Date(Date.now() - 7200000) },
-    { amount: 500, timestamp: new Date(Date.now() - 10800000) },
-  ]);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [animation] = useState(new Animated.Value(0));
 
-  // backend integration
-        const { user, isLoading, postWater, token } = useAuthStore();
-
+  // Initialize data
   useEffect(() => {
-    console.log('WaterIntakeScreen mounted');
-    console.log('User:', user);
-    console.log('Token:', token);
+    fetchTodayTotal();
+    fetchTarget();
   }, []);
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', error);
+    }
+  }, [error]);
+
   const animateProgress = () => {
     Animated.timing(animation, {
       toValue: 1,
@@ -50,58 +64,42 @@ const WaterIntakeScreen = ({ navigation }) => {
     }).start();
   };
 
-  const addWater = async(amount = null) => {
-    amount = 1000; // Default amount for testing
-    // const res_res =  postWater({ amount: 100 })
-    const date = new Date().now();
-            const result = await postWater(amount, date);
-                if (!result.success) Alert.alert("Error", result.error);
-                if (result.success) {
-                  Alert.alert("Success", "Account created successfully!");
-                  navigation.navigate('SignIn');
-                }
-    const parsedAmount = amount || parseInt(inputValue);
-    if (parsedAmount > 0) {
-      const timestamp = new Date();
-      setWaterIntake(prev => prev + parsedAmount);
-      setHistory(prev => [{ amount: parsedAmount, timestamp }, ...prev]);
-      setInputValue('');
-      animateProgress();
+  const handleAddWater = async (amount = null) => {
+    const intakeAmount = amount || parseInt(inputValue);
+    if (intakeAmount > 0) {
+      const result = await addIntake(intakeAmount);
+      if (result.success) {
+        setInputValue('');
+        animateProgress();
+      }
     }
   };
 
-  const updateGoal = () => {
+  const handleUpdateGoal = async () => {
     const parsedGoal = parseInt(goalInput);
     if (parsedGoal > 0) {
-      setDailyGoal(parsedGoal);
-      setGoalInput('');
-      setGoalModalVisible(false);
-      animateProgress();
+      const result = await updateTarget(parsedGoal);
+      if (result.success) {
+        setGoalInput('');
+        setGoalModalVisible(false);
+        animateProgress();
+      }
     }
   };
 
-  const getAverage = (days) => {
-    const now = new Date();
-    const filtered = history.filter(entry => {
-      const diff = (now - new Date(entry.timestamp)) / (1000 * 60 * 60 * 24);
-      return diff <= days;
-    });
-    const daily = {};
-    filtered.forEach(entry => {
-      const date = new Date(entry.timestamp).toDateString();
-      daily[date] = (daily[date] || 0) + entry.amount;
-    });
-    const total = Object.values(daily).reduce((a, b) => a + b, 0);
-    return total / days;
-  };
+  // Format intake history for display
+  const intakeHistory = intakes.map(intake => ({
+    amount: intake.amount,
+    timestamp: new Date(intake.date)
+  }));
 
-  const progress = Math.min(waterIntake / dailyGoal, 1);
-  const percentage = Math.round(progress * 100);
   const quickAmounts = [200, 250, 300, 500];
+  const progress = getProgress() / 100;
+  const percentage = Math.round(getProgress());
 
   return (
     <View style={styles.container}>
-      {/* Header         colors={['#4B6CB7', '#182848']} */}
+      {/* Header */}
       <LinearGradient
         colors={['orange', 'yellow']}
         style={styles.header}
@@ -133,7 +131,7 @@ const WaterIntakeScreen = ({ navigation }) => {
             <View style={styles.progressTextContainer}>
               <Text style={styles.progressPercentage}>{percentage}%</Text>
               <Text style={styles.progressAmount}>
-                {waterIntake}ml / {dailyGoal}ml
+                {todayTotal}ml / {target}ml
               </Text>
             </View>
           </View>
@@ -147,7 +145,8 @@ const WaterIntakeScreen = ({ navigation }) => {
               <TouchableOpacity
                 key={amount}
                 style={styles.quickButton}
-                onPress={() => addWater(amount)}
+                onPress={() => handleAddWater(amount)}
+                disabled={loading}
               >
                 <Text style={styles.quickButtonText}>+{amount}ml</Text>
               </TouchableOpacity>
@@ -169,40 +168,21 @@ const WaterIntakeScreen = ({ navigation }) => {
             />
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => addWater()}
-              disabled={!inputValue}
+              onPress={() => handleAddWater()}
+              disabled={!inputValue || loading}
             >
               <MaterialCommunityIcons name="plus" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="calendar-today" size={24} color="#4B6CB7" />
-            <Text style={styles.statValue}>{getAverage(1).toFixed(0)}ml</Text>
-            <Text style={styles.statLabel}>Today's Avg</Text>
-          </View>
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="calendar-week" size={24} color="#4B6CB7" />
-            <Text style={styles.statValue}>{getAverage(7).toFixed(0)}ml</Text>
-            <Text style={styles.statLabel}>Weekly Avg</Text>
-          </View>
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="calendar-month" size={24} color="#4B6CB7" />
-            <Text style={styles.statValue}>{getAverage(30).toFixed(0)}ml</Text>
-            <Text style={styles.statLabel}>Monthly Avg</Text>
-          </View>
-        </View>
-
         {/* History Section */}
         <View style={styles.historyContainer}>
           <Text style={styles.sectionTitle}>Recent Intakes</Text>
-          {history.length > 0 ? (
+          {intakes.length > 0 ? (
             <FlatList
-              data={history.slice(0, 5)}
-              keyExtractor={(_, index) => index.toString()}
+              data={intakeHistory.slice(0, 5)}
+              keyExtractor={(item, index) => index.toString()}
               renderItem={({ item }) => (
                 <View style={styles.historyItem}>
                   <View style={styles.historyIcon}>
@@ -210,7 +190,7 @@ const WaterIntakeScreen = ({ navigation }) => {
                   </View>
                   <Text style={styles.historyAmount}>{item.amount} ml</Text>
                   <Text style={styles.historyTime}>
-                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
               )}
@@ -234,7 +214,7 @@ const WaterIntakeScreen = ({ navigation }) => {
             <Text style={styles.modalTitle}>Set Daily Water Goal</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Enter goal in ml"
+              placeholder={`Current goal: ${target}ml`}
               placeholderTextColor="#999"
               keyboardType="numeric"
               value={goalInput}
@@ -250,10 +230,10 @@ const WaterIntakeScreen = ({ navigation }) => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
-                onPress={updateGoal}
-                disabled={!goalInput}
+                onPress={handleUpdateGoal}
+                disabled={!goalInput || loading}
               >
-                <Text style={styles.saveButtonText}>Save Goal</Text>
+                <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Goal'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -262,6 +242,288 @@ const WaterIntakeScreen = ({ navigation }) => {
     </View>
   );
 };
+
+
+// import React, { useEffect, useState } from 'react';
+// import {Alert,
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   TextInput,
+//   FlatList,
+//   Modal,
+//   ScrollView,
+//   Dimensions,
+//   Animated,
+//   Easing,
+//   useWindowDimensions
+// } from 'react-native';
+// import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+// import { Circle } from 'react-native-progress';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import useWaterStore from '../store/waterStore';
+
+// // import { useAuthStore } from '../store/authStore';
+// const WaterIntakeScreen = ({ navigation }) => {
+//   const { width, height } = useWindowDimensions();
+//   const styles = createStyles(width);
+
+//   const [waterIntake, setWaterIntake] = useState(1200);
+//   const [dailyGoal, setDailyGoal] = useState(3000);
+//   const [inputValue, setInputValue] = useState('');
+//   const [history, setHistory] = useState([
+//     { amount: 400, timestamp: new Date(Date.now() - 3600000) },
+//     { amount: 300, timestamp: new Date(Date.now() - 7200000) },
+//     { amount: 500, timestamp: new Date(Date.now() - 10800000) },
+//   ]);
+//   const [goalModalVisible, setGoalModalVisible] = useState(false);
+//   const [goalInput, setGoalInput] = useState('');
+//   const [animation] = useState(new Animated.Value(0));
+
+//   // backend integration
+//         // const { user, isLoading, postWater, token } = useAuthStore();
+//     const { 
+//     intakes, 
+//     todayTotal, 
+//     target, 
+//     fetchIntakes, 
+//     fetchTodayTotal, 
+//     fetchTarget 
+//   } = useWaterStore();
+
+//   useEffect(() => {
+//     fetchIntakes();
+//     fetchTodayTotal();
+//     fetchTarget();
+//   }, []);
+
+//   // useEffect(() => {
+//   //   console.log('WaterIntakeScreen mounted');
+//   //   console.log('User:', user);
+//   //   console.log('Token:', token);
+//   // }, []);
+//   const animateProgress = () => {
+//     Animated.timing(animation, {
+//       toValue: 1,
+//       duration: 1000,
+//       easing: Easing.out(Easing.ease),
+//       useNativeDriver: true
+//     }).start();
+//   };
+
+//   const addWater = async(amount = null) => {
+//     amount = 1000; // Default amount for testing
+//     // const res_res =  postWater({ amount: 100 })
+//     const date = new Date().now();
+//             const result = await postWater(amount, date);
+//                 if (!result.success) Alert.alert("Error", result.error);
+//                 if (result.success) {
+//                   Alert.alert("Success", "Account created successfully!");
+//                   navigation.navigate('SignIn');
+//                 }
+//     const parsedAmount = amount || parseInt(inputValue);
+//     if (parsedAmount > 0) {
+//       const timestamp = new Date();
+//       setWaterIntake(prev => prev + parsedAmount);
+//       setHistory(prev => [{ amount: parsedAmount, timestamp }, ...prev]);
+//       setInputValue('');
+//       animateProgress();
+//     }
+//   };
+
+//   const updateGoal = () => {
+//     const parsedGoal = parseInt(goalInput);
+//     if (parsedGoal > 0) {
+//       setDailyGoal(parsedGoal);
+//       setGoalInput('');
+//       setGoalModalVisible(false);
+//       animateProgress();
+//     }
+//   };
+
+//   const getAverage = (days) => {
+//     const now = new Date();
+//     const filtered = history.filter(entry => {
+//       const diff = (now - new Date(entry.timestamp)) / (1000 * 60 * 60 * 24);
+//       return diff <= days;
+//     });
+//     const daily = {};
+//     filtered.forEach(entry => {
+//       const date = new Date(entry.timestamp).toDateString();
+//       daily[date] = (daily[date] || 0) + entry.amount;
+//     });
+//     const total = Object.values(daily).reduce((a, b) => a + b, 0);
+//     return total / days;
+//   };
+
+//   const progress = Math.min(waterIntake / dailyGoal, 1);
+//   const percentage = Math.round(progress * 100);
+//   const quickAmounts = [200, 250, 300, 500];
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Header         colors={['#4B6CB7', '#182848']} */}
+//       <LinearGradient
+//         colors={['orange', 'yellow']}
+//         style={styles.header}
+//         start={{ x: 0, y: 0 }}
+//         end={{ x: 1, y: 0 }}
+//       >
+//         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+//           <Feather name="arrow-left" size={24} color="#fff" />
+//         </TouchableOpacity>
+//         <Text style={styles.headerTitle}>Water Intake</Text>
+//         <TouchableOpacity onPress={() => setGoalModalVisible(true)}>
+//           <Feather name="settings" size={24} color="#fff" />
+//         </TouchableOpacity>
+//       </LinearGradient>
+
+//       <ScrollView contentContainerStyle={styles.scrollContent}>
+//         {/* Progress Section */}
+//         <View style={styles.progressContainer}>
+//           <View style={styles.progressCircleContainer}>
+//             <Circle
+//               size={width * 0.6}
+//               progress={progress}
+//               color="#00BFFF"
+//               thickness={15}
+//               unfilledColor="#E0F7FA"
+//               borderWidth={0}
+//               strokeCap="round"
+//             />
+//             <View style={styles.progressTextContainer}>
+//               <Text style={styles.progressPercentage}>{percentage}%</Text>
+//               <Text style={styles.progressAmount}>
+//                 {waterIntake}ml / {dailyGoal}ml
+//               </Text>
+//             </View>
+//           </View>
+//         </View>
+
+//         {/* Quick Add Buttons */}
+//         <View style={styles.quickAddContainer}>
+//           <Text style={styles.sectionTitle}>Quick Add</Text>
+//           <View style={styles.quickButtonsRow}>
+//             {quickAmounts.map((amount) => (
+//               <TouchableOpacity
+//                 key={amount}
+//                 style={styles.quickButton}
+//                 onPress={() => addWater(amount)}
+//               >
+//                 <Text style={styles.quickButtonText}>+{amount}ml</Text>
+//               </TouchableOpacity>
+//             ))}
+//           </View>
+//         </View>
+
+//         {/* Custom Input */}
+//         <View style={styles.inputContainer}>
+//           <Text style={styles.sectionTitle}>Custom Amount</Text>
+//           <View style={styles.inputRow}>
+//             <TextInput
+//               style={styles.input}
+//               placeholder="Enter amount in ml"
+//               placeholderTextColor="#999"
+//               keyboardType="numeric"
+//               value={inputValue}
+//               onChangeText={setInputValue}
+//             />
+//             <TouchableOpacity
+//               style={styles.addButton}
+//               onPress={() => addWater()}
+//               disabled={!inputValue}
+//             >
+//               <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+//             </TouchableOpacity>
+//           </View>
+//         </View>
+
+//         {/* Stats Cards */}
+//         <View style={styles.statsContainer}>
+//           <View style={styles.statCard}>
+//             <MaterialCommunityIcons name="calendar-today" size={24} color="#4B6CB7" />
+//             <Text style={styles.statValue}>{getAverage(1).toFixed(0)}ml</Text>
+//             <Text style={styles.statLabel}>Today's Avg</Text>
+//           </View>
+//           <View style={styles.statCard}>
+//             <MaterialCommunityIcons name="calendar-week" size={24} color="#4B6CB7" />
+//             <Text style={styles.statValue}>{getAverage(7).toFixed(0)}ml</Text>
+//             <Text style={styles.statLabel}>Weekly Avg</Text>
+//           </View>
+//           <View style={styles.statCard}>
+//             <MaterialCommunityIcons name="calendar-month" size={24} color="#4B6CB7" />
+//             <Text style={styles.statValue}>{getAverage(30).toFixed(0)}ml</Text>
+//             <Text style={styles.statLabel}>Monthly Avg</Text>
+//           </View>
+//         </View>
+
+//         {/* History Section */}
+//         <View style={styles.historyContainer}>
+//           <Text style={styles.sectionTitle}>Recent Intakes</Text>
+//           {history.length > 0 ? (
+//             <FlatList
+//               data={history.slice(0, 5)}
+//               keyExtractor={(_, index) => index.toString()}
+//               renderItem={({ item }) => (
+//                 <View style={styles.historyItem}>
+//                   <View style={styles.historyIcon}>
+//                     <MaterialCommunityIcons name="cup-water" size={20} color="#00BFFF" />
+//                   </View>
+//                   <Text style={styles.historyAmount}>{item.amount} ml</Text>
+//                   <Text style={styles.historyTime}>
+//                     {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+//                   </Text>
+//                 </View>
+//               )}
+//               scrollEnabled={false}
+//             />
+//           ) : (
+//             <Text style={styles.emptyHistory}>No recent water intake recorded</Text>
+//           )}
+//         </View>
+//       </ScrollView>
+
+//       {/* Goal Setting Modal */}
+//       <Modal
+//         visible={goalModalVisible}
+//         transparent={true}
+//         animationType="fade"
+//         onRequestClose={() => setGoalModalVisible(false)}
+//       >
+//         <View style={styles.modalOverlay}>
+//           <View style={styles.modalContainer}>
+//             <Text style={styles.modalTitle}>Set Daily Water Goal</Text>
+//             <TextInput
+//               style={styles.modalInput}
+//               placeholder="Enter goal in ml"
+//               placeholderTextColor="#999"
+//               keyboardType="numeric"
+//               value={goalInput}
+//               onChangeText={setGoalInput}
+//               autoFocus={true}
+//             />
+//             <View style={styles.modalButtons}>
+//               <TouchableOpacity
+//                 style={[styles.modalButton, styles.cancelButton]}
+//                 onPress={() => setGoalModalVisible(false)}
+//               >
+//                 <Text style={styles.cancelButtonText}>Cancel</Text>
+//               </TouchableOpacity>
+//               <TouchableOpacity
+//                 style={[styles.modalButton, styles.saveButton]}
+//                 onPress={updateGoal}
+//                 disabled={!goalInput}
+//               >
+//                 <Text style={styles.saveButtonText}>Save Goal</Text>
+//               </TouchableOpacity>
+//             </View>
+//           </View>
+//         </View>
+//       </Modal>
+//     </View>
+//   );
+// };
 
 const createStyles = (width) => StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,14 @@ import {
   TextInput,
   ScrollView,
   Dimensions,
+  RefreshControl,
   Image,useWindowDimensions
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+import { useAuthStore } from '../store/authStore';
+// import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +30,34 @@ const workoutCategories = {
 
 const WorkoutHistoryScreen = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
+  // const {  } = useAu
+          // postWorkout
+          const { loading, error, postWorkout, user, getWorkout, getWorkoutCount, workoutData,  totalCaloriesBurned, totalDurantion, totalExercises } = useAuthStore();
+
+          console.log(workoutData,'\n WOrkout history screen-37' );
+          
+          const checkUser = () => {
+              console.log('User:', user); 
+              console.log('getWorkout:', getWorkout.data);
+          }
+          const getWorkoutCountData = async () => {
+              const count = await getWorkoutCount();
+              console.log('Workout Count:', count);
+              console.warn('Workout Count:', count);
+          }
+      const handlePostWorkout = async () => {
+          const workoutData = {
+              // date: new Date().toISOString(),
+              duration: 160, // in minutes
+              type: 'Running',
+              caloriesBurned: 1500,
+              exerciseType: 'Cardio',
+              distance: 5, // in kilometers
+          };
+          const responseWorkout = await postWorkout(workoutData);
+          console.log('Workout posted:', responseWorkout);
+  
+      }
 
   const [workouts, setWorkouts] = useState([
     {
@@ -57,6 +89,16 @@ const WorkoutHistoryScreen = ({ navigation }) => {
       notes: 'Vinyasa flow'
     }
   ]);
+   useEffect(() => {
+      getWorkoutCount();
+      getWorkout();
+      // getWorkout();
+      setWorkouts(workoutData); // Assuming workoutData is an array of workout objects
+      console.log('Workout Data-95:', workoutData);
+    }, []); 
+    useEffect(() => {
+      getWorkout();
+    }, [getWorkout]);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({ 
     type: '', 
@@ -84,17 +126,38 @@ const WorkoutHistoryScreen = ({ navigation }) => {
     setForm(prev => ({ ...prev, type: workout }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // const newlyCreatedWorkout = {
+    //   type: selectedWorkout || form.type,
+    //   duration: form.duration,
+    //   calories: form.calories,
+    //   distance: form.distance,
+
     const newWorkout = {
       id: Date.now().toString(),
-      type: selectedWorkout || form.type,
+      exerciseType: selectedWorkout || form.type,
       duration: form.duration,
-      calories: form.calories,
+      caloriesBurned: form.calories,
       distance: form.distance,
       notes: form.notes,
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+
+            const workoutData = {
+            // date: new Date().toISOString(),
+            // duration: 10, // in minutes
+            duration: form.duration,
+            exerciseType: selectedWorkout || form.type,
+            caloriesBurned: form.calories,
+            // exerciseType: 'warm up',
+            // distance: 5, // in kilometers
+        };
+        const responseWorkout = await postWorkout(workoutData);
+        console.log(responseWorkout, 'Workout posted 153');
+
+    // handlePostWorkout(newlyCreatedWorkout);
+    handleAddWorkout(newWorkout);
     setWorkouts([newWorkout, ...workouts]);
     setForm({ type: '', duration: '', calories: '', distance: '', notes: '' });
     setModalVisible(false);
@@ -102,47 +165,272 @@ const WorkoutHistoryScreen = ({ navigation }) => {
     setSelectedWorkout(null);
   };
 
-  const renderWorkoutItem = ({ item }) => (
+  // const renderWorkoutItem = ({ item }) => (
+  //   <TouchableOpacity style={styles.workoutCard}>
+  //     <View style={styles.workoutHeader}>
+  //       <View style={styles.workoutIcon}>
+  //         <MaterialCommunityIcons 
+  //           name={getWorkoutIcon(item.type)} 
+  //           size={24} 
+  //           color="#4B6CB7" 
+  //         />
+  //       </View>
+  //       <View style={styles.workoutTitleContainer}>
+  //         <Text style={styles.workoutType}>{item.type}</Text>
+  //         <Text style={styles.workoutDate}>{item.date} • {item.time}</Text>
+  //       </View>
+  //       <Feather name="chevron-right" size={20} color="#999" />
+  //     </View>
+      
+  //     <View style={styles.workoutStats}>
+  //       <View style={styles.statItem}>
+  //         <Text style={styles.statValue}>{item.duration}</Text>
+  //         <Text style={styles.statLabel}>min</Text>
+  //       </View>
+  //       <View style={styles.statItem}>
+  //         <Text style={styles.statValue}>{item.calories}</Text>
+  //         <Text style={styles.statLabel}>cal</Text>
+  //       </View>
+  //       {item.distance && (
+  //         <View style={styles.statItem}>
+  //           <Text style={styles.statValue}>{item.distance}</Text>
+  //           <Text style={styles.statLabel}>km</Text>
+  //         </View>
+  //       )}
+  //     </View>
+      
+  //     {item.notes && (
+  //       <View style={styles.notesContainer}>
+  //         <Text style={styles.notesText}>"{item.notes}"</Text>
+  //       </View>
+  //     )}
+  //   </TouchableOpacity>
+  // );
+//   const getWorkoutIcon = (exerciseType) => {
+//   switch (exerciseType.toLowerCase()) { // Ensure case-insensitive comparison
+//     case 'cardio':
+//       return 'heart-pulse';
+//     case 'speed skating':
+//       return 'skate'; // Example icon for speed skating
+//     case 'running':
+//       return 'run';
+//     case 'weights':
+//       return 'dumbbell';
+//     case 'swimming':
+//       return 'swim';
+//     // Add more cases as needed
+//     default:
+//       return 'run'; // Default icon
+//   }
+// };
+
+// const renderWorkoutItem = ({ item }) => {
+//   // Parse the date string into a Date object
+//   const workoutDateTime = new Date(item.date);
+
+//   // Format the date for display (e.g., "July 4, 2025")
+//   const formattedDate = workoutDateTime.toLocaleDateString('en-US', {
+//     year: 'numeric',
+//     month: 'long',
+//     day: 'numeric',
+//   });
+
+//   // Format the time for display (e.g., "08:05 AM")
+//   const formattedTime = workoutDateTime.toLocaleTimeString('en-US', {
+//     hour: '2-digit',
+//     minute: '2-digit',
+//     hour12: true, // Use 12-hour format with AM/PM
+//   });
+
+//   return (
+//     <TouchableOpacity style={styles.workoutCard}>
+//       <View style={styles.workoutHeader}>
+//         <View style={styles.workoutIcon}>
+//           {/* Use item.exerciseType for the icon lookup */}
+//           <MaterialCommunityIcons
+//             name={getWorkoutIcon(item.exerciseType)}
+//             size={24}
+//             color="#4B6CB7"
+//           />
+//         </View>
+//         <View style={styles.workoutTitleContainer}>
+//           {/* Use item.exerciseType for the workout type text */}
+//           <Text style={styles.workoutType}>{item.exerciseType}</Text>
+//           {/* Display formatted date and time */}
+//           <Text style={styles.workoutDate}>{formattedDate} • {formattedTime}</Text>
+//         </View>
+//         <Feather name="chevron-right" size={20} color="#999" />
+//       </View>
+
+//       <View style={styles.workoutStats}>
+//         <View style={styles.statItem}>
+//           <Text style={styles.statValue}>{item.duration}</Text>
+//           <Text style={styles.statLabel}>min</Text>
+//         </View>
+//         <View style={styles.statItem}>
+//           {/* Use item.caloriesBurned for calories */}
+//           <Text style={styles.statValue}>{item.caloriesBurned}</Text>
+//           <Text style={styles.statLabel}>cal</Text>
+//         </View>
+//         {/* Conditionally render distance if it exists in the item */}
+//         {item.distance !== undefined && item.distance !== null && (
+//           <View style={styles.statItem}>
+//             <Text style={styles.statValue}>{item.distance}</Text>
+//             <Text style={styles.statLabel}>km</Text>
+//           </View>
+//         )}
+//       </View>
+
+//       {/* Conditionally render notes if they exist in the item */}
+//       {item.notes !== undefined && item.notes !== null && item.notes.length > 0 && (
+//         <View style={styles.notesContainer}>
+//           <Text style={styles.notesText}>"{item.notes}"</Text>
+//         </View>
+//       )}
+//     </TouchableOpacity>
+//   );
+// };
+
+
+const renderWorkoutItem = ({ item }) => {
+  const getWorkoutIcon = (exerciseType) => {
+  if (!exerciseType || typeof exerciseType !== 'string') {
+    return 'run'; // Default icon if type is missing or invalid
+  }
+  switch (exerciseType.toLowerCase()) {
+    case 'cardio':
+      return 'heart-pulse';
+    case 'speed skating':
+      return 'skate';
+    case 'running':
+      return 'run';
+    case 'weights':
+      return 'dumbbell';
+    case 'swimming':
+      return 'swim';
+    case 'yoga':
+      return 'yoga';
+    case 'cycling':
+      return 'bike';
+    // Add more cases for other exercise types as needed
+    default:
+      return 'run'; // Fallback icon
+  }
+};
+  // Parse the date string into a Date object
+  const workoutDateTime = new Date(item.date);
+
+  // Format the date for display (e.g., "July 4, 2025")
+  const formattedDate = workoutDateTime.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  // Format the time for display (e.g., "08:05 AM")
+  const formattedTime = workoutDateTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true, // Use 12-hour format with AM/PM
+  });
+
+  return (
     <TouchableOpacity style={styles.workoutCard}>
       <View style={styles.workoutHeader}>
         <View style={styles.workoutIcon}>
-          <MaterialCommunityIcons 
-            name={getWorkoutIcon(item.type)} 
-            size={24} 
-            color="#4B6CB7" 
+          {/* Use item.exerciseType for the icon lookup */}
+          <MaterialCommunityIcons
+            name={getWorkoutIcon(item.exerciseType)}
+            size={24}
+            color="#4B6CB7"
           />
         </View>
         <View style={styles.workoutTitleContainer}>
-          <Text style={styles.workoutType}>{item.type}</Text>
-          <Text style={styles.workoutDate}>{item.date} • {item.time}</Text>
+          {/* Use item.exerciseType for the workout type text */}
+          <Text style={styles.workoutType}>{item.exerciseType}</Text>
+          {/* Display formatted date and time */}
+          <Text style={styles.workoutDate}>{formattedDate} • {formattedTime}</Text>
         </View>
         <Feather name="chevron-right" size={20} color="#999" />
       </View>
-      
+
       <View style={styles.workoutStats}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{item.duration}</Text>
           <Text style={styles.statLabel}>min</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{item.calories}</Text>
+          {/* Use item.caloriesBurned for calories */}
+          <Text style={styles.statValue}>{item.caloriesBurned}</Text>
           <Text style={styles.statLabel}>cal</Text>
         </View>
-        {item.distance && (
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{item.distance}</Text>
-            <Text style={styles.statLabel}>km</Text>
-          </View>
-        )}
+        {/* Removed item.distance rendering as it's not in the provided JSON */}
       </View>
-      
-      {item.notes && (
-        <View style={styles.notesContainer}>
-          <Text style={styles.notesText}>"{item.notes}"</Text>
-        </View>
-      )}
+
+      {/* Removed item.notes rendering as it's not in the provided JSON */}
     </TouchableOpacity>
   );
+};
+
+
+//const renderWorkoutItem = ({ item }) => {
+//   // Parse the date string into a Date object for better formatting
+//   const workoutDate = new Date(item.date);
+//   const formattedDate = workoutDate.toLocaleDateString(); // e.g., "7/4/2025"
+//   const formattedTime = workoutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // e.g., "08:35 AM"
+
+//   return (
+//     <TouchableOpacity style={styles.workoutCard}>
+//       <View style={styles.workoutHeader}>
+//         <View style={styles.workoutIcon}>
+//           <MaterialCommunityIcons
+//             name={getWorkoutIcon(item.exerciseType)} // Corrected: use item.exerciseType
+//             size={24}
+//             color="#4B6CB7"
+//           />
+//         </View>
+//         <View style={styles.workoutTitleContainer}>
+//           <Text style={styles.workoutType}>{item.exerciseType}</Text> {/* Corrected: use item.exerciseType */}
+//           <Text style={styles.workoutDate}>{formattedDate} • {formattedTime}</Text> {/* Corrected: Use parsed date/time */}
+//         </View>
+//         <Feather name="chevron-right" size={20} color="#999" />
+//       </View>
+
+//       <View style={styles.workoutStats}>
+//         <View style={styles.statItem}>
+//           <Text style={styles.statValue}>{item.duration}</Text>
+//           <Text style={styles.statLabel}>min</Text>
+//         </View>
+//         <View style={styles.statItem}>
+//           <Text style={styles.statValue}>{item.caloriesBurned}</Text> {/* Corrected: use item.caloriesBurned */}
+//           <Text style={styles.statLabel}>cal</Text>
+//         </View>
+//         {item.distance && ( // Assuming distance might exist in some future data
+//           <View style={styles.statItem}>
+//             <Text style={styles.statValue}>{item.distance}</Text>
+//             <Text style={styles.statLabel}>km</Text>
+//           </View>
+//         )}
+//       </View>
+
+//       {item.notes && ( // Assuming notes might exist in your schema
+//         <View style={styles.notesContainer}>
+//           <Text style={styles.notesText}>"{item.notes}"</Text>
+//         </View>
+//       )}
+//     </TouchableOpacity>
+//   );
+// };
+  const [refreshing, setRefreshing] = useState(false);
+const onRefresh = async () => {
+    setRefreshing(true);
+    const result = await getWorkout();
+    setRefreshing(false);
+    if (!result.success) {
+      // Optionally handle error (e.g., show alert)
+      console.log('Refresh failed:', result.error);
+    }
+  };
 
   const getWorkoutIcon = (type) => {
     if (type.includes('Skating')) return 'skate';
@@ -174,20 +462,22 @@ const WorkoutHistoryScreen = ({ navigation }) => {
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
           <MaterialCommunityIcons name="calendar-month" size={24} color="#4B6CB7" />
-          <Text style={styles.summaryValue}>{workouts.length}</Text>
+          <Text style={styles.summaryValue}>{totalExercises}</Text>
           <Text style={styles.summaryLabel}>Workouts</Text>
         </View>
         <View style={styles.summaryCard}>
           <MaterialCommunityIcons name="clock-outline" size={24} color="#4B6CB7" />
           <Text style={styles.summaryValue}>
-            {workouts.reduce((sum, w) => sum + parseInt(w.duration), 0)}
+            {/* {workouts.reduce((sum, w) => sum + parseInt(w.duration), 0)} */}
+            {totalDurantion}
           </Text>
           <Text style={styles.summaryLabel}>Minutes</Text>
         </View>
         <View style={styles.summaryCard}>
           <MaterialCommunityIcons name="fire" size={24} color="#4B6CB7" />
           <Text style={styles.summaryValue}>
-            {workouts.reduce((sum, w) => sum + parseInt(w.calories), 0)}
+            {totalCaloriesBurned}
+            {/* {workouts.reduce((sum, w) => sum + parseInt(w.calories), 0)} */}
           </Text>
           <Text style={styles.summaryLabel}>Calories</Text>
         </View>
@@ -199,6 +489,11 @@ const WorkoutHistoryScreen = ({ navigation }) => {
         renderItem={renderWorkoutItem}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Image 

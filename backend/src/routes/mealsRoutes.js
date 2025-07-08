@@ -4,9 +4,11 @@ import Meal from '../models/Meal.js';
 import mongoose from 'mongoose';
 const router = express.Router();
 
-router.post('', async (req, res) => {
+router.post('', auth, async (req, res) => {
   try {
-    const { userId, name, calories, mealType, createdAt } = req.body;
+    const userId = req.user._id; // Get user ID from authenticated request(auth)
+    // const { userId, name, calories, mealType, createdAt } = req.body;
+    const { name, calories, mealType, createdAt } = req.body;
     
     // Validate userId as ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -40,94 +42,143 @@ router.get('/',auth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-router.get('/:userId',  async (req, res) => {
+
+router.get('/get',auth, async (req, res) => {
   try {
-    const { date, startDate, endDate } = req.query;
-    
+    const user = req.user._id;
     // Validate userId as ObjectId
-    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
-      return res.status(400).json({ error: 'Invalid user ID format' });
-    }
-    console.log('mealsRoutes, 48')
-    const query = { user: req.params.userId };
-    
-    if (date) {
-      // Filter for specific day (midnight to midnight)
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-    } else if (startDate && endDate) {
-      // Filter by date range
-      query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    }
+    // if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+    //   return res.status(400).json({ error: 'Invalid user ID format' });
+    // }
+    // Get today's start and end time
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const query = {
+      // user: req.params.userId,
+      user,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    };
 
     const meals = await Meal.find(query).sort({ createdAt: -1 }).populate('user', '_id');
     res.json(meals);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-    // res.status(200).json({ message: 'Meals API is working' });
 });
 
 // Get total calories per day for a user
-router.get('/:userId/total-calories', async (req, res) => {
+// router.get('/:userId/total-calories', async (req, res) => {
+//   try {
+//     // todays calories eaten total count return
+//         // Get today's start and end time
+//     const now = new Date();
+//     const startOfDay = new Date(now);
+//     startOfDay.setHours(0, 0, 0, 0);
+//     const endOfDay = new Date(now);
+//     endOfDay.setHours(23, 59, 59, 999);
+
+//     const query = {
+//       user: req.params.userId,
+//       createdAt: { $gte: startOfDay, $lte: endOfDay }
+//     };
+//     // const date = req.query.date ? new Date(req.query.date) : new Date();
+//     console.log(date);
+    
+//     // Validate userId as ObjectId
+//     if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+//       return res.status(400).json({ error: 'Invalid user ID format' });
+//     }
+
+//     // const query = { user: req.params.userId };
+    
+//     if (date) {
+//       // Filter for specific day (midnight to midnight)
+//       const startOfDay = new Date(date);
+//       startOfDay.setHours(0, 0, 0, 0);
+//       const endOfDay = new Date(date);
+//       endOfDay.setHours(23, 59, 59, 999);
+//       query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+//     }
+
+//     const totalCalories = await Meal.aggregate([
+//       { $match: query },
+//       {
+//         $group: {
+//           _id: {
+//             year: { $year: '$createdAt' },
+//             month: { $month: '$createdAt' },
+//             day: { $dayOfMonth: '$createdAt' }
+//           },
+//           totalCalories: { $sum: '$calories' }
+//         }
+//       },
+//       {
+//         $project: {
+//           date: {
+//             $dateFromParts: {
+//               year: '$_id.year',
+//               month: '$_id.month',
+//               day: '$_id.day'
+//             }
+//           },
+//           totalCalories: 1,
+//           _id: 0
+//         }
+//       },
+//       { $sort: { date: -1 } }
+//     ]);
+
+//     res.json(totalCalories);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// Update a meal
+
+router.get('/get/total-calories',auth, async (req, res) => {
   try {
-    const date = req.query.date ? new Date(req.query.date) : new Date();
-    console.log(date);
-    
+        const user = req.user._id;
+
     // Validate userId as ObjectId
-    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
-      return res.status(400).json({ error: 'Invalid user ID format' });
-    }
+    // if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+    //   return res.status(400).json({ error: 'Invalid user ID format' });
+    // }
 
-    const query = { user: req.params.userId };
-    
-    if (date) {
-      // Filter for specific day (midnight to midnight)
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-    }
+    // Get today's start and end time
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    const totalCalories = await Meal.aggregate([
-      { $match: query },
+    // Aggregate total calories for today
+    const result = await Meal.aggregate([
+      {
+        $match: {
+          // user: new mongoose.Types.ObjectId(req.params.userId),
+          user,
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        }
+      },
       {
         $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' },
-            day: { $dayOfMonth: '$createdAt' }
-          },
+          _id: null,
           totalCalories: { $sum: '$calories' }
         }
-      },
-      {
-        $project: {
-          date: {
-            $dateFromParts: {
-              year: '$_id.year',
-              month: '$_id.month',
-              day: '$_id.day'
-            }
-          },
-          totalCalories: 1,
-          _id: 0
-        }
-      },
-      { $sort: { date: -1 } }
+      }
     ]);
 
-    res.json(totalCalories);
+    const totalCalories = result.length > 0 ? result[0].totalCalories : 0;
+    res.json({ totalCalories });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
-// Update a meal
 router.put('/:id', async (req, res) => {
   try {
     // res.send('Update meal endpoint is not implemented yet');

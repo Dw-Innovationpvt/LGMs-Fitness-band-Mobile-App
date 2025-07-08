@@ -2,7 +2,9 @@ import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import transporter from "../lib/nodemailer.js";
+
 import userAuth from "../middleware/userAuth.js";
+import auth from "../middleware/auth.js";
 const router = express.Router();
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "15d" });
@@ -272,13 +274,14 @@ router.post("/login", async (req, res) => {
 
     res.status(200).json({
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        profileImage: user.profileImage,
-        createdAt: user.createdAt,
-      },
+      user: user,
+    //   user: {
+    //     id: user._id,
+    //     username: user.username,
+    //     email: user.email,
+    //     profileImage: user.profileImage,
+    //     createdAt: user.createdAt,
+    //   },
     });
   } catch (error) {
     console.log("Error in login route", error);
@@ -473,6 +476,74 @@ router.post("/verify-reset-otp", async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
+router.put('/change-password', auth, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ message: "New password is required and should be at least 6 characters long" });
+        }
+        user.password = newPassword; // update password
+        await user.save();
+
+        const token = generateToken(user._id);
+
+        res.status(200).json({ token, message: "Password changed successfully" });
+    }catch (error) {
+        console.log("Error in change-password route", error);
+        res.status(500).json({ message: "Internal server error at pass change" });
+    }
+})
+// router.put("/update-profile", async (req, res) => {
+//     try {
+//         const { userId } = req.user; // get userId from the token
+//         const { username, email, profileImage } = req.body;
+
+//         if (!username || !email) return res.status(400).json({ message: "Username and email are required" });
+
+//         // check if user exists
+//         const user = await User.findById(userId);
+//         if (!user) return res.status(404).json({ message: "User not found" });
+
+//         // check if email is already taken
+//         const existingEmail = await User.findOne({ email });
+//         if (existingEmail && existingEmail._id.toString() !== userId) {
+//             return res.status(400).json({ message: "Email already exists" });
+//         }
+
+//         // check if username is already taken
+//         const existingUsername = await User.findOne({ username });
+//         if (existingUsername && existingUsername._id.toString() !== userId) {
+//             return res.status(400).json({ message: "Username already exists" });
+//         }
+
+//         // update user profile
+//         user.username = username;
+//         user.email = email;
+//         user.profileImage = profileImage || user.profileImage; // keep old image if new one is not provided
+
+//         await user.save();
+
+//         res.status(200).json({
+//             message: "Profile updated successfully",
+//             user: {
+//                 id: user._id,
+//                 username: user.username,
+//                 email: user.email,
+//                 profileImage: user.profileImage,
+//             },
+//         });
+//     } catch (error) {
+//         console.log("Error in update-profile route", error);
+//         res.status(500).json({ message: "Internal server error" });
+//     }
+// }
+
+
 
 export default router;
 

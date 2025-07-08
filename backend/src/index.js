@@ -9,6 +9,7 @@ import waterRoutes from './routes/waterRoutes.js';
 import exerciseRoutes from './routes/exerciseRoutes.js';
 import stepsRoutes from './routes/stepsRoutes.js';
 import mealsRoutes from './routes/mealsRoutes.js';
+import bmiRoutes from './routes/bmiRoutes.js';
 import { connectDB } from "./lib/db.js";
 import cors from 'cors';
 
@@ -37,6 +38,9 @@ app.use('/api/exercises', exerciseRoutes);
 app.use('/api/meals', mealsRoutes);
 // steps count
 app.use('/api/steps', stepsRoutes);
+
+// for bmi setup making true... bmiSCreen frontedn
+app.use('/api/bmi', bmiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
