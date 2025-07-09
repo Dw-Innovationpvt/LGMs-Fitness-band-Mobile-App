@@ -113,7 +113,8 @@ export const useAuthStore = create((set) => ({
       await AsyncStorage.setItem("token", data.token);
 
       set({ token: data.token, user: data.user, isLoading: false });
-
+      // console.log('116authstore');
+      // console.log(data.user, "userData");
       return { success: true };
     } catch (error) {
       set({ isLoading: false });
@@ -602,8 +603,59 @@ const data = await response.json();
       setupComplete: false,
       error: null
     });
-  }
+  },
+  // getUserData: () => {
+  //   const { user } = get();
+  //   return user;
+  // },
+  getUserData: async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
 
+      const response = await fetch(`${API_URL}/user`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Use the token from the store
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch user data");
+      }
+
+      const data = await response.json();
+      set({ user: data.user });
+
+      return data;
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      return null;
+    }
+  },
+  updateAccountUser: async (userData) => {
+    set({ loading: true, error: null });
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await fetch(`${API_URL}/user/update-profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Use the token from the store
+        },
+        body: JSON.stringify(userData),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to update user data");
+      set({ user: data.user, loading: false });
+      return { success: true, user: data.user };
+    } catch (err) {
+      set({ 
+        error: err.response?.data?.message || err.message,
+        loading: false 
+      });
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  }
 
 
 }));

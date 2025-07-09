@@ -10,6 +10,7 @@ import exerciseRoutes from './routes/exerciseRoutes.js';
 import stepsRoutes from './routes/stepsRoutes.js';
 import mealsRoutes from './routes/mealsRoutes.js';
 import bmiRoutes from './routes/bmiRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { connectDB } from "./lib/db.js";
 import cors from 'cors';
 
@@ -41,6 +42,7 @@ app.use('/api/steps', stepsRoutes);
 
 // for bmi setup making true... bmiSCreen frontedn
 app.use('/api/bmi', bmiRoutes);
+app.use('/api/user', userRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

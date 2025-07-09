@@ -1,3 +1,5 @@
+// 9-july wednesday
+
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
