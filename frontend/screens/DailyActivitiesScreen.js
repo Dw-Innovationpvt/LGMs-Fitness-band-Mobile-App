@@ -217,8 +217,8 @@ const DailyActivitiesScreen = ({ navigation }) => {
           <Text style={styles.headerTitle}>Daily Activities</Text>
           <Text style={styles.headerDate}>{currentDate}</Text>
         </View>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Feather name="plus" size={24} color="#fff" />
+        <TouchableOpacity  >
+          {/* <Feather name="plus" size={24} color="#fff" /> */}
         </TouchableOpacity>
       </LinearGradient>
 

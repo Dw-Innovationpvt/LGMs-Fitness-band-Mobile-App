@@ -76,7 +76,7 @@ const AccountSettingsScreen = ({ navigation }) => {
             else{
 
                 showCustomAlert('Success', 'Password changed successfully!', () => {});
-                Haptics.trigger('notificationSuccess');
+Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 setIsPasswordModalVisible(false);
                 setNewPassword('');
             }

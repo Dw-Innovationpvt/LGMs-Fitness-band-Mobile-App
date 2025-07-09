@@ -382,7 +382,7 @@ name: user?.username || 'Madan',
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F5F7FB' },
+    container: { flex: 1, backgroundColor: '#F5F7FB', paddingBottom: 80 },
     header: {
         paddingTop: Platform.OS === 'ios' ? 50 : 30,
         paddingHorizontal: 20,

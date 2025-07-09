@@ -27,17 +27,17 @@ const BMIScreen = ({ navigation }) => {
 
         const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
 
-        navigation.navigate('MealTiming', {
-            bmiData: {
-                height,
-                heightUnit,
-                weight,
-                weightUnit,
-                gender,
-                age,
-                bmiValue: bmi
-            }
-        });
+    navigation.navigate('SkatePreference', {
+  bmiData: {
+    height,
+    heightUnit,
+    weight,
+    weightUnit,
+    gender,
+    age,
+    bmiValue: bmi
+  }
+});
     };
 
     const renderAgePicker = () => {

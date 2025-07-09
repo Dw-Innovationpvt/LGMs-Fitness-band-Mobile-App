@@ -101,7 +101,7 @@ const WaterIntakeScreen = ({ navigation }) => {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={['orange', 'yellow']}
+        colors={['#4B6CB7', '#182848']} 
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

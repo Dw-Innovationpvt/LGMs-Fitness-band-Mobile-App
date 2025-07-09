@@ -23,10 +23,8 @@ const { width } = Dimensions.get('window');
 const workoutCategories = {
   '🏋️ Strength': ['Weight Lifting', 'Bodyweight', 'Resistance Bands', 'CrossFit'],
   '🏃 Cardio': ['Running', 'Cycling', 'Swimming', 'HIIT'],
-  '🧘 Flexibility': ['Yoga', 'Pilates', 'Stretching'],
-  '🛹 Skating': ['Speed Skating', 'Distance Skating', 'Freestyle'],
-  '🥊 Combat': ['Boxing', 'MMA', 'Kickboxing']
-};
+   '🛹 Skating': ['Speed Skating', 'Distance Skating', 'Freestyle'],
+ };
 
 const WorkoutHistoryScreen = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
