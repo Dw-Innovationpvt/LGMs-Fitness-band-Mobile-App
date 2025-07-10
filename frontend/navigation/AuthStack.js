@@ -9,6 +9,9 @@ import BMIScreen from '../screens/BMIScreen';
 import SkatePreferenceScreen from '../screens/SkatePreferenceScreen';
 import MealTimingScreen from '../screens/MealTimingScreen';
 import LoadingScreen from '../screens/LoadingScreen';
+import ForgotPassword from '../screens/ForgotPassword';
+import OtpScreen from '../screens/OtpScreen';
+import EnterOTPPassword from '../screens/EnterOTPPassword';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +23,9 @@ const AuthStack = () => (
     <Stack.Screen name="Splash" component={SplashScreen} />
     <Stack.Screen name="SignIn" component={SignInScreen} />
     <Stack.Screen name="SignUp" component={SignUpScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+    <Stack.Screen name="OtpScreen" component={OtpScreen} />
+    <Stack.Screen name="EnterOtpPassword" component={EnterOTPPassword} />
     <Stack.Screen name="BMI" component={BMIScreen} />
     <Stack.Screen name="SkatePreference" component={SkatePreferenceScreen} />
     <Stack.Screen name="MealTiming" component={MealTimingScreen} />

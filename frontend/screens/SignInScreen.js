@@ -32,16 +32,18 @@ const SignInScreen = ({ navigation, route }) => {
 
   // checking if backend is working
   const onForgotPasswordPress = async () => {
-    try {
-      const response = await nothingtoworry();
-      if (response.success) {
-        // console.log('Backend is working:', response.data);
-      } else {
-        console.error('Error:', response.error);
-      }
-    } catch (error) {
-      console.error('Error checking backend:', error);
-    }
+      console.log('onForgotPasswordPress called');
+    navigation.navigate('ForgotPassword');
+    // try {
+    //   const response = await nothingtoworry();
+    //   if (response.success) {
+    //     // console.log('Backend is working:', response.data);
+    //   } else {
+    //     console.error('Error:', response.error);
+    //   }
+    // } catch (error) {
+    //   console.error('Error checking backend:', error);
+    // }
   };
 
   // Get setIsSignedIn from route params
