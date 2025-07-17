@@ -15,7 +15,7 @@ api.interceptors.request.use(async config => {
   const token = await AsyncStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.warn('Using localStorage for token, consider using AsyncStorage for React Native, i think api.js is successfulll');
+    // console.warn('Using localStorage for token, consider using AsyncStorage for React Native, i think api.js is successfulll');
   }
 
   return config;

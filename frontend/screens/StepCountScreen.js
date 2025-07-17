@@ -16,9 +16,14 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
 
+import { useBLEStore } from '../store/bleStore';
+
 const { width } = Dimensions.get('window');
 
+
 const StepCountScreen = ({ navigation }) => {
+    const { sendCommand, data } = useBLEStore();
+
   const { width, height } = useWindowDimensions();
   const [steps, setSteps] = useState(7243);
   const [distance, setDistance] = useState(5.2);
@@ -38,6 +43,10 @@ const StepCountScreen = ({ navigation }) => {
     const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
     setCalories(calculatedCalories);
   }, [distance, avgSpeed]);
+    useEffect(() => {
+    sendCommand('SET_MODE STEP_COUNTING');
+    return () => sendCommand('SET_MODE SKATING_SPEED');
+  }, []);
 
   // Mock data for the chart
   const chartData = {
@@ -117,7 +126,8 @@ const StepCountScreen = ({ navigation }) => {
             <Feather name="edit-2" size={18} color="#4B6CB7" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.statValue}>{steps.toLocaleString()}</Text>
+        {/* <Text style={styles.statValue}>{steps.toLocaleString()}</Text> */}
+        <Text style={styles.statValue}>{data?.s ?? data?.steps ?? 0}</Text>
         <Text style={styles.statLabel}>Steps</Text>
         <View style={styles.progressBar}>
           <LinearGradient
@@ -129,6 +139,7 @@ const StepCountScreen = ({ navigation }) => {
         </View>
         <Text style={styles.progressText}>
           {Math.round((steps/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal
+          {/* {Math.round((( {data?.s ?? data?.steps ?? 0})/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal */}
         </Text>
       </View>
 
