@@ -57,6 +57,7 @@ export const useBLEStore = create((set, get) => ({
   isScanning: false,
   error: null,
 
+  skatingMode: null,
 
 // Scan for BLE devices
   scanForDevices: async () => {
@@ -259,6 +260,36 @@ export const useBLEStore = create((set, get) => ({
     const success = await sendCommand(bandActive ? 'TURN_OFF' : 'TURN_ON');
     if (success) set({ bandActive: !bandActive });
   },
+
+
+  // Activate Speed Skating Mode
+  activateSpeedSkating: async () => {
+    const success = await get().sendCommand('MODE_SPEED');
+    if (success) {
+      set({ skatingMode: 'speed' });
+    }
+    return success;
+  },
+
+  // Activate Distance Skating Mode
+  activateDistanceSkating: async () => {
+    const success = await get().sendCommand('MODE_DISTANCE');
+    if (success) {
+      set({ skatingMode: 'distance' });
+    }
+    return success;
+  },
+
+  // Activate Freestyle Skating Mode
+  activateFreestyleSkating: async () => {
+    const success = await get().sendCommand('MODE_FREESTYLE');
+    if (success) {
+      set({ skatingMode: 'freestyle' });
+    }
+    return success;
+  },
+
+
 
   disconnect: async () => {
     const { connectedDevice, bleManager } = get();

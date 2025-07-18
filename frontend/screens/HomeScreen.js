@@ -40,6 +40,8 @@ const HomeScreen = ({ navigation }) => {
     sendCommand
   } = useBLEStore();
 
+  const { activateSpeedSkating, activateDistanceSkating, activateFreestyleSkating, skatingMode } = useBLEStore();
+
   const userName = 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
   const [mealInputVisible, setMealInputVisible] = useState(false);
@@ -216,8 +218,21 @@ const HomeScreen = ({ navigation }) => {
     setSkatingModalVisible(true);
   };
 
-  const startSkatingSession = (type) => {
+  const startSkatingSession = async (type) => {
     setSkatingModalVisible(false);
+    if (type == 'speed'){
+      await activateSpeedSkating();
+      // Current mode will be 'speed'
+      console.log(skatingMode,'226-home'); 
+    }
+    else if (type=='distance'){
+      await activateDistanceSkating();
+      
+    }
+    else {
+      await activateFreestyleSkating();
+
+    }
     navigation.navigate('SkatingTracking', { skatingType: type });
   };
   
@@ -714,6 +729,525 @@ const HomeScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    marginBottom: Platform.OS === 'ios' ? 60 : 60,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 60,
+    backgroundColor: '#F5F7FB',
+  },
+  headerGradient: {
+    marginTop: Platform.OS === 'ios' ? -60 : -10,
+    paddingHorizontal: '6%',
+    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
+    paddingBottom: height * 0.02,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
+    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
+    elevation: Platform.OS === 'android' ? 10 : 0,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '8%',
+  },
+  greetingText: {
+    fontSize: width * 0.045,
+    marginRight: '2%',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  headerText: {
+    fontSize: width * 0.055,
+    color: '#fff',
+    marginTop: '1%',
+  },
+  profileIcon: {
+    width: width * 0.1,
+    height: width * 0.1,
+    borderRadius: width * 0.05,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  topActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: '-2%',
+  },
+  actionCard: {
+    alignItems: 'center',
+    width: '30%',
+    paddingHorizontal: '2%',
+  },
+  actionIconContainer: {
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  actionIconShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  actionLabel: {
+    color: '#fff',
+    fontSize: width * 0.033,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: '4%',
+    paddingBottom: '8%',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    overflow: 'hidden',
+  },
+  cardElevated: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  cardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: width * 0.045,
+    color: '#2E3A59',
+    marginLeft: '2%',
+    fontWeight: '500',
+  },
+  timeText: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: '4%',
+    minHeight: width * 0.3,
+    fontSize: width * 0.04,
+    color: '#333',
+    backgroundColor: '#fff',
+    marginBottom: '4%',
+    textAlignVertical: 'top',
+  },
+  mealButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  mealButton: {
+    borderRadius: 12,
+    padding: '4%',
+    width: '48%',
+    alignItems: 'center',
+  },
+  mealButtonText: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+  },
+  activityGradient: {
+    padding: '4%',
+    borderRadius: 16,
+  },
+  activityGrid: {
+    flexDirection: 'row', 
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+activityMetricCard: {
+  width: '48%',
+  borderRadius: 12,
+  padding: '4%',
+  marginBottom: '4%',
+  alignItems: 'center',
+},
+metricIconContainer: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: '4%',
+},
+  metricValue: {
+    fontSize: width * 0.05,
+    color: '#2E3A59',
+    fontWeight: 'bold',
+  },
+  metricLabel: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+    marginBottom: '2%',
+  },
+  metricTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricTrendText: {
+    fontSize: width * 0.035,
+    marginLeft: 4,
+  },
+  progressCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(74,108,183,0.2)',
+  },
+  progressCircleText: {
+    fontSize: width * 0.035,
+    color: '#4B6CB7',
+    fontWeight: 'bold',
+  },
+  activityProgressContainer: {
+    marginTop: '4%',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    width: '100%',
+  },
+  activityProgressText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginBottom: '2%',
+  },
+  fullProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: '2%',
+  },
+activityProgressFill: {
+  height: '100%',
+  borderRadius: 4,
+},
+  activityProgressPercent: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+  },
+  waterCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  waterInfo: {
+    flex: 1,
+  },
+  intakeRow: {
+    marginBottom: '4%',
+  },
+  intakeText: {
+    color: '#5A6A8C',
+    fontSize: width * 0.04,
+  },
+  intakeBold: {
+    fontSize: width * 0.05,
+    color: '#2E3A59',
+    fontWeight: 'bold',
+  },
+  recentSessionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+  recentSessionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(123, 31, 162, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  recentSessionDetails: {
+    flex: 1,
+  },
+  recentSessionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2E3A59',
+  },
+  recentSessionStats: {
+    fontSize: 14,
+    color: '#5A6A8C',
+    marginTop: 4,
+  },
+  recentSessionTime: {
+    fontSize: 12,
+    color: '#9AA5B9',
+    alignSelf: 'flex-start',
+  },
+  stepProgressContainer: {
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+  stepProgressText: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  stepCount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2E3A59',
+  },
+  stepGoal: {
+    fontSize: 16,
+    color: '#5A6A8C',
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressPercentage: {
+    fontSize: 12,
+    color: '#4B6CB7',
+    fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: '#4B6CB7',
+    borderRadius: 24,
+    paddingVertical: '2.5%',
+    paddingHorizontal: '5%',
+    alignSelf: 'flex-start',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: width * 0.035,
+    fontWeight: '500',
+  },
+  waterBottleContainer: {
+    marginLeft: '4%',
+    alignItems: 'center',
+  },
+  waterBottle: {
+    width: width * 0.15,
+    height: width * 0.25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'flex-end',
+  },
+  waterFill: {
+    backgroundColor: '#4B6CB7',
+    width: '100%',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '6%',
+  },
+  modalTitle: {
+    fontSize: width * 0.05,
+    marginBottom: '5%',
+    color: '#2E3A59',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  mealCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: '4%',
+    borderRadius: 12,
+    marginBottom: '4%',
+    borderWidth: 1,
+    borderColor: '#F0F4FF',
+  },
+  mealCardText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginLeft: '3%',
+    flex: 1,
+    fontWeight: '500',
+  },
+  skatingTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: '4%',
+    borderRadius: 12,
+    marginBottom: '4%',
+    borderWidth: 1,
+    borderColor: '#F0F4FF',
+  },
+  skatingTypeText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginLeft: '3%',
+    flex: 1,
+    fontWeight: '500',
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: '3.5%',
+    borderRadius: 12,
+    marginTop: '2%',
+    backgroundColor: '#F5F7FB',
+  },
+  cancelText: {
+    color: '#5A6A8C',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+
+
+
+  // Pairing Modal Styles
+  scanningContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  scanningText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  deviceName: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  noDevicesText: {
+    textAlign: 'center',
+    padding: 20,
+    color: '#999',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  primaryButton: {
+    backgroundColor: '#4B6CB7',
+  },
+  secondaryButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  secondaryButtonText: {
+    color: '#333',
+  },
+
+  deviceItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
+},
+deviceItemConnecting: {
+  opacity: 0.7,
+},
+deviceIconContainer: {
+  marginRight: 12,
+},
+deviceInfoContainer: {
+  flex: 1,
+  marginRight: 12,
+},
+deviceName: {
+  fontSize: 16,
+  color: '#333',
+  marginBottom: 2,
+},
+deviceNameConnecting: {
+  color: '#999',
+},
+deviceId: {
+  fontSize: 12,
+  color: '#999',
+},
+
+
+});
+export default HomeScreen;
 
 
 // import React, { useState, useEffect } from 'react';
@@ -1805,524 +2339,7 @@ const HomeScreen = ({ navigation }) => {
 // //   );
 // // };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    marginBottom: Platform.OS === 'ios' ? 60 : 60,
-    paddingBottom: Platform.OS === 'ios' ? 0 : 60,
-    backgroundColor: '#F5F7FB',
-  },
-  headerGradient: {
-    marginTop: Platform.OS === 'ios' ? -60 : -10,
-    paddingHorizontal: '6%',
-    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
-    paddingBottom: height * 0.02,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    shadowColor: '#1A2980',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
-    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
-    elevation: Platform.OS === 'android' ? 10 : 0,
-  },
-  headerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '8%',
-  },
-  greetingText: {
-    fontSize: width * 0.045,
-    marginRight: '2%',
-    color: 'rgba(255,255,255,0.9)',
-  },
-  headerText: {
-    fontSize: width * 0.055,
-    color: '#fff',
-    marginTop: '1%',
-  },
-  profileIcon: {
-    width: width * 0.1,
-    height: width * 0.1,
-    borderRadius: width * 0.05,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  topActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: '-2%',
-  },
-  actionCard: {
-    alignItems: 'center',
-    width: '30%',
-    paddingHorizontal: '2%',
-  },
-  actionIconContainer: {
-    width: width * 0.14,
-    height: width * 0.14,
-    borderRadius: width * 0.07,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: '4%',
-  },
-  actionIconShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  actionLabel: {
-    color: '#fff',
-    fontSize: width * 0.033,
-    textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: '4%',
-    paddingBottom: '8%',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: '4%',
-    marginBottom: '4%',
-    overflow: 'hidden',
-  },
-  cardElevated: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '4%',
-  },
-  cardTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardTitle: {
-    fontSize: width * 0.045,
-    color: '#2E3A59',
-    marginLeft: '2%',
-    fontWeight: '500',
-  },
-  timeText: {
-    fontSize: width * 0.035,
-    color: '#5A6A8C',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: '4%',
-    minHeight: width * 0.3,
-    fontSize: width * 0.04,
-    color: '#333',
-    backgroundColor: '#fff',
-    marginBottom: '4%',
-    textAlignVertical: 'top',
-  },
-  mealButtonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  mealButton: {
-    borderRadius: 12,
-    padding: '4%',
-    width: '48%',
-    alignItems: 'center',
-  },
-  mealButtonText: {
-    fontSize: width * 0.04,
-    fontWeight: '600',
-  },
-  activityGradient: {
-    padding: '4%',
-    borderRadius: 16,
-  },
-  activityGrid: {
-    flexDirection: 'row', 
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-activityMetricCard: {
-  width: '48%',
-  borderRadius: 12,
-  padding: '4%',
-  marginBottom: '4%',
-  alignItems: 'center',
-},
-metricIconContainer: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginBottom: '4%',
-},
-  metricValue: {
-    fontSize: width * 0.05,
-    color: '#2E3A59',
-    fontWeight: 'bold',
-  },
-  metricLabel: {
-    fontSize: width * 0.035,
-    color: '#5A6A8C',
-    marginBottom: '2%',
-  },
-  metricTrend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metricTrendText: {
-    fontSize: width * 0.035,
-    marginLeft: 4,
-  },
-  progressCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F4FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: '4%',
-    borderWidth: 1,
-    borderColor: 'rgba(74,108,183,0.2)',
-  },
-  progressCircleText: {
-    fontSize: width * 0.035,
-    color: '#4B6CB7',
-    fontWeight: 'bold',
-  },
-  activityProgressContainer: {
-    marginTop: '4%',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 12,
-    padding: '4%',
-    width: '100%',
-  },
-  activityProgressText: {
-    fontSize: width * 0.04,
-    color: '#2E3A59',
-    marginBottom: '2%',
-  },
-  fullProgressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: '2%',
-  },
-activityProgressFill: {
-  height: '100%',
-  borderRadius: 4,
-},
-  activityProgressPercent: {
-    fontSize: width * 0.035,
-    color: '#5A6A8C',
-  },
-  waterCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  waterInfo: {
-    flex: 1,
-  },
-  intakeRow: {
-    marginBottom: '4%',
-  },
-  intakeText: {
-    color: '#5A6A8C',
-    fontSize: width * 0.04,
-  },
-  intakeBold: {
-    fontSize: width * 0.05,
-    color: '#2E3A59',
-    fontWeight: 'bold',
-  },
-  recentSessionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-  },
-  recentSessionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(123, 31, 162, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  recentSessionDetails: {
-    flex: 1,
-  },
-  recentSessionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#2E3A59',
-  },
-  recentSessionStats: {
-    fontSize: 14,
-    color: '#5A6A8C',
-    marginTop: 4,
-  },
-  recentSessionTime: {
-    fontSize: 12,
-    color: '#9AA5B9',
-    alignSelf: 'flex-start',
-  },
-  stepProgressContainer: {
-    marginTop: 8,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 12,
-    padding: '4%',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-  },
-  stepProgressText: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
-  },
-  stepCount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2E3A59',
-  },
-  stepGoal: {
-    fontSize: 16,
-    color: '#5A6A8C',
-  },
-  progressBarContainer: {
-    height: 6,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressPercentage: {
-    fontSize: 12,
-    color: '#4B6CB7',
-    fontWeight: '500',
-  },
-  addButton: {
-    backgroundColor: '#4B6CB7',
-    borderRadius: 24,
-    paddingVertical: '2.5%',
-    paddingHorizontal: '5%',
-    alignSelf: 'flex-start',
-    shadowColor: '#1A2980',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: width * 0.035,
-    fontWeight: '500',
-  },
-  waterBottleContainer: {
-    marginLeft: '4%',
-    alignItems: 'center',
-  },
-  waterBottle: {
-    width: width * 0.15,
-    height: width * 0.25,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#F5F7FB',
-    justifyContent: 'flex-end',
-  },
-  waterFill: {
-    backgroundColor: '#4B6CB7',
-    width: '100%',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: '6%',
-  },
-  modalTitle: {
-    fontSize: width * 0.05,
-    marginBottom: '5%',
-    color: '#2E3A59',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  mealCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: '4%',
-    borderRadius: 12,
-    marginBottom: '4%',
-    borderWidth: 1,
-    borderColor: '#F0F4FF',
-  },
-  mealCardText: {
-    fontSize: width * 0.04,
-    color: '#2E3A59',
-    marginLeft: '3%',
-    flex: 1,
-    fontWeight: '500',
-  },
-  skatingTypeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: '4%',
-    borderRadius: 12,
-    marginBottom: '4%',
-    borderWidth: 1,
-    borderColor: '#F0F4FF',
-  },
-  skatingTypeText: {
-    fontSize: width * 0.04,
-    color: '#2E3A59',
-    marginLeft: '3%',
-    flex: 1,
-    fontWeight: '500',
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    padding: '3.5%',
-    borderRadius: 12,
-    marginTop: '2%',
-    backgroundColor: '#F5F7FB',
-  },
-  cancelText: {
-    color: '#5A6A8C',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
 
-
-
-
-  // Pairing Modal Styles
-  scanningContainer: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  scanningText: {
-    marginTop: 10,
-    color: '#666',
-  },
-  deviceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  deviceName: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-  },
-  noDevicesText: {
-    textAlign: 'center',
-    padding: 20,
-    color: '#999',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  primaryButton: {
-    backgroundColor: '#4B6CB7',
-  },
-  secondaryButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  secondaryButtonText: {
-    color: '#333',
-  },
-
-  deviceItem: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingVertical: 12,
-  paddingHorizontal: 16,
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-},
-deviceItemConnecting: {
-  opacity: 0.7,
-},
-deviceIconContainer: {
-  marginRight: 12,
-},
-deviceInfoContainer: {
-  flex: 1,
-  marginRight: 12,
-},
-deviceName: {
-  fontSize: 16,
-  color: '#333',
-  marginBottom: 2,
-},
-deviceNameConnecting: {
-  color: '#999',
-},
-deviceId: {
-  fontSize: 12,
-  color: '#999',
-},
-
-
-});
-export default HomeScreen;
 
 
 
