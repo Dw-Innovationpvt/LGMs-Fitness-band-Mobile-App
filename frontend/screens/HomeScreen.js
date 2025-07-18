@@ -224,6 +224,7 @@ const HomeScreen = ({ navigation }) => {
       await activateSpeedSkating();
       // Current mode will be 'speed'
       console.log(skatingMode,'226-home'); 
+      console.log('hii-227home');
     }
     else if (type=='distance'){
       await activateDistanceSkating();
