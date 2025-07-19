@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, Platform,Alert, ActivityIndicator,
   ScrollView, Dimensions, Modal, SafeAreaView, TextInput, FlatList
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
-import { useBLEStore } from '../store/bleStore';
+
+import { useBLEStore } from '../store/bleStore'; // Import the BLE store
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,24 +29,18 @@ const HomeScreen = ({ navigation }) => {
 
   // calories related
   const { totalCaloriesBurned, getWorkoutCount } = useAuthStore();
-  
-  // BLE Store integration
   const {
     connectToDevice,
     disconnect,
     isConnected,
     bandActive,
     toggleBand,
+    // data: bleData,
     data,
-    sendCommand,
-    scanDevices,
-    devices,
-    isScanning,
-    activateSpeedSkating,
-    activateDistanceSkating,
-    activateFreestyleSkating,
-    skatingMode
+    sendCommand
   } = useBLEStore();
+
+  const { activateSpeedSkating, activateDistanceSkating, activateFreestyleSkating, skatingMode } = useBLEStore();
 
   const userName = 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
@@ -53,7 +49,11 @@ const HomeScreen = ({ navigation }) => {
   const [mealItems, setMealItems] = useState('');
   const [currentTime, setCurrentTime] = useState('');
   const [skatingModalVisible, setSkatingModalVisible] = useState(false);
-  const [pairingModalVisible, setPairingModalVisible] = useState(false);
+
+  // ble down code
+    const [pairingModalVisible, setPairingModalVisible] = useState(false);
+  const [foundDevices, setFoundDevices] = useState([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   const [dailyData, setDailyData] = useState({
     meals: [
@@ -73,20 +73,15 @@ const HomeScreen = ({ navigation }) => {
     ],
   });
 
-  // Initialize data
+  // Initialize water data
   useEffect(() => {
     fetchTodayTotal();
     fetchTarget();
+    // connectToDevice();
     getWorkoutCount();
-    
-    // Set to step counting mode when component mounts
-    sendCommand('SET_MODE STEP_COUNTING');
-    
-    // Cleanup - disconnect and set back to skating mode when component unmounts
-    return () => {
-      sendCommand('SET_MODE SKATING_SPEED');
-      disconnect();
-    };
+        // related to step counting 
+        sendCommand('SET_MODE STEP_COUNTING');
+        return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
 
   // Handle water errors
@@ -94,10 +89,49 @@ const HomeScreen = ({ navigation }) => {
     if (waterError) {
       Alert.alert('Water Error', waterError);
     }
+    // if (bleError) Alert.alert('Bluetooth Error', bleError);
+  // }, [waterError, bleError]);
   }, [waterError]);
 
+  // Handle BLE device scanning
+  const scanForDevices = async () => {
+    try {
+      setIsScanning(true);
+      setFoundDevices([]);
+      
+      // This would be implemented in your BLE store
+      const devices = await useBLEStore.getState().scanForDevices();
+      setFoundDevices(devices);
+      
+      setIsScanning(false);
+    } catch (error) {
+      Alert.alert('Scan Error', error.message);
+      setIsScanning(false);
+    }
+  };
+  // Handle BLE device scanning
+  const handleScanDevices = async () => {
+    setPairingModalVisible(true);
+    try {
+      await scanForDevices();
+    } catch (error) {
+      Alert.alert('Scan Error', error.message);
+    }
+  };
+
+  // Handle device connection
+  // const handleDeviceConnection = async (device) => {
+  //   try {
+  //     await connectToDevice(device);
+  //     setPairingModalVisible(false);
+  //     Alert.alert('Success', 'Device connected successfully');
+  //   } catch (error) {
+  //     Alert.alert('Connection Error', error.message);
+  //   }
+  // };
+
   const handleAddWater = async () => {
-    const result = await addIntake(400);
+    const result = await addIntake(400); // Add 400ml
     if (!result.success) {
       Alert.alert('Error', result.error);
     }
@@ -111,6 +145,7 @@ const HomeScreen = ({ navigation }) => {
     setCurrentMealType(mealType);
     setMealInputVisible(true);
     
+    // Get current time
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
@@ -119,16 +154,25 @@ const HomeScreen = ({ navigation }) => {
     const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
     setCurrentTime(`${formattedHours}:${formattedMinutes} ${ampm}`);
   };
-
+    const handleDeviceConnection = async (device) => {
+    try {
+      await connectToDevice(device);
+      setPairingModalVisible(false);
+      Alert.alert('Success', 'Device connected successfully');
+    } catch (error) {
+      Alert.alert('Connection Error', error.message);
+    }
+  };
   const handleSaveMeal = async() => {
     if (mealItems.trim()) {
       const newMeal = {
         mealType: currentMealType,
         name: mealItems,
         time: currentTime,
-        calories: 10
+        calories: 10 // You can add calorie calculation logic here
       };
 
+      // post this meal to the backend
       const responseWorkout = await postMeals(newMeal);
 
       setDailyData(prev => ({
@@ -143,21 +187,31 @@ const HomeScreen = ({ navigation }) => {
 
   const getMealColor = () => {
     switch (currentMealType) {
-      case 'Breakfast': return '#FFF3E0';
-      case 'Lunch': return '#E8F5E9';
-      case 'Snack': return '#F3E5F5';
-      case 'Dinner': return '#E3F2FD';
-      default: return '#F5F5F5';
+      case 'Breakfast':
+        return '#FFF3E0';
+      case 'Lunch':
+        return '#E8F5E9';
+      case 'Snack':
+        return '#F3E5F5';
+      case 'Dinner':
+        return '#E3F2FD';
+      default:
+        return '#F5F5F5';
     }
   };
 
   const getMealIcon = () => {
     switch (currentMealType) {
-      case 'Breakfast': return <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />;
-      case 'Lunch': return <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />;
-      case 'Snack': return <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />;
-      case 'Dinner': return <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />;
-      default: return <MaterialCommunityIcons name="food" size={24} color="#666" />;
+      case 'Breakfast':
+        return <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />;
+      case 'Lunch':
+        return <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />;
+      case 'Snack':
+        return <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />;
+      case 'Dinner':
+        return <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />;
+      default:
+        return <MaterialCommunityIcons name="food" size={24} color="#666" />;
     }
   };
 
@@ -167,99 +221,104 @@ const HomeScreen = ({ navigation }) => {
 
   const startSkatingSession = async (type) => {
     setSkatingModalVisible(false);
-    if (type === 'speed') {
+    if (type == 'speed'){
       await activateSpeedSkating();
-    } else if (type === 'distance') {
+      // Current mode will be 'speed'
+      console.log(skatingMode,'226-home'); 
+      console.log('hii-227home');
+    }
+    else if (type=='distance'){
       await activateDistanceSkating();
-    } else {
+      
+    }
+    else {
       await activateFreestyleSkating();
+
     }
     navigation.navigate('SkatingTracking', { skatingType: type });
   };
+  
+
 
   const handlePairDevicePress = () => {
+    connectToDevice();
+    handleConnect();
     setPairingModalVisible(true);
-    scanDevices();
-  };
-
-  const handleDeviceConnection = async (device) => {
-    try {
-      await connectToDevice(device);
-      setPairingModalVisible(false);
-      Alert.alert('Success', 'Device connected successfully');
-    } catch (error) {
-      Alert.alert('Connection Error', error.message);
-    }
+    scanForDevices();
   };
 
   const renderDeviceItem = ({ item }) => {
-    const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-    const handleConnect = async () => {
-      setIsConnecting(true);
-      try {
-        await handleDeviceConnection(item);
-      } catch (error) {
-        Alert.alert('Connection Failed', error.message);
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.deviceItem,
-          isConnecting && styles.deviceItemConnecting
-        ]}
-        onPress={handleConnect}
-        disabled={isConnecting}
-      >
-        <View style={styles.deviceIconContainer}>
-          <MaterialCommunityIcons 
-            name="bluetooth" 
-            size={24} 
-            color={isConnecting ? "#999" : "#4B6CB7"} 
-          />
-        </View>
-        
-        <View style={styles.deviceInfoContainer}>
-          <Text 
-            style={[
-              styles.deviceName,
-              isConnecting && styles.deviceNameConnecting
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.name || 'Unknown Device'}
-          </Text>
-          <Text style={styles.deviceId}>
-            {item.id}
-          </Text>
-        </View>
-
-        {isConnecting ? (
-          <ActivityIndicator size="small" color="#4B6CB7" />
-        ) : (
-          <MaterialCommunityIcons 
-            name="chevron-right" 
-            size={24} 
-            color="#666" 
-          />
-        )}
-      </TouchableOpacity>
-    );
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      await connectToDevice(item);
+      setPairingModalVisible(false);
+      Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
+    } catch (error) {
+      Alert.alert('Connection Failed', error.message);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   return (
+    <TouchableOpacity
+      style={[
+        styles.deviceItem,
+        isConnecting && styles.deviceItemConnecting
+      ]}
+      onPress={handleConnect}
+      disabled={isConnecting}
+    >
+      <View style={styles.deviceIconContainer}>
+        <MaterialCommunityIcons 
+          name="bluetooth" 
+          size={24} 
+          color={isConnecting ? "#999" : "#4B6CB7"} 
+        />
+      </View>
+      
+      <View style={styles.deviceInfoContainer}>
+        <Text 
+          style={[
+            styles.deviceName,
+            isConnecting && styles.deviceNameConnecting
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {item.name || 'Unknown Device'}
+        </Text>
+        <Text style={styles.deviceId}>
+          {item.id}
+        </Text>
+      </View>
+
+      {isConnecting ? (
+        <ActivityIndicator size="small" color="#4B6CB7" />
+      ) : (
+        <MaterialCommunityIcons 
+          name="chevron-right" 
+          size={24} 
+          color="#666" 
+        />
+      )}
+    </TouchableOpacity>
+  );
+};
+
+  return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Header Gradient */}
       <LinearGradient 
         colors={['#4B6CB7', '#182848']} 
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
+        {/* Top Header */}
         <View style={styles.headerSection}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-start', marginTop: 10 }}>
             <Text style={styles.greetingText}>Good Morning,</Text>
@@ -275,6 +334,7 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Quick Actions */}
         <View style={styles.topActions}>
           <TouchableOpacity 
             style={styles.actionCard} 
@@ -300,7 +360,8 @@ const HomeScreen = ({ navigation }) => {
 
           <TouchableOpacity 
             style={styles.actionCard} 
-            onPress={handlePairDevicePress}
+            // onPress={() => navigation.navigate('PairDevice')}
+            onPress={() => handlePairDevicePress()}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
@@ -311,11 +372,13 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
+      {/* Main Content */}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Meal Input Card (shown when adding a meal) */}
         {mealInputVisible && (
           <View style={[styles.card, styles.cardElevated, { backgroundColor: getMealColor() }]}>
             <View style={styles.cardHeader}>
@@ -354,80 +417,87 @@ const HomeScreen = ({ navigation }) => {
           </View>
         )}
 
-        <View style={[styles.card, styles.cardElevated]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleContainer}>
-              <MaterialCommunityIcons name="chart-line" size={20} color="#2E3A59" />
-              <Text style={[styles.cardTitle, { color: '#2E3A59' }]}>Today's Activity</Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('ActivityDetails')}>
-              <Feather name="chevron-right" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.activityGrid}>
-            <View style={[styles.activityMetricCard, { backgroundColor: '#FFF8F0' }]}>
-              <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
-                <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
-              </View>
-              <Text style={styles.metricValue}>{totalCalories}</Text>
-              <Text style={styles.metricLabel}>Calories In</Text>
-              <View style={styles.metricTrend}>
-                <Feather name="arrow-up" size={14} color="#48BB78" />
-                <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>12%</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.activityMetricCard, { backgroundColor: '#FFF5F5' }]}>
-              <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
-                <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
-              </View>
-              <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
-              <Text style={styles.metricLabel}>Calories Out</Text>
-              <View style={styles.metricTrend}>
-                <Feather name="arrow-up" size={14} color="#FC8181" />
-                <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.activityMetricCard, { backgroundColor: '#F0F9FF' }]}>
-              <View style={[styles.metricIconContainer, { backgroundColor: '#DBEAFE' }]}>
-                <MaterialCommunityIcons name="clock-outline" size={18} color="#4299E1" />
-              </View>
-              <Text style={styles.metricValue}>42</Text>
-              <Text style={styles.metricLabel}>Active Min</Text>
-              <View style={styles.metricTrend}>
-                <Feather name="arrow-down" size={14} color="#ED8936" />
-                <Text style={[styles.metricTrendText, { color: '#ED8936' }]}>5%</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.activityMetricCard, { backgroundColor: '#FAF5FF' }]}>
-              <View style={[styles.metricIconContainer, { backgroundColor: '#E9D8FD' }]}>
-                <MaterialCommunityIcons name="target" size={18} color="#9F7AEA" />
-              </View>
-              <Text style={styles.metricValue}>{completedGoals}/{dailyData.goals.length}</Text>
-              <Text style={styles.metricLabel}>Goals Met</Text>
-              <View style={styles.progressCircle}>
-                <Text style={styles.progressCircleText}>
-                  {Math.round((completedGoals/dailyData.goals.length)*100)}%
-                </Text>
-              </View>
-            </View>
-          </View>
-          
-          <View style={styles.activityProgressContainer}>
-            <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
-            <View style={styles.fullProgressBar}>
-              <View style={[styles.activityProgressFill, { 
-                width: '65%',
-                backgroundColor: '#4C51BF'
-              }]} />
-            </View>
-            <Text style={styles.activityProgressPercent}>65% Complete</Text>
-          </View>
-        </View>
+{/* Enhanced Activity Card - Updated with muted colorful sub-cards */}
+<View style={[styles.card, styles.cardElevated]}>
+  <View style={styles.cardHeader}>
+    <View style={styles.cardTitleContainer}>
+      <MaterialCommunityIcons name="chart-line" size={20} color="#2E3A59" />
+      <Text style={[styles.cardTitle, { color: '#2E3A59' }]}>Today's Activity</Text>
+    </View>
+    <TouchableOpacity onPress={() => navigation.navigate('ActivityDetails')}>
+      <Feather name="chevron-right" size={24} color="#666" />
+    </TouchableOpacity>
+  </View>
+  
+  <View style={styles.activityGrid}>
+    {/* Calories In - Muted orange */}
+    <View style={[styles.activityMetricCard, { backgroundColor: '#FFF8F0' }]}>
+      <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
+        <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
+      </View>
+      <Text style={styles.metricValue}>{totalCalories}</Text>
+      <Text style={styles.metricLabel}>Calories In</Text>
+      <View style={styles.metricTrend}>
+        <Feather name="arrow-up" size={14} color="#48BB78" />
+        <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>12%</Text>
+      </View>
+    </View>
+    
+    {/* Calories Out - Muted red */}
+    <View style={[styles.activityMetricCard, { backgroundColor: '#FFF5F5' }]}>
+      <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
+        <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
+      </View>
+      <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
+      <Text style={styles.metricLabel}>Calories Out</Text>
+      <View style={styles.metricTrend}>
+        <Feather name="arrow-up" size={14} color="#FC8181" />
+        <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
+      </View>
+    </View>
+    
+    {/* Active Minutes - Muted blue */}
+    <View style={[styles.activityMetricCard, { backgroundColor: '#F0F9FF' }]}>
+      <View style={[styles.metricIconContainer, { backgroundColor: '#DBEAFE' }]}>
+        <MaterialCommunityIcons name="clock-outline" size={18} color="#4299E1" />
+      </View>
+      <Text style={styles.metricValue}>42</Text>
+      <Text style={styles.metricLabel}>Active Min</Text>
+      <View style={styles.metricTrend}>
+        <Feather name="arrow-down" size={14} color="#ED8936" />
+        <Text style={[styles.metricTrendText, { color: '#ED8936' }]}>5%</Text>
+      </View>
+    </View>
+    
+    {/* Goals Progress - Muted purple */}
+    <View style={[styles.activityMetricCard, { backgroundColor: '#FAF5FF' }]}>
+      <View style={[styles.metricIconContainer, { backgroundColor: '#E9D8FD' }]}>
+        <MaterialCommunityIcons name="target" size={18} color="#9F7AEA" />
+      </View>
+      <Text style={styles.metricValue}>{completedGoals}/{dailyData.goals.length}</Text>
+      <Text style={styles.metricLabel}>Goals Met</Text>
+      <View style={styles.progressCircle}>
+        <Text style={styles.progressCircleText}>
+          {Math.round((completedGoals/dailyData.goals.length)*100)}%
+        </Text>
+      </View>
+    </View>
+  </View>
+  
+  {/* Activity Progress Bar */}
+  <View style={styles.activityProgressContainer}>
+    <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
+    <View style={styles.fullProgressBar}>
+      <View style={[styles.activityProgressFill, { 
+        width: '65%',
+        backgroundColor: '#4C51BF' // More muted blue
+      }]} />
+    </View>
+    <Text style={styles.activityProgressPercent}>65% Complete</Text>
+  </View>
+</View>
 
+        {/* Water Card */}
         <View style={[styles.card, styles.cardElevated]}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleContainer}>
@@ -466,58 +536,64 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={[styles.card, styles.cardElevated]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleContainer}>
-              <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
-              <Text style={styles.cardTitle}>Skating Tracking</Text>
-            </View>
-            <TouchableOpacity onPress={handleSkatingPress}>
-              <Feather name="chevron-right" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.recentSessionContainer}>
-            <View style={styles.recentSessionIcon}>
-              <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
-            </View>
-            <View style={styles.recentSessionDetails}>
-              <Text style={styles.recentSessionTitle}>Speed Skating</Text>
-              <Text style={styles.recentSessionStats}>15.2 km/h • 92 strides • 32 min</Text>
-            </View>
-            <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
-          </View>
-        </View>
+  // In the HomeScreen component, replace the Skating Tracking and Step Count cards with these:
 
-        <View style={[styles.card, styles.cardElevated]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleContainer}>
-              <Feather name="activity" size={20} color="#00C853" />
-              <Text style={styles.cardTitle}>Step Count</Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
-              <Feather name="chevron-right" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.stepProgressContainer}>
-            <View style={styles.stepProgressText}>
-              <Text style={styles.stepCount}>{data?.s ?? data?.steps ?? 0}</Text>
-              <Text style={styles.stepGoal}>/ 10,000 steps</Text>
-            </View>
-            <View style={styles.progressBarContainer}>
-              <LinearGradient
-                colors={['#4B6CB7', '#6B8CE8']}
-                style={[styles.progressFill, { width: `${((data?.s ?? data?.steps ?? 0)/10000)*100}%` }]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              />
-            </View>
-            <Text style={styles.progressPercentage}>{Math.round((data?.s ?? data?.steps ?? 0 /10000)*100)}% of daily goal</Text>
-          </View>
-        </View>
+{/* Skating Tracking - Updated with recent session */}
+<View style={[styles.card, styles.cardElevated]}>
+  <View style={styles.cardHeader}>
+    <View style={styles.cardTitleContainer}>
+      <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
+      <Text style={styles.cardTitle}>Skating Tracking</Text>
+    </View>
+    <TouchableOpacity onPress={handleSkatingPress}>
+      <Feather name="chevron-right" size={24} color="#666" />
+    </TouchableOpacity>
+  </View>
+  
+  <View style={styles.recentSessionContainer}>
+    <View style={styles.recentSessionIcon}>
+      <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
+    </View>
+    <View style={styles.recentSessionDetails}>
+      <Text style={styles.recentSessionTitle}>Speed Skating</Text>
+      <Text style={styles.recentSessionStats}>15.2 km/h • 92 strides • 32 min</Text>
+    </View>
+    <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
+  </View>
+</View>
+
+{/* Step Count - Updated with today's progress */}
+<View style={[styles.card, styles.cardElevated]}>
+  <View style={styles.cardHeader}>
+    <View style={styles.cardTitleContainer}>
+      <Feather name="activity" size={20} color="#00C853" />
+      <Text style={styles.cardTitle}>Step Count</Text>
+    </View>
+    <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
+      <Feather name="chevron-right" size={24} color="#666" />
+    </TouchableOpacity>
+  </View>
+  
+  <View style={styles.stepProgressContainer}>
+    <View style={styles.stepProgressText}>
+      {/* <Text style={styles.stepCount}>3,205</Text> */}
+      <Text style={styles.stepCount}>{data?.s ?? data?.steps ?? 0}</Text>
+      <Text style={styles.stepGoal}>/ 10,000 steps</Text>
+    </View>
+    <View style={styles.progressBarContainer}>
+      <LinearGradient
+        colors={['#4B6CB7', '#6B8CE8']}
+        style={[styles.progressFill, { width: `${((data?.s ?? data?.steps ?? 0)/10000)*100}%` }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      />
+    </View>
+    <Text style={styles.progressPercentage}>{Math.round((data?.s ?? data?.steps ?? 0 /10000)*100)}% of daily goal</Text>
+  </View>
+</View>
       </ScrollView>
 
+      {/* Modal - Add Meal */}
       <Modal visible={modalVisible === 'meal'} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -570,19 +646,20 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      <Modal visible={pairingModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pair Your Device</Text>
+                       {/* Pairing Device Modal */}
+       <Modal visible={pairingModalVisible} animationType="slide" transparent>
+         <View style={styles.modalOverlay}>
+           <View style={styles.modalContent}>
+             <Text style={styles.modalTitle}>Pair Your Device</Text>
             
-            {isScanning ? (
+             {isScanning ? (
               <View style={styles.scanningContainer}>
                 <ActivityIndicator size="large" color="#4B6CB7" />
                 <Text style={styles.scanningText}>Scanning for devices...</Text>
               </View>
             ) : (
               <FlatList
-                data={devices}
+                data={foundDevices}
                 keyExtractor={(item) => item.id}
                 renderItem={renderDeviceItem}
                 ListEmptyComponent={
@@ -595,7 +672,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.modalButtonRow}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.secondaryButton]}
-                onPress={scanDevices}
+                onPress={handleScanDevices}
               >
                 <Text style={styles.secondaryButtonText}>Rescan</Text>
               </TouchableOpacity>
@@ -610,6 +687,7 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* Skating Type Selection Modal */}
       <Modal visible={skatingModalVisible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -659,271 +737,271 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    marginBottom: Platform.OS === 'ios' ? 60 : 60,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 60,
+    backgroundColor: '#F5F7FB',
   },
   headerGradient: {
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    marginTop: Platform.OS === 'ios' ? -60 : -10,
+    paddingHorizontal: '6%',
+    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
+    paddingBottom: height * 0.02,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
+    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
+    elevation: Platform.OS === 'android' ? 10 : 0,
   },
   headerSection: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '8%',
   },
   greetingText: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
-    marginRight: 5,
+    fontSize: width * 0.045,
+    marginRight: '2%',
+    color: 'rgba(255,255,255,0.9)',
   },
   headerText: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: width * 0.055,
     color: '#fff',
+    marginTop: '1%',
   },
   profileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: width * 0.1,
+    height: width * 0.1,
+    borderRadius: width * 0.05,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   topActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginHorizontal: '-2%',
   },
   actionCard: {
     alignItems: 'center',
-    width: width / 3.5,
+    width: '30%',
+    paddingHorizontal: '2%',
   },
   actionIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: '4%',
   },
   actionIconShadow: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 3,
   },
   actionLabel: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: width * 0.033,
     textAlign: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: '4%',
+    paddingBottom: '8%',
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    overflow: 'hidden',
   },
   cardElevated: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: '4%',
   },
   cardTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: width * 0.045,
+    color: '#2E3A59',
+    marginLeft: '2%',
+    fontWeight: '500',
   },
   timeText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 100,
-    marginBottom: 12,
-    fontSize: 16,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: '4%',
+    minHeight: width * 0.3,
+    fontSize: width * 0.04,
+    color: '#333',
+    backgroundColor: '#fff',
+    marginBottom: '4%',
+    textAlignVertical: 'top',
   },
   mealButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   mealButton: {
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: '4%',
     width: '48%',
     alignItems: 'center',
   },
   mealButtonText: {
-    fontSize: 16,
+    fontSize: width * 0.04,
     fontWeight: '600',
   },
+  activityGradient: {
+    padding: '4%',
+    borderRadius: 16,
+  },
   activityGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row', 
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
-  activityMetricCard: {
-    width: width / 2.3,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  metricIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
+activityMetricCard: {
+  width: '48%',
+  borderRadius: 12,
+  padding: '4%',
+  marginBottom: '4%',
+  alignItems: 'center',
+},
+metricIconContainer: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: '4%',
+},
   metricValue: {
-    fontSize: 20,
+    fontSize: width * 0.05,
+    color: '#2E3A59',
     fontWeight: 'bold',
-    color: '#333',
   },
   metricLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+    marginBottom: '2%',
   },
   metricTrend: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   metricTrendText: {
-    fontSize: 12,
-    marginLeft: 2,
+    fontSize: width * 0.035,
+    marginLeft: 4,
   },
   progressCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EDF2F7',
+    backgroundColor: '#F0F4FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(74,108,183,0.2)',
   },
   progressCircleText: {
-    fontSize: 10,
+    fontSize: width * 0.035,
+    color: '#4B6CB7',
     fontWeight: 'bold',
-    color: '#4C51BF',
   },
   activityProgressContainer: {
-    marginTop: 8,
+    marginTop: '4%',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    width: '100%',
   },
   activityProgressText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginBottom: '2%',
   },
   fullProgressBar: {
-    height: 6,
-    backgroundColor: '#EDF2F7',
-    borderRadius: 3,
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
     overflow: 'hidden',
+    marginBottom: '2%',
   },
-  activityProgressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
+activityProgressFill: {
+  height: '100%',
+  borderRadius: 4,
+},
   activityProgressPercent: {
-    fontSize: 12,
-    color: '#4C51BF',
-    marginTop: 4,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
   },
   waterCardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-end',
   },
   waterInfo: {
     flex: 1,
   },
   intakeRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    marginBottom: '4%',
   },
   intakeText: {
-    fontSize: 16,
-    color: '#666',
+    color: '#5A6A8C',
+    fontSize: width * 0.04,
   },
   intakeBold: {
-    fontSize: 24,
+    fontSize: width * 0.05,
+    color: '#2E3A59',
     fontWeight: 'bold',
-    color: '#00B0FF',
-  },
-  addButton: {
-    backgroundColor: '#00B0FF',
-    borderRadius: 8,
-    padding: 8,
-    marginTop: 12,
-    width: 100,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  waterBottleContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 80,
-  },
-  waterBottle: {
-    width: 40,
-    height: 80,
-    borderWidth: 2,
-    borderColor: '#00B0FF',
-    borderRadius: 8,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
-  waterFill: {
-    backgroundColor: '#00B0FF',
-    width: '100%',
   },
   recentSessionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
-    backgroundColor: '#FAF5FF',
-    borderRadius: 8,
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
   recentSessionIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EDE7F6',
+    backgroundColor: 'rgba(123, 31, 162, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -933,123 +1011,169 @@ const styles = StyleSheet.create({
   },
   recentSessionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#7B1FA2',
+    fontWeight: '500',
+    color: '#2E3A59',
   },
   recentSessionStats: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#5A6A8C',
+    marginTop: 4,
   },
   recentSessionTime: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 12,
+    color: '#9AA5B9',
+    alignSelf: 'flex-start',
   },
   stepProgressContainer: {
     marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
   stepProgressText: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    marginBottom: 8,
   },
   stepCount: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#00C853',
+    color: '#2E3A59',
   },
   stepGoal: {
     fontSize: 16,
-    color: '#666',
-    marginLeft: 4,
+    color: '#5A6A8C',
   },
   progressBarContainer: {
-    height: 8,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 4,
-    marginTop: 8,
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
     overflow: 'hidden',
+    marginBottom: 4,
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressPercentage: {
     fontSize: 12,
-    color: '#00C853',
-    marginTop: 4,
-    textAlign: 'right',
+    color: '#4B6CB7',
+    fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: '#4B6CB7',
+    borderRadius: 24,
+    paddingVertical: '2.5%',
+    paddingHorizontal: '5%',
+    alignSelf: 'flex-start',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: width * 0.035,
+    fontWeight: '500',
+  },
+  waterBottleContainer: {
+    marginLeft: '4%',
+    alignItems: 'center',
+  },
+  waterBottle: {
+    width: width * 0.15,
+    height: width * 0.25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'flex-end',
+  },
+  waterFill: {
+    backgroundColor: '#4B6CB7',
+    width: '100%',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
+    width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    width: width - 40,
+    borderRadius: 16,
+    padding: '6%',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: '#333',
+    fontSize: width * 0.05,
+    marginBottom: '5%',
+    color: '#2E3A59',
     textAlign: 'center',
+    fontWeight: '500',
   },
   mealCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: '4%',
+    borderRadius: 12,
+    marginBottom: '4%',
+    borderWidth: 1,
+    borderColor: '#F0F4FF',
   },
   mealCardText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginLeft: '3%',
     flex: 1,
-    fontSize: 16,
-    marginLeft: 12,
+    fontWeight: '500',
   },
-  cancelButton: {
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  cancelText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-    skatingTypeCard: {
+  skatingTypeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: '4%',
+    borderRadius: 12,
+    marginBottom: '4%',
+    borderWidth: 1,
+    borderColor: '#F0F4FF',
   },
   skatingTypeText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginLeft: '3%',
     flex: 1,
-    fontSize: 16,
-    marginLeft: 12,
+    fontWeight: '500',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    padding: '3.5%',
+    borderRadius: 12,
+    marginTop: '2%',
+    backgroundColor: '#F5F7FB',
   },
+  cancelText: {
+    color: '#5A6A8C',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+
+
+
+  // Pairing Modal Styles
   scanningContainer: {
-    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 20,
   },
   scanningText: {
     marginTop: 10,
     color: '#666',
-  },
-  deviceList: {
-    width: '100%',
-    maxHeight: 300,
   },
   deviceItem: {
     flexDirection: 'row',
@@ -1058,39 +1182,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  deviceItemConnecting: {
-    opacity: 0.6,
-  },
-  deviceIconContainer: {
-    marginRight: 15,
-  },
-  deviceInfoContainer: {
-    flex: 1,
-  },
   deviceName: {
+    flex: 1,
+    marginLeft: 10,
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  deviceNameConnecting: {
-    color: '#999',
-  },
-  deviceId: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 2,
   },
   noDevicesText: {
     textAlign: 'center',
     padding: 20,
-    color: '#666',
+    color: '#999',
   },
-  modalButtonRow: {
+  buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
   },
-  modalButton: {
+  actionButton: {
     flex: 1,
     padding: 15,
     borderRadius: 8,
@@ -1101,16 +1208,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#4B6CB7',
   },
   secondaryButton: {
-    backgroundColor: '#eee',
+    backgroundColor: '#f0f0f0',
   },
   primaryButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
   secondaryButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
+    color: '#333',
   },
-});
 
+  deviceItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
+},
+deviceItemConnecting: {
+  opacity: 0.7,
+},
+deviceIconContainer: {
+  marginRight: 12,
+},
+deviceInfoContainer: {
+  flex: 1,
+  marginRight: 12,
+},
+deviceName: {
+  fontSize: 16,
+  color: '#333',
+  marginBottom: 2,
+},
+deviceNameConnecting: {
+  color: '#999',
+},
+deviceId: {
+  fontSize: 12,
+  color: '#999',
+},
+
+
+});
 export default HomeScreen;
+
+
