@@ -77,6 +77,7 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     fetchTodayTotal();
     fetchTarget();
+    // connectToDevice();
     getWorkoutCount();
         // related to step counting 
         sendCommand('SET_MODE STEP_COUNTING');
@@ -240,6 +241,8 @@ const HomeScreen = ({ navigation }) => {
 
 
   const handlePairDevicePress = () => {
+    connectToDevice();
+    handleConnect();
     setPairingModalVisible(true);
     scanForDevices();
   };
@@ -580,12 +583,12 @@ const HomeScreen = ({ navigation }) => {
     <View style={styles.progressBarContainer}>
       <LinearGradient
         colors={['#4B6CB7', '#6B8CE8']}
-        style={[styles.progressFill, { width: `${(3205/10000)*100}%` }]}
+        style={[styles.progressFill, { width: `${((data?.s ?? data?.steps ?? 0)/10000)*100}%` }]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       />
     </View>
-    <Text style={styles.progressPercentage}>{Math.round((3205/10000)*100)}% of daily goal</Text>
+    <Text style={styles.progressPercentage}>{Math.round((data?.s ?? data?.steps ?? 0 /10000)*100)}% of daily goal</Text>
   </View>
 </View>
       </ScrollView>
