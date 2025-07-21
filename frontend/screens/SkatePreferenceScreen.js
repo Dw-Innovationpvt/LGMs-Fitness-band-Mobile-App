@@ -47,7 +47,8 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
     
     // Go back to profile
     // navigation.goBack();
-    navigation.navigate('Home');
+    // navigation.navigate('Home');
+    navigation.replace('Main');
 
   };
 

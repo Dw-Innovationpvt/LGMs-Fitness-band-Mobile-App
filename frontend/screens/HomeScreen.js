@@ -9,8 +9,9 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
-import { useBLEStore } from '../store/bleStore';
+// import { useBLEStore } from '../store/bleStore';
 
+import { useBLEStore } from './components/bleStore';
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {

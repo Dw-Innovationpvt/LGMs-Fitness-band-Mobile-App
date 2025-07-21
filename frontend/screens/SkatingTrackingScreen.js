@@ -17,7 +17,8 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useBLEStore } from '../store/bleStore';
+// import { useBLEStore } from '../store/bleStore';
+import { useBLEStore } from './components/bleStore';
 
 const { width } = Dimensions.get('window');
 
