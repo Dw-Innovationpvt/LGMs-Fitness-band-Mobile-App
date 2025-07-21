@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { BleManager } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
 const CHARACTERISTIC_UUID = 'abcdefab-1234-5678-1234-abcdefabcdef';
@@ -45,6 +46,94 @@ function formatBLEData(data) {
   return formattedData;
 }
 
+// Request all required permissions for BLE scanning on Android
+const requestBLEPermissions = async () => {
+  if (Platform.OS === 'android') {
+    try {
+      console.log('Requesting BLE permissions for Android ' + Platform.Version);
+      
+      // For Android 10 (API 29) and below, only location permission is needed for BLE
+      // For Android 12+ (API 31+), explicit Bluetooth permissions are also required
+      
+      // Always request location permissions (required for BLE scanning on all Android versions)
+      const locationPermissions = [
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      ];
+      
+      // For Android 10 (API 29) and below
+      if (Platform.Version <= 30) {
+        console.log('Android 10 or below detected, requesting only location permissions');
+        const granted = await PermissionsAndroid.requestMultiple(locationPermissions);
+        
+        const hasLocationPermission = 
+          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED ||
+          granted['android.permission.ACCESS_COARSE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED;
+        
+        if (!hasLocationPermission) {
+          console.log('Location permissions denied on Android 10 or below');
+        }
+        
+        return hasLocationPermission;
+      } 
+      // For Android 11 (API 30)
+      else if (Platform.Version === 30) {
+        console.log('Android 11 detected, requesting location permissions');
+        const granted = await PermissionsAndroid.requestMultiple(locationPermissions);
+        
+        const hasLocationPermission = 
+          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED ||
+          granted['android.permission.ACCESS_COARSE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED;
+        
+        if (!hasLocationPermission) {
+          console.log('Location permissions denied on Android 11');
+        }
+        
+        return hasLocationPermission;
+      }
+      // For Android 12+ (API 31+)
+      else {
+        console.log('Android 12+ detected, requesting both location and Bluetooth permissions');
+        const permissions = [
+          ...locationPermissions,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+        ];
+        
+        const granted = await PermissionsAndroid.requestMultiple(permissions);
+        
+        // Check if location permissions are granted
+        const hasLocationPermission = 
+          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED ||
+          granted['android.permission.ACCESS_COARSE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED;
+        
+        // Check if Bluetooth permissions are granted
+        const hasBluetoothPermission = 
+          granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+          granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED;
+        
+        const allPermissionsGranted = hasLocationPermission && hasBluetoothPermission;
+        
+        if (!hasLocationPermission) {
+          console.log('Location permissions denied on Android 12+');
+        }
+        
+        if (!hasBluetoothPermission) {
+          console.log('Bluetooth permissions denied on Android 12+');
+        }
+        
+        return allPermissionsGranted;
+      }
+    } catch (err) {
+      console.warn('Permission request error:', err);
+      return false;
+    }
+  } else {
+    // iOS handles permissions differently
+    return true;
+  }
+};
+
 export const useBLEStore = create((set, get) => ({
   bleManager: new BleManager(),
   connectedDevice: null,
@@ -59,38 +148,90 @@ export const useBLEStore = create((set, get) => ({
 
   skatingMode: null,
 
-// Scan for BLE devices
+  // Scan for BLE devices
   scanForDevices: async () => {
     const { bleManager } = get();
     set({ isScanning: true, foundDevices: [], error: null });
+    
+    console.log('Starting BLE device scan...');
+    
+    try {
+      // First check if BLE is enabled
+      const bleState = await bleManager.state();
+      console.log('BLE State:', bleState);
+      
+      if (bleState !== 'PoweredOn') {
+        set({ 
+          isScanning: false, 
+          error: 'Bluetooth is not enabled. Please turn on Bluetooth and try again.' 
+        });
+        return [];
+      }
+      
+      // Check for all required permissions (location and Bluetooth)
+      const hasPermissions = await requestBLEPermissions();
+      if (!hasPermissions) {
+        console.error('Required permissions denied - BLE scanning requires location and Bluetooth permissions');
+        set({ 
+          isScanning: false, 
+          error: 'Bluetooth and location permissions are required. Please grant all permissions for Bluetooth scanning to work.'
+        });
+        return [];
+      }
+      
+      return new Promise((resolve) => {
+        // Timeout after 15 seconds
+        const timeout = setTimeout(() => {
+          console.log('BLE scan timeout reached');
+          bleManager.stopDeviceScan();
+          set({ isScanning: false });
+          
+          const devices = get().foundDevices;
+          console.log(`Scan completed. Found ${devices.length} devices`);
+          
+          if (devices.length === 0) {
+            console.log('No devices found. Check if Bluetooth is enabled and device is in range');
+            set({ error: 'No devices found. Make sure Bluetooth is enabled and your fitness band is nearby.' });
+          }
+          
+          resolve(devices);
+        }, 15000);
 
-    return new Promise((resolve) => {
-      // Timeout after 10 seconds
-      const timeout = setTimeout(() => {
-        bleManager.stopDeviceScan();
-        set({ isScanning: false });
-        resolve(get().foundDevices);
-      }, 10000);
+        bleManager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+          if (error) {
+            console.error('BLE Scan error:', error.message);
+            clearTimeout(timeout);
+            set({ isScanning: false, error: `Bluetooth error: ${error.message}` });
+            resolve([]);
+            return;
+          }
+          
+          // Log all discovered devices for debugging
+          if (device && device.name) {
+            console.log(`Found device: ${device.name} (${device.id})`);
+          } else if (device) {
+            console.log(`Found unnamed device: ${device.id}`);
+          }
 
-      bleManager.startDeviceScan(null, null, (error, device) => {
-        if (error) {
-          clearTimeout(timeout);
-          set({ isScanning: false, error: error.message });
-          resolve([]);
-          return;
-        }
-
-        if (device.name && device.name.includes('ESP32C6')) {
-          set((state) => {
-            const exists = state.foundDevices.some(d => d.id === device.id);
-            if (!exists) {
-              return { foundDevices: [...state.foundDevices, device] };
-            }
-            return state;
-          });
-        }
+          // Accept any device with a name OR devices that might be your fitness band
+          if (device && (device.name || device.localName)) {
+            set((state) => {
+              const exists = state.foundDevices.some(d => d.id === device.id);
+              if (!exists) {
+                const displayName = device.name || device.localName || 'Unknown Device';
+                console.log(`Adding device to list: ${displayName}`);
+                return { foundDevices: [...state.foundDevices, device] };
+              }
+              return state;
+            });
+          }
+        });
       });
-    });
+    } catch (e) {
+      console.error('Unexpected error during BLE scan:', e);
+      set({ isScanning: false, error: `Unexpected error: ${e.message}` });
+      return [];
+    }
   },
 
   connectToDevice: async (device) => {
@@ -98,21 +239,42 @@ export const useBLEStore = create((set, get) => ({
       console.log('Connecting to device:', device.name || device.id);
       const bleManager = get().bleManager;
       
+      // Clear any previous errors
+      set({ error: null });
+      
       // Disconnect any existing connection first
       const { connectedDevice } = get();
       if (connectedDevice) {
         console.log('Disconnecting previous device');
-        await get().disconnect();
+        try {
+          await connectedDevice.cancelConnection();
+        } catch (disconnectError) {
+          console.warn('Error disconnecting previous device:', disconnectError);
+        }
       }
+      
+      // Stop scanning
+      bleManager.stopDeviceScan();
       
       // Connect to the device with timeout
       console.log('Attempting connection...');
       const deviceConnection = await Promise.race([
         device.connect(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 10000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+        )
       ]);
       
-      console.log('Connected, discovering services...');
+      console.log('Connected successfully, discovering services...');
+      
+      // Set connection immediately to provide user feedback
+      set({ 
+        connectedDevice: deviceConnection, 
+        isConnected: true,
+        error: null 
+      });
+      
+      // Discover services and characteristics
       await deviceConnection.discoverAllServicesAndCharacteristics();
 
       // Try to increase MTU size for larger data packets
@@ -123,19 +285,119 @@ export const useBLEStore = create((set, get) => ({
         console.warn('MTU request failed, continuing with default:', mtuError);
       }
 
-      // Find our service and characteristic
+      // Find services
       console.log('Finding services and characteristics...');
       const services = await deviceConnection.services();
+      console.log('Available services:', services.map(s => s.uuid));
+      
+      // Check if our specific service exists
+      const targetService = services.find(s => s.uuid.toLowerCase() === SERVICE_UUID.toLowerCase());
+      
+      if (!targetService) {
+        // If specific service not found, try to find any service with characteristics
+        console.warn(`Target service ${SERVICE_UUID} not found. Available services:`, 
+          services.map(s => s.uuid));
+        
+        // For testing, you might want to use the first available service
+        if (services.length > 0) {
+          const firstService = services[0];
+          console.log(`Using first available service: ${firstService.uuid}`);
+          
+          const characteristics = await deviceConnection.characteristicsForService(firstService.uuid);
+          console.log('Available characteristics:', characteristics.map(c => c.uuid));
+          
+          if (characteristics.length > 0) {
+            const char = characteristics[0]; // Use first available characteristic
+            console.log(`Using first available characteristic: ${char.uuid}`);
+            
+            set({ 
+              characteristic: char,
+              isConnected: true,
+              error: null 
+            });
+            
+            // Set up monitoring if characteristic supports notifications
+            if (char.isNotifiable) {
+              console.log('Setting up characteristic monitoring...');
+              deviceConnection.monitorCharacteristicForService(
+                firstService.uuid,
+                char.uuid,
+                (error, characteristic) => {
+                  if (error) {
+                    console.error('❌ Monitor error:', error);
+                    return;
+                  }
+
+                  const base64Value = characteristic?.value;
+                  if (!base64Value) {
+                    console.warn('⚠ Empty characteristic value');
+                    return;
+                  }
+                  
+                  try {
+                    const json = Buffer.from(base64Value, 'base64').toString('utf-8');
+                    console.log('Received data:', json);
+                    
+                    if (!json || json.trim() === '') {
+                      console.warn('⚠ Empty JSON string after decoding');
+                      return;
+                    }
+
+                    try {
+                      const parsed = JSON.parse(json);
+                      console.log('Successfully parsed JSON data');
+                      const formattedData = formatBLEData(parsed);
+                      set({ data: formattedData });
+                    } catch (err) {
+                      console.warn('⚠ JSON parse error, trying to fix:', err);
+                      
+                      // Try to fix incomplete JSON
+                      try {
+                        const fixedJson = fixIncompleteJson(json);
+                        if (fixedJson !== json) {
+                          console.log('Attempting to parse fixed JSON:', fixedJson);
+                          const parsed = JSON.parse(fixedJson);
+                          console.log('Successfully parsed after fixing JSON');
+                          const formattedData = formatBLEData(parsed);
+                          set({ data: formattedData });
+                          return;
+                        }
+                      } catch (fixErr) {
+                        console.warn('Could not fix JSON:', fixErr);
+                      }
+                      
+                      // Store raw data if JSON parsing fails
+                      set({ data: { rawData: json } });
+                    }
+                  } catch (decodeErr) {
+                    console.error('❌ Base64 decoding error:', decodeErr);
+                  }
+                }
+              );
+            } else {
+              console.log('Characteristic does not support notifications');
+            }
+            
+            return; // Exit successfully
+          }
+        }
+        
+        throw new Error(`Required service ${SERVICE_UUID} not found on device`);
+      }
+      
+      // If we found our target service, proceed as before
       const characteristics = await deviceConnection.characteristicsForService(SERVICE_UUID);
-      const char = characteristics.find(c => c.uuid === CHARACTERISTIC_UUID);
+      const char = characteristics.find(c => c.uuid.toLowerCase() === CHARACTERISTIC_UUID.toLowerCase());
       
       if (!char) {
         throw new Error(`Characteristic ${CHARACTERISTIC_UUID} not found`);
       }
       
-      console.log('Service and characteristic found');
-      set({ connectedDevice: deviceConnection, characteristic: char, isConnected: true });
+      console.log('Target service and characteristic found');
+      set({ characteristic: char });
 
+      // Set up characteristic monitoring
+      console.log('Setting up characteristic monitoring...');
       deviceConnection.monitorCharacteristicForService(
         SERVICE_UUID,
         CHARACTERISTIC_UUID,
@@ -166,7 +428,7 @@ export const useBLEStore = create((set, get) => ({
               const formattedData = formatBLEData(parsed);
               set({ data: formattedData });
             } catch (err) {
-              console.warn('⚠ JSON parse error:', err);
+              console.warn('⚠ JSON parse error, trying to fix:', err);
               
               // Try to fix incomplete JSON
               try {
@@ -197,6 +459,9 @@ export const useBLEStore = create((set, get) => ({
               } catch (extractErr) {
                 console.warn('JSON extraction failed:', extractErr);
               }
+              
+              // Store raw data if all parsing attempts fail
+              set({ data: { rawData: json } });
             }
           } catch (decodeErr) {
             console.error('❌ Base64 decoding error:', decodeErr);
@@ -204,9 +469,32 @@ export const useBLEStore = create((set, get) => ({
         }
       );
 
+      console.log('✅ Device connected and configured successfully');
+
+      // Set up disconnect handler
+      deviceConnection.onDisconnected((error, disconnectedDevice) => {
+        console.log('Device disconnected:', disconnectedDevice.id);
+        if (error) {
+          console.error('Disconnection error:', error);
+        }
+        set({ 
+          isConnected: false, 
+          connectedDevice: null, 
+          characteristic: null,
+          bandActive: false,
+          data: null
+        });
+      });
+
     } catch (err) {
       console.error('❌ Connection error:', err);
-      set({ isConnected: false });
+      set({ 
+        isConnected: false, 
+        connectedDevice: null,
+        characteristic: null,
+        error: err.message || 'Failed to connect to device'
+      });
+      throw err; // Re-throw to handle in UI
     }
   },
 
@@ -231,8 +519,8 @@ export const useBLEStore = create((set, get) => ({
       try {
         const encoded = Buffer.from(formattedCmd).toString('base64');
         await connectedDevice.writeCharacteristicWithResponseForService(
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID,
+          characteristic.serviceUUID,
+          characteristic.uuid,
           encoded
         );
         console.log('✅ Sent command (base64):', formattedCmd);
@@ -242,8 +530,8 @@ export const useBLEStore = create((set, get) => ({
         
         // If base64 fails, try with raw string
         await connectedDevice.writeCharacteristicWithResponseForService(
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID,
+          characteristic.serviceUUID,
+          characteristic.uuid,
           formattedCmd
         );
         console.log('✅ Sent command (raw):', formattedCmd);
@@ -260,7 +548,6 @@ export const useBLEStore = create((set, get) => ({
     const success = await sendCommand(bandActive ? 'TURN_OFF' : 'TURN_ON');
     if (success) set({ bandActive: !bandActive });
   },
-
 
   // Activate Speed Skating Mode
   activateSpeedSkating: async () => {
@@ -289,124 +576,25 @@ export const useBLEStore = create((set, get) => ({
     return success;
   },
 
-
-
   disconnect: async () => {
     const { connectedDevice, bleManager } = get();
-    if (connectedDevice) {
-      await connectedDevice.cancelConnection();
+    try {
+      if (connectedDevice) {
+        console.log('Disconnecting device...');
+        await connectedDevice.cancelConnection();
+      }
+    } catch (error) {
+      console.warn('Error during disconnect:', error);
+    } finally {
+      bleManager.stopDeviceScan();
+      set({ 
+        isConnected: false, 
+        bandActive: false, 
+        connectedDevice: null,
+        characteristic: null,
+        data: null,
+        error: null
+      });
     }
-    bleManager.stopDeviceScan();
-    set({ isConnected: false, bandActive: false, connectedDevice: null });
   }
 }));
-// import { create } from 'zustand';
-// import { BleManager } from 'react-native-ble-plx';
-// import { Buffer } from 'buffer';
-
-// const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
-// const CHARACTERISTIC_UUID = 'abcdefab-1234-5678-1234-abcdefabcdef';
-
-// export const useBLEStore = create((set, get) => {
-//   const bleManager = new BleManager();
-
-//   return {
-//     bleManager,
-//     connectedDevice: null,
-//     monitorSubscription: null,
-//     connectionStatus: 'disconnected',
-//     bandActive: false,
-//     data: null,
-
-//     scanDevices: async () => {
-//       set({ connectionStatus: 'scanning' });
-
-//       bleManager.startDeviceScan(null, null, async (error, device) => {
-//         if (error) {
-//           console.error('Scan error:', error);
-//           return;
-//         }
-
-//         if (device?.name?.includes('ESP32C6')) {
-//           await get().connectToDevice(device);
-//         }
-//       });
-
-//       setTimeout(() => bleManager.stopDeviceScan(), 10000);
-//     },
-
-//     connectToDevice: async (device) => {
-//       try {
-//         set({ connectionStatus: 'connecting' });
-//         const connectedDevice = await device.connect();
-//         await connectedDevice.discoverAllServicesAndCharacteristics();
-//         await connectedDevice.requestMTU(185);
-
-//         get().monitorCharacteristic(connectedDevice);
-//         set({ connectedDevice, connectionStatus: 'connected' });
-
-//         setTimeout(() => get().sendCommand('STATUS'), 2000);
-//       } catch (e) {
-//         console.error('Connection error:', e);
-//         set({ connectionStatus: 'disconnected' });
-//       }
-//     },
-
-//     monitorCharacteristic: (device) => {
-//       const monitor = device.monitorCharacteristicForService(
-//         SERVICE_UUID,
-//         CHARACTERISTIC_UUID,
-//         (error, characteristic) => {
-//           if (error) {
-//             console.error('Monitor error:', error);
-//             set({ connectionStatus: 'disconnected' });
-//             return;
-//           }
-
-//           const value = Buffer.from(characteristic.value, 'base64').toString('utf-8');
-//           try {
-//             const parsed = JSON.parse(value);
-//             set({
-//               data: {
-//                 mode: parsed.m || 'Unknown',
-//                 steps: parsed.s || 0,
-//                 walking_dist: parsed.wd || 0,
-//                 strides: parsed.st || 0,
-//                 skating_dist: parsed.sd || 0,
-//                 speed: parsed.sp || 0,
-//                 laps: parsed.l || 0,
-//               },
-//             });
-//           } catch (err) {
-//             console.error('JSON Parse error:', err);
-//           }
-//         }
-//       );
-//       set({ monitorSubscription: monitor });
-//     },
-
-//     sendCommand: async (command) => {
-//       const { connectedDevice } = get();
-//       if (!connectedDevice) return;
-
-//       try {
-//         const encoded = Buffer.from(command, 'utf-8').toString('base64');
-//         await connectedDevice.writeCharacteristicWithResponseForService(
-//           SERVICE_UUID,
-//           CHARACTERISTIC_UUID,
-//           encoded
-//         );
-//         console.log('Sent command:', command);
-//       } catch (err) {
-//         console.error('SendCommand error:', err);
-//       }
-//     },
-
-//     disconnect: async () => {
-//       const { monitorSubscription, connectedDevice } = get();
-//       monitorSubscription?.remove();
-//       if (connectedDevice) await connectedDevice.cancelConnection();
-//       set({ connectedDevice: null, connectionStatus: 'disconnected', bandActive: false });
-//     },
-//   };
-// });

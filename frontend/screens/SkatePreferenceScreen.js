@@ -1,5 +1,4 @@
 // Update SkatePreferenceScreen.js
-
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
@@ -17,8 +16,8 @@ const wheelOptions = {
 };
 
 const SkatePreferenceScreen = ({ navigation, route }) => {
-  // Get the current preferences and callback from route params
-  const { currentPreferences, onUpdatePreferences } = route.params;
+  // Get the current preferences and callback from route params with defaults
+  const { currentPreferences = {}, onUpdatePreferences = () => {} } = route.params || {};
   
   const [skateType, setSkateType] = useState(currentPreferences.skateType || 'inline');
   const [wheelDiameter, setWheelDiameter] = useState(currentPreferences.wheelDiameter || '');
@@ -47,7 +46,9 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
     });
     
     // Go back to profile
-    navigation.goBack();
+    // navigation.goBack();
+    navigation.navigate('Home');
+
   };
 
   const handleWheelSelect = (size) => {
@@ -55,7 +56,6 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
     setWheelDiameter(size);
     setCustomDiameter('');
   };
-
 
   return (
     <LinearGradient
@@ -123,7 +123,7 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Common {skateType === 'inline' ? 'Inline' : 'Quad'} Sizes</Text>
           
           <View style={styles.wheelContainer}>
-            {wheelOptions[skateType].map((size) => (
+            {(wheelOptions[skateType] || []).map((size) => (
               <TouchableOpacity
                 key={size}
                 style={[
@@ -187,6 +187,195 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
     </LinearGradient>
   );
 };
+
+
+// import React, { useState, useEffect } from 'react';
+// import {
+//   View, Text, TouchableOpacity, StyleSheet,
+//   ScrollView, Dimensions, TextInput
+// } from 'react-native';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import { MaterialCommunityIcons } from '@expo/vector-icons';
+// import * as Haptics from 'expo-haptics';
+
+// const { width } = Dimensions.get('window');
+
+// const wheelOptions = {
+//   inline: ['90 mm', '100 mm', '110 mm'],
+//   quad: ['56 mm', '58 mm', '62 mm', '65 mm']
+// };
+
+// const SkatePreferenceScreen = ({ navigation, route }) => {
+//   // Get the current preferences and callback from route params
+//   const { currentPreferences, onUpdatePreferences } = route.params;
+  
+//   const [skateType, setSkateType] = useState(currentPreferences.skateType || 'inline');
+//   const [wheelDiameter, setWheelDiameter] = useState(currentPreferences.wheelDiameter || '');
+//   const [customDiameter, setCustomDiameter] = useState('');
+
+//   useEffect(() => {
+//     // Reset wheel diameter when skate type changes
+//     setWheelDiameter('');
+//     setCustomDiameter('');
+//   }, [skateType]);
+
+//   const handleSave = () => {
+//     const selectedDiameter = wheelDiameter || customDiameter;
+    
+//     if (!selectedDiameter) {
+//       alert('Please select or enter a wheel diameter');
+//       return;
+//     }
+    
+//     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+//     // Call the update callback with new preferences
+//     onUpdatePreferences({
+//       skateType,
+//       wheelDiameter: selectedDiameter
+//     });
+    
+//     // Go back to profile
+//     navigation.goBack();
+//   };
+
+//   const handleWheelSelect = (size) => {
+//     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//     setWheelDiameter(size);
+//     setCustomDiameter('');
+//   };
+
+
+//   return (
+//     <LinearGradient
+//       colors={['#F5F7FB', '#E4E8F0']}
+//       style={styles.container}
+//     >
+//       <ScrollView contentContainerStyle={styles.scrollContainer}>
+//         <Text style={styles.title}>Skate Preferences 🛼</Text>
+//         <Text style={styles.subtitle}>Tell us about your skating setup</Text>
+
+//         {/* Skate Type Selection */}
+//         <View style={styles.card}>
+//           <Text style={styles.cardTitle}>Skate Type</Text>
+//           <View style={styles.typeContainer}>
+//             <TouchableOpacity 
+//               style={[
+//                 styles.typeOption,
+//                 skateType === 'inline' && styles.selectedType
+//               ]}
+//               onPress={() => {
+//                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//                 setSkateType('inline');
+//               }}
+//             >
+//               <MaterialCommunityIcons 
+//                 name="rollerblade" 
+//                 size={32} 
+//                 color={skateType === 'inline' ? '#fff' : '#4B6CB7'} 
+//               />
+//               <Text style={[
+//                 styles.typeText,
+//                 skateType === 'inline' && styles.selectedTypeText
+//               ]}>
+//                 Inline Skates
+//               </Text>
+//             </TouchableOpacity>
+//             <TouchableOpacity 
+//               style={[
+//                 styles.typeOption,
+//                 skateType === 'quad' && styles.selectedType
+//               ]}
+//               onPress={() => {
+//                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//                 setSkateType('quad');
+//               }}
+//             >
+//               <MaterialCommunityIcons 
+//                 name="roller-skate" 
+//                 size={32} 
+//                 color={skateType === 'quad' ? '#fff' : '#FF6B6B'} 
+//               />
+//               <Text style={[
+//                 styles.typeText,
+//                 skateType === 'quad' && styles.selectedTypeText
+//               ]}>
+//                 Quad Skates
+//               </Text>
+//             </TouchableOpacity>
+//           </View>
+//         </View>
+
+//         {/* Wheel Diameter Selection */}
+//         <View style={styles.card}>
+//           <Text style={styles.cardTitle}>Select Wheel Diameter</Text>
+//           <Text style={styles.sectionTitle}>Common {skateType === 'inline' ? 'Inline' : 'Quad'} Sizes</Text>
+          
+//           <View style={styles.wheelContainer}>
+//             {wheelOptions[skateType].map((size) => (
+//               <TouchableOpacity
+//                 key={size}
+//                 style={[
+//                   styles.wheelOption,
+//                   wheelDiameter === size && styles.selectedWheel
+//                 ]}
+//                 onPress={() => handleWheelSelect(size)}
+//               >
+//                 <Text style={[
+//                   styles.wheelText,
+//                   wheelDiameter === size && styles.selectedWheelText
+//                 ]}>
+//                   {size}
+//                 </Text>
+//                 {wheelDiameter === size && (
+//                   <MaterialCommunityIcons 
+//                     name="check-circle" 
+//                     size={20} 
+//                     color="#4B6CB7" 
+//                     style={styles.checkIcon}
+//                   />
+//                 )}
+//               </TouchableOpacity>
+//             ))}
+//           </View>
+
+//           <Text style={styles.sectionTitle}>Custom Size</Text>
+//           <TextInput
+//             style={styles.input}
+//             placeholder={`Enter custom diameter in mm (${skateType === 'inline' ? '72-110' : '50-65'}mm)`}
+//             placeholderTextColor="#999"
+//             keyboardType="numeric"
+//             value={customDiameter}
+//             onChangeText={(text) => {
+//               setCustomDiameter(text);
+//               setWheelDiameter('');
+//             }}
+//           />
+//         </View>
+
+//         <TouchableOpacity 
+//           style={styles.continueButton}
+//           onPress={handleSave}
+//           disabled={!wheelDiameter && !customDiameter}
+//         >
+//           <LinearGradient
+//             colors={['#4B6CB7', '#182848']}
+//             style={styles.gradientButton}
+//             start={{ x: 0, y: 0 }}
+//             end={{ x: 1, y: 0 }}
+//           >
+//             <Text style={styles.buttonText}>Continue</Text>
+//             <MaterialCommunityIcons 
+//               name="arrow-right" 
+//               size={24} 
+//               color="#fff" 
+//             />
+//           </LinearGradient>
+//         </TouchableOpacity>
+//       </ScrollView>
+//     </LinearGradient>
+//   );
+// };
 
 const styles = StyleSheet.create({
   container: {

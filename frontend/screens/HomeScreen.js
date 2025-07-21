@@ -1,21 +1,21 @@
+
+
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Platform,Alert, ActivityIndicator,
-  ScrollView, Dimensions, Modal, SafeAreaView, TextInput, FlatList
+  View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator,
+  ScrollView, Dimensions, Modal, SafeAreaView, TextInput, FlatList, Linking
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
-
-import { useBLEStore } from '../store/bleStore'; // Import the BLE store
-
+import { useBLEStore } from '../store/bleStore';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
   const { postMeals } = useAuthStore();
-  
+
   // Water store integration
   const {
     todayTotal,
@@ -35,12 +35,15 @@ const HomeScreen = ({ navigation }) => {
     isConnected,
     bandActive,
     toggleBand,
-    // data: bleData,
     data,
-    sendCommand
+    sendCommand,
+    foundDevices,
+    scanForDevices,
+    activateSpeedSkating,
+    activateDistanceSkating,
+    activateFreestyleSkating,
+    skatingMode
   } = useBLEStore();
-
-  const { activateSpeedSkating, activateDistanceSkating, activateFreestyleSkating, skatingMode } = useBLEStore();
 
   const userName = 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
@@ -49,10 +52,7 @@ const HomeScreen = ({ navigation }) => {
   const [mealItems, setMealItems] = useState('');
   const [currentTime, setCurrentTime] = useState('');
   const [skatingModalVisible, setSkatingModalVisible] = useState(false);
-
-  // ble down code
-    const [pairingModalVisible, setPairingModalVisible] = useState(false);
-  const [foundDevices, setFoundDevices] = useState([]);
+  const [pairingModalVisible, setPairingModalVisible] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
   const [dailyData, setDailyData] = useState({
@@ -73,65 +73,35 @@ const HomeScreen = ({ navigation }) => {
     ],
   });
 
-  // Initialize water data
   useEffect(() => {
     fetchTodayTotal();
     fetchTarget();
-    // connectToDevice();
     getWorkoutCount();
-        // related to step counting 
-        sendCommand('SET_MODE STEP_COUNTING');
-        return () => sendCommand('SET_MODE SKATING_SPEED');
+    sendCommand('SET_MODE STEP_COUNTING');
+    return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
 
-  // Handle water errors
   useEffect(() => {
     if (waterError) {
       Alert.alert('Water Error', waterError);
     }
-    // if (bleError) Alert.alert('Bluetooth Error', bleError);
-  // }, [waterError, bleError]);
   }, [waterError]);
 
-  // Handle BLE device scanning
-  const scanForDevices = async () => {
-    try {
-      setIsScanning(true);
-      setFoundDevices([]);
-      
-      // This would be implemented in your BLE store
-      const devices = await useBLEStore.getState().scanForDevices();
-      setFoundDevices(devices);
-      
-      setIsScanning(false);
-    } catch (error) {
-      Alert.alert('Scan Error', error.message);
-      setIsScanning(false);
-    }
-  };
-  // Handle BLE device scanning
   const handleScanDevices = async () => {
     setPairingModalVisible(true);
     try {
+      setIsScanning(true);
       await scanForDevices();
+      setIsScanning(false);
     } catch (error) {
+      console.error('Error in handleScanDevices:', error);
       Alert.alert('Scan Error', error.message);
+      setIsScanning(false);
     }
   };
 
-  // Handle device connection
-  // const handleDeviceConnection = async (device) => {
-  //   try {
-  //     await connectToDevice(device);
-  //     setPairingModalVisible(false);
-  //     Alert.alert('Success', 'Device connected successfully');
-  //   } catch (error) {
-  //     Alert.alert('Connection Error', error.message);
-  //   }
-  // };
-
   const handleAddWater = async () => {
-    const result = await addIntake(400); // Add 400ml
+    const result = await addIntake(400);
     if (!result.success) {
       Alert.alert('Error', result.error);
     }
@@ -144,8 +114,7 @@ const HomeScreen = ({ navigation }) => {
     setModalVisible(null);
     setCurrentMealType(mealType);
     setMealInputVisible(true);
-    
-    // Get current time
+
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
@@ -154,7 +123,8 @@ const HomeScreen = ({ navigation }) => {
     const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
     setCurrentTime(`${formattedHours}:${formattedMinutes} ${ampm}`);
   };
-    const handleDeviceConnection = async (device) => {
+
+  const handleDeviceConnection = async (device) => {
     try {
       await connectToDevice(device);
       setPairingModalVisible(false);
@@ -163,23 +133,23 @@ const HomeScreen = ({ navigation }) => {
       Alert.alert('Connection Error', error.message);
     }
   };
-  const handleSaveMeal = async() => {
+
+  const handleSaveMeal = async () => {
     if (mealItems.trim()) {
       const newMeal = {
         mealType: currentMealType,
         name: mealItems,
         time: currentTime,
-        calories: 10 // You can add calorie calculation logic here
+        calories: 10
       };
 
-      // post this meal to the backend
       const responseWorkout = await postMeals(newMeal);
 
       setDailyData(prev => ({
         ...prev,
         meals: [...prev.meals, newMeal]
       }));
-      
+
       setMealItems('');
       setMealInputVisible(false);
     }
@@ -187,31 +157,21 @@ const HomeScreen = ({ navigation }) => {
 
   const getMealColor = () => {
     switch (currentMealType) {
-      case 'Breakfast':
-        return '#FFF3E0';
-      case 'Lunch':
-        return '#E8F5E9';
-      case 'Snack':
-        return '#F3E5F5';
-      case 'Dinner':
-        return '#E3F2FD';
-      default:
-        return '#F5F5F5';
+      case 'Breakfast': return '#FFF3E0';
+      case 'Lunch': return '#E8F5E9';
+      case 'Snack': return '#F3E5F5';
+      case 'Dinner': return '#E3F2FD';
+      default: return '#F5F5F5';
     }
   };
 
   const getMealIcon = () => {
     switch (currentMealType) {
-      case 'Breakfast':
-        return <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />;
-      case 'Lunch':
-        return <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />;
-      case 'Snack':
-        return <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />;
-      case 'Dinner':
-        return <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />;
-      default:
-        return <MaterialCommunityIcons name="food" size={24} color="#666" />;
+      case 'Breakfast': return <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />;
+      case 'Lunch': return <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />;
+      case 'Snack': return <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />;
+      case 'Dinner': return <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />;
+      default: return <MaterialCommunityIcons name="food" size={24} color="#666" />;
     }
   };
 
@@ -221,110 +181,97 @@ const HomeScreen = ({ navigation }) => {
 
   const startSkatingSession = async (type) => {
     setSkatingModalVisible(false);
-    if (type == 'speed'){
+    if (type === 'speed') {
       await activateSpeedSkating();
-      // Current mode will be 'speed'
-      console.log(skatingMode,'226-home'); 
-      console.log('hii-227home');
-    }
-    else if (type=='distance'){
+    } else if (type === 'distance') {
       await activateDistanceSkating();
-      
-    }
-    else {
+    } else {
       await activateFreestyleSkating();
-
     }
     navigation.navigate('SkatingTracking', { skatingType: type });
   };
-  
-
 
   const handlePairDevicePress = () => {
-    connectToDevice();
-    handleConnect();
     setPairingModalVisible(true);
-    scanForDevices();
+    handleScanDevices();
   };
 
   const renderDeviceItem = ({ item }) => {
-  const [isConnecting, setIsConnecting] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleConnect = async () => {
-    setIsConnecting(true);
-    try {
-      await connectToDevice(item);
-      setPairingModalVisible(false);
-      Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
-    } catch (error) {
-      Alert.alert('Connection Failed', error.message);
-    } finally {
-      setIsConnecting(false);
-    }
+    const handleConnect = async () => {
+      setIsConnecting(true);
+      try {
+        await connectToDevice(item);
+        setPairingModalVisible(false);
+        Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
+      } catch (error) {
+        Alert.alert('Connection Failed', error.message);
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.deviceItem,
+          isConnecting && styles.deviceItemConnecting
+        ]}
+        onPress={handleConnect}
+        disabled={isConnecting}
+      >
+        <View style={styles.deviceIconContainer}>
+          <MaterialCommunityIcons
+            name="bluetooth"
+            size={24}
+            color={isConnecting ? "#999" : "#4B6CB7"}
+          />
+        </View>
+
+        <View style={styles.deviceInfoContainer}>
+          <Text
+            style={[
+              styles.deviceName,
+              isConnecting && styles.deviceNameConnecting
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.name || 'Unknown Device'}
+          </Text>
+          <Text style={styles.deviceId}>
+            {item.id}
+          </Text>
+        </View>
+
+        {isConnecting ? (
+          <ActivityIndicator size="small" color="#4B6CB7" />
+        ) : (
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={24}
+            color="#666"
+          />
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.deviceItem,
-        isConnecting && styles.deviceItemConnecting
-      ]}
-      onPress={handleConnect}
-      disabled={isConnecting}
-    >
-      <View style={styles.deviceIconContainer}>
-        <MaterialCommunityIcons 
-          name="bluetooth" 
-          size={24} 
-          color={isConnecting ? "#999" : "#4B6CB7"} 
-        />
-      </View>
-      
-      <View style={styles.deviceInfoContainer}>
-        <Text 
-          style={[
-            styles.deviceName,
-            isConnecting && styles.deviceNameConnecting
-          ]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {item.name || 'Unknown Device'}
-        </Text>
-        <Text style={styles.deviceId}>
-          {item.id}
-        </Text>
-      </View>
-
-      {isConnecting ? (
-        <ActivityIndicator size="small" color="#4B6CB7" />
-      ) : (
-        <MaterialCommunityIcons 
-          name="chevron-right" 
-          size={24} 
-          color="#666" 
-        />
-      )}
-    </TouchableOpacity>
-  );
-};
-
-  return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header Gradient */}
-      <LinearGradient 
-        colors={['#4B6CB7', '#182848']} 
+      <LinearGradient
+        colors={['#4B6CB7', '#182848']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
-        {/* Top Header */}
         <View style={styles.headerSection}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-start', marginTop: 10 }}>
             <Text style={styles.greetingText}>Good Morning,</Text>
             <Text style={styles.headerText}>{userName}</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.8}
           >
@@ -334,10 +281,9 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Actions */}
         <View style={styles.topActions}>
-          <TouchableOpacity 
-            style={styles.actionCard} 
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => setModalVisible('meal')}
             activeOpacity={0.7}
           >
@@ -347,8 +293,8 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Add Meal</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionCard} 
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => navigation.navigate('SetGoal')}
             activeOpacity={0.7}
           >
@@ -358,10 +304,9 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Set Goal</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionCard} 
-            // onPress={() => navigation.navigate('PairDevice')}
-            onPress={() => handlePairDevicePress()}
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handlePairDevicePress}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
@@ -372,13 +317,11 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      {/* Main Content */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Meal Input Card (shown when adding a meal) */}
         {mealInputVisible && (
           <View style={[styles.card, styles.cardElevated, { backgroundColor: getMealColor() }]}>
             <View style={styles.cardHeader}>
@@ -388,7 +331,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
               <Text style={styles.timeText}>{currentTime}</Text>
             </View>
-            
+
             <TextInput
               placeholder={`What did you have for ${currentMealType.toLowerCase()}?`}
               style={styles.input}
@@ -397,17 +340,17 @@ const HomeScreen = ({ navigation }) => {
               placeholderTextColor="#999"
               multiline
             />
-            
+
             <View style={styles.mealButtonRow}>
-              <TouchableOpacity 
-                style={[styles.mealButton, { backgroundColor: '#E0E0E0' }]} 
+              <TouchableOpacity
+                style={[styles.mealButton, { backgroundColor: '#E0E0E0' }]}
                 onPress={() => setMealInputVisible(false)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.mealButtonText, { color: '#333' }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.mealButton, { backgroundColor: '#1A2980' }]} 
+              <TouchableOpacity
+                style={[styles.mealButton, { backgroundColor: '#1A2980' }]}
                 onPress={handleSaveMeal}
                 activeOpacity={0.8}
               >
@@ -417,87 +360,80 @@ const HomeScreen = ({ navigation }) => {
           </View>
         )}
 
-{/* Enhanced Activity Card - Updated with muted colorful sub-cards */}
-<View style={[styles.card, styles.cardElevated]}>
-  <View style={styles.cardHeader}>
-    <View style={styles.cardTitleContainer}>
-      <MaterialCommunityIcons name="chart-line" size={20} color="#2E3A59" />
-      <Text style={[styles.cardTitle, { color: '#2E3A59' }]}>Today's Activity</Text>
-    </View>
-    <TouchableOpacity onPress={() => navigation.navigate('ActivityDetails')}>
-      <Feather name="chevron-right" size={24} color="#666" />
-    </TouchableOpacity>
-  </View>
-  
-  <View style={styles.activityGrid}>
-    {/* Calories In - Muted orange */}
-    <View style={[styles.activityMetricCard, { backgroundColor: '#FFF8F0' }]}>
-      <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
-        <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
-      </View>
-      <Text style={styles.metricValue}>{totalCalories}</Text>
-      <Text style={styles.metricLabel}>Calories In</Text>
-      <View style={styles.metricTrend}>
-        <Feather name="arrow-up" size={14} color="#48BB78" />
-        <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>12%</Text>
-      </View>
-    </View>
-    
-    {/* Calories Out - Muted red */}
-    <View style={[styles.activityMetricCard, { backgroundColor: '#FFF5F5' }]}>
-      <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
-        <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
-      </View>
-      <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
-      <Text style={styles.metricLabel}>Calories Out</Text>
-      <View style={styles.metricTrend}>
-        <Feather name="arrow-up" size={14} color="#FC8181" />
-        <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
-      </View>
-    </View>
-    
-    {/* Active Minutes - Muted blue */}
-    <View style={[styles.activityMetricCard, { backgroundColor: '#F0F9FF' }]}>
-      <View style={[styles.metricIconContainer, { backgroundColor: '#DBEAFE' }]}>
-        <MaterialCommunityIcons name="clock-outline" size={18} color="#4299E1" />
-      </View>
-      <Text style={styles.metricValue}>42</Text>
-      <Text style={styles.metricLabel}>Active Min</Text>
-      <View style={styles.metricTrend}>
-        <Feather name="arrow-down" size={14} color="#ED8936" />
-        <Text style={[styles.metricTrendText, { color: '#ED8936' }]}>5%</Text>
-      </View>
-    </View>
-    
-    {/* Goals Progress - Muted purple */}
-    <View style={[styles.activityMetricCard, { backgroundColor: '#FAF5FF' }]}>
-      <View style={[styles.metricIconContainer, { backgroundColor: '#E9D8FD' }]}>
-        <MaterialCommunityIcons name="target" size={18} color="#9F7AEA" />
-      </View>
-      <Text style={styles.metricValue}>{completedGoals}/{dailyData.goals.length}</Text>
-      <Text style={styles.metricLabel}>Goals Met</Text>
-      <View style={styles.progressCircle}>
-        <Text style={styles.progressCircleText}>
-          {Math.round((completedGoals/dailyData.goals.length)*100)}%
-        </Text>
-      </View>
-    </View>
-  </View>
-  
-  {/* Activity Progress Bar */}
-  <View style={styles.activityProgressContainer}>
-    <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
-    <View style={styles.fullProgressBar}>
-      <View style={[styles.activityProgressFill, { 
-        width: '65%',
-        backgroundColor: '#4C51BF' // More muted blue
-      }]} />
-    </View>
-    <Text style={styles.activityProgressPercent}>65% Complete</Text>
-  </View>
-</View>
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <MaterialCommunityIcons name="chart-line" size={20} color="#2E3A59" />
+              <Text style={[styles.cardTitle, { color: '#2E3A59' }]}>Today's Activity</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('ActivityDetails')}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
 
-        {/* Water Card */}
+          <View style={styles.activityGrid}>
+            <View style={[styles.activityMetricCard, { backgroundColor: '#FFF8F0' }]}>
+              <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
+                <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
+              </View>
+              <Text style={styles.metricValue}>{totalCalories}</Text>
+              <Text style={styles.metricLabel}>Calories In</Text>
+              <View style={styles.metricTrend}>
+                <Feather name="arrow-up" size={14} color="#48BB78" />
+                <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>12%</Text>
+              </View>
+            </View>
+
+            <View style={[styles.activityMetricCard, { backgroundColor: '#FFF5F5' }]}>
+              <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
+                <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
+              </View>
+              <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
+              <Text style={styles.metricLabel}>Calories Out</Text>
+              <View style={styles.metricTrend}>
+                <Feather name="arrow-up" size={14} color="#FC8181" />
+                <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
+              </View>
+            </View>
+
+            <View style={[styles.activityMetricCard, { backgroundColor: '#F0F9FF' }]}>
+              <View style={[styles.metricIconContainer, { backgroundColor: '#DBEAFE' }]}>
+                <MaterialCommunityIcons name="clock-outline" size={18} color="#4299E1" />
+              </View>
+              <Text style={styles.metricValue}>42</Text>
+              <Text style={styles.metricLabel}>Active Min</Text>
+              <View style={styles.metricTrend}>
+                <Feather name="arrow-down" size={14} color="#ED8936" />
+                <Text style={[styles.metricTrendText, { color: '#ED8936' }]}>5%</Text>
+              </View>
+            </View>
+
+            <View style={[styles.activityMetricCard, { backgroundColor: '#FAF5FF' }]}>
+              <View style={[styles.metricIconContainer, { backgroundColor: '#E9D8FD' }]}>
+                <MaterialCommunityIcons name="target" size={18} color="#9F7AEA" />
+              </View>
+              <Text style={styles.metricValue}>{completedGoals}/{dailyData.goals.length}</Text>
+              <Text style={styles.metricLabel}>Goals Met</Text>
+              <View style={styles.progressCircle}>
+                <Text style={styles.progressCircleText}>
+                  {Math.round((completedGoals / dailyData.goals.length) * 100)}%
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.activityProgressContainer}>
+            <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
+            <View style={styles.fullProgressBar}>
+              <View style={[styles.activityProgressFill, {
+                width: '65%',
+                backgroundColor: '#4C51BF'
+              }]} />
+            </View>
+            <Text style={styles.activityProgressPercent}>65% Complete</Text>
+          </View>
+        </View>
+
         <View style={[styles.card, styles.cardElevated]}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleContainer}>
@@ -508,7 +444,7 @@ const HomeScreen = ({ navigation }) => {
               <Feather name="chevron-right" size={24} color="#666" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.waterCardContent}>
             <View style={styles.waterInfo}>
               <View style={styles.intakeRow}>
@@ -516,15 +452,15 @@ const HomeScreen = ({ navigation }) => {
                   <Text style={styles.intakeBold}>{todayTotal}</Text> /{target} ml
                 </Text>
               </View>
-              <TouchableOpacity 
-                style={styles.addButton} 
+              <TouchableOpacity
+                style={styles.addButton}
                 onPress={handleAddWater}
                 activeOpacity={0.8}
               >
                 <Text style={styles.addButtonText}>+ 400 ml</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.waterBottleContainer}>
               <View style={styles.waterBottle}>
                 <View style={[
@@ -536,70 +472,64 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-  // In the HomeScreen component, replace the Skating Tracking and Step Count cards with these:
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
+              <Text style={styles.cardTitle}>Skating Tracking</Text>
+            </View>
+            <TouchableOpacity onPress={handleSkatingPress}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
 
-{/* Skating Tracking - Updated with recent session */}
-<View style={[styles.card, styles.cardElevated]}>
-  <View style={styles.cardHeader}>
-    <View style={styles.cardTitleContainer}>
-      <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
-      <Text style={styles.cardTitle}>Skating Tracking</Text>
-    </View>
-    <TouchableOpacity onPress={handleSkatingPress}>
-      <Feather name="chevron-right" size={24} color="#666" />
-    </TouchableOpacity>
-  </View>
-  
-  <View style={styles.recentSessionContainer}>
-    <View style={styles.recentSessionIcon}>
-      <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
-    </View>
-    <View style={styles.recentSessionDetails}>
-      <Text style={styles.recentSessionTitle}>Speed Skating</Text>
-      <Text style={styles.recentSessionStats}>15.2 km/h • 92 strides • 32 min</Text>
-    </View>
-    <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
-  </View>
-</View>
+          <View style={styles.recentSessionContainer}>
+            <View style={styles.recentSessionIcon}>
+              <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
+            </View>
+            <View style={styles.recentSessionDetails}>
+              <Text style={styles.recentSessionTitle}>Speed Skating</Text>
+              <Text style={styles.recentSessionStats}>15.2 km/h • 92 strides • 32 min</Text>
+            </View>
+            <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
+          </View>
+        </View>
 
-{/* Step Count - Updated with today's progress */}
-<View style={[styles.card, styles.cardElevated]}>
-  <View style={styles.cardHeader}>
-    <View style={styles.cardTitleContainer}>
-      <Feather name="activity" size={20} color="#00C853" />
-      <Text style={styles.cardTitle}>Step Count</Text>
-    </View>
-    <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
-      <Feather name="chevron-right" size={24} color="#666" />
-    </TouchableOpacity>
-  </View>
-  
-  <View style={styles.stepProgressContainer}>
-    <View style={styles.stepProgressText}>
-      {/* <Text style={styles.stepCount}>3,205</Text> */}
-      <Text style={styles.stepCount}>{data?.s ?? data?.steps ?? 0}</Text>
-      <Text style={styles.stepGoal}>/ 10,000 steps</Text>
-    </View>
-    <View style={styles.progressBarContainer}>
-      <LinearGradient
-        colors={['#4B6CB7', '#6B8CE8']}
-        style={[styles.progressFill, { width: `${((data?.s ?? data?.steps ?? 0)/10000)*100}%` }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      />
-    </View>
-    <Text style={styles.progressPercentage}>{Math.round((data?.s ?? data?.steps ?? 0 /10000)*100)}% of daily goal</Text>
-  </View>
-</View>
+        <View style={[styles.card, styles.cardElevated]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <Feather name="activity" size={20} color="#00C853" />
+              <Text style={styles.cardTitle}>Step Count</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
+              <Feather name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.stepProgressContainer}>
+            <View style={styles.stepProgressText}>
+              <Text style={styles.stepCount}>{data?.s ?? data?.steps ?? 0}</Text>
+              <Text style={styles.stepGoal}>/ 10,000 steps</Text>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <LinearGradient
+                colors={['#4B6CB7', '#6B8CE8']}
+                style={[styles.progressFill, { width: `${((data?.s ?? data?.steps ?? 0) / 10000) * 100}%` }]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              />
+            </View>
+            <Text style={styles.progressPercentage}>{Math.round(((data?.s ?? data?.steps ?? 0) / 10000) * 100)}% of daily goal</Text>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Modal - Add Meal */}
       <Modal visible={modalVisible === 'meal'} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Meals</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.mealCard, { backgroundColor: '#FFF3E0' }]}
               onPress={() => handleMealCardPress('Breakfast')}
             >
@@ -607,8 +537,8 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.mealCardText}>Breakfast</Text>
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.mealCard, { backgroundColor: '#E8F5E9' }]}
               onPress={() => handleMealCardPress('Lunch')}
             >
@@ -616,8 +546,8 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.mealCardText}>Lunch</Text>
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.mealCard, { backgroundColor: '#F3E5F5' }]}
               onPress={() => handleMealCardPress('Snack')}
             >
@@ -625,8 +555,8 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.mealCardText}>Snack</Text>
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.mealCard, { backgroundColor: '#E3F2FD' }]}
               onPress={() => handleMealCardPress('Dinner')}
             >
@@ -635,8 +565,8 @@ const HomeScreen = ({ navigation }) => {
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.cancelButton} 
+            <TouchableOpacity
+              style={styles.cancelButton}
               onPress={() => setModalVisible(null)}
               activeOpacity={0.8}
             >
@@ -646,16 +576,16 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-                       {/* Pairing Device Modal */}
-       <Modal visible={pairingModalVisible} animationType="slide" transparent>
-         <View style={styles.modalOverlay}>
-           <View style={styles.modalContent}>
-             <Text style={styles.modalTitle}>Pair Your Device</Text>
-            
-             {isScanning ? (
+      <Modal visible={pairingModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Pair Your Device</Text>
+
+            {isScanning ? (
               <View style={styles.scanningContainer}>
                 <ActivityIndicator size="large" color="#4B6CB7" />
                 <Text style={styles.scanningText}>Scanning for devices...</Text>
+                <Text style={styles.scanningSubText}>Make sure your fitness band is turned on and nearby</Text>
               </View>
             ) : (
               <FlatList
@@ -663,20 +593,36 @@ const HomeScreen = ({ navigation }) => {
                 keyExtractor={(item) => item.id}
                 renderItem={renderDeviceItem}
                 ListEmptyComponent={
-                  <Text style={styles.noDevicesText}>No devices found</Text>
+                  <View style={styles.noDevicesContainer}>
+                    <MaterialCommunityIcons name="bluetooth-off" size={40} color="#999" />
+                    <Text style={styles.noDevicesText}>No devices found</Text>
+                    <Text style={styles.noDevicesSubText}>
+                      Make sure your fitness band is turned on, in pairing mode, and within range
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.helpButton]}
+                      onPress={() => Alert.alert(
+                        'Pairing Help',
+                        'To pair your fitness band:\n\n1. Make sure Bluetooth is enabled on your phone\n2. Turn on your fitness band\n3. Put your fitness band in pairing mode (refer to device manual)\n4. Keep your fitness band within 1 meter of your phone\n5. Tap "Rescan" to try again'
+                      )}
+                    >
+                      <Text style={styles.helpButtonText}>Pairing Help</Text>
+                    </TouchableOpacity>
+                  </View>
                 }
                 style={styles.deviceList}
               />
             )}
 
             <View style={styles.modalButtonRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.secondaryButton]}
                 onPress={handleScanDevices}
+                disabled={isScanning}
               >
-                <Text style={styles.secondaryButtonText}>Rescan</Text>
+                <Text style={styles.secondaryButtonText}>{isScanning ? 'Scanning...' : 'Rescan'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.primaryButton]}
                 onPress={() => setPairingModalVisible(false)}
               >
@@ -687,13 +633,12 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Skating Type Selection Modal */}
       <Modal visible={skatingModalVisible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Skating Type</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.skatingTypeCard, { backgroundColor: '#EDE7F6' }]}
               onPress={() => startSkatingSession('speed')}
             >
@@ -701,8 +646,8 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.skatingTypeText}>Speed Skating</Text>
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.skatingTypeCard, { backgroundColor: '#E3F2FD' }]}
               onPress={() => startSkatingSession('distance')}
             >
@@ -710,8 +655,8 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.skatingTypeText}>Distance Skating</Text>
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.skatingTypeCard, { backgroundColor: '#FFF3E0' }]}
               onPress={() => startSkatingSession('freestyle')}
             >
@@ -720,8 +665,8 @@ const HomeScreen = ({ navigation }) => {
               <Feather name="chevron-right" size={20} color="#666" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.cancelButton} 
+            <TouchableOpacity
+              style={styles.cancelButton}
               onPress={() => setSkatingModalVisible(false)}
               activeOpacity={0.8}
             >
@@ -733,6 +678,8 @@ const HomeScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
+// export default HomeScreen;
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -886,25 +833,25 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   activityGrid: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-activityMetricCard: {
-  width: '48%',
-  borderRadius: 12,
-  padding: '4%',
-  marginBottom: '4%',
-  alignItems: 'center',
-},
-metricIconContainer: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginBottom: '4%',
-},
+  activityMetricCard: {
+    width: '48%',
+    borderRadius: 12,
+    padding: '4%',
+    marginBottom: '4%',
+    alignItems: 'center',
+  },
+  metricIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
   metricValue: {
     fontSize: width * 0.05,
     color: '#2E3A59',
@@ -959,10 +906,10 @@ metricIconContainer: {
     overflow: 'hidden',
     marginBottom: '2%',
   },
-activityProgressFill: {
-  height: '100%',
-  borderRadius: 4,
-},
+  activityProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
   activityProgressPercent: {
     fontSize: width * 0.035,
     color: '#5A6A8C',
@@ -1187,10 +1134,42 @@ activityProgressFill: {
     marginLeft: 10,
     fontSize: 16,
   },
+  noDevicesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
   noDevicesText: {
     textAlign: 'center',
-    padding: 20,
-    color: '#999',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginVertical: 10,
+  },
+  noDevicesSubText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  scanningSubText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#888',
+    marginTop: 10,
+  },
+  helpButton: {
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  helpButtonText: {
+    color: '#1976D2',
+    fontSize: 14,
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -1219,35 +1198,35 @@ activityProgressFill: {
   },
 
   deviceItem: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingVertical: 12,
-  paddingHorizontal: 16,
-  borderBottomWidth: 1,
-  borderBottomColor: '#eee',
-},
-deviceItemConnecting: {
-  opacity: 0.7,
-},
-deviceIconContainer: {
-  marginRight: 12,
-},
-deviceInfoContainer: {
-  flex: 1,
-  marginRight: 12,
-},
-deviceName: {
-  fontSize: 16,
-  color: '#333',
-  marginBottom: 2,
-},
-deviceNameConnecting: {
-  color: '#999',
-},
-deviceId: {
-  fontSize: 12,
-  color: '#999',
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  deviceItemConnecting: {
+    opacity: 0.7,
+  },
+  deviceIconContainer: {
+    marginRight: 12,
+  },
+  deviceInfoContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  deviceName: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 2,
+  },
+  deviceNameConnecting: {
+    color: '#999',
+  },
+  deviceId: {
+    fontSize: 12,
+    color: '#999',
+  },
 
 
 });
