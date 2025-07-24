@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Dimensions,
@@ -15,7 +14,6 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
-// import { useBLEStore } from './bleStore';
 import { useBLEStore } from './components/bleStore';
 
 const { width } = Dimensions.get('window');
@@ -32,14 +30,16 @@ const StepCountScreen = ({ navigation }) => {
   const [stepGoal, setStepGoal] = useState(10000);
   const [tempGoal, setTempGoal] = useState('10000');
 
-  // Derived state from BLE data
-  const steps = data?.s ?? data?.steps ?? 0;
-  const distanceInMeters = data?.d ?? data?.walking_dist ?? 0;
+  // Extract data from hardware with proper field names
+  const isStepMode = data?.mode === 'S';
+  const steps = isStepMode ? data?.stepCount || 0 : 0;
+  const distanceInMeters = isStepMode ? data?.walkingDistance || 0 : 0;
   const distanceInKm = +(distanceInMeters / 1000).toFixed(2);
+  const speed = isStepMode ? data?.speed || 0 : 0;
   
-  // Calculate calories based on distance and average speed (4.8 km/h as default)
-  const avgSpeed = 4.8; // km/h
-  const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
+  // Calculate calories based on distance and speed
+  const avgSpeedKmh = +(speed * 3.6).toFixed(1); // Convert m/s to km/h
+  const metValue = avgSpeedKmh < 3 ? 2.9 : avgSpeedKmh < 4 ? 3.3 : 3.8;
   const calories = Math.round(distanceInKm * metValue * 70 / 1.6); // Assuming 70kg person
 
   // Set mode when component mounts
@@ -48,7 +48,7 @@ const StepCountScreen = ({ navigation }) => {
     return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
 
-  // Mock data for the chart
+  // Progress chart data
   const chartData = {
     labels: ["Steps"],
     data: [steps/stepGoal],
@@ -62,9 +62,6 @@ const StepCountScreen = ({ navigation }) => {
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(75, 108, 183, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 16
-    },
     propsForDots: {
       r: "6",
       strokeWidth: "2",
@@ -110,53 +107,61 @@ const StepCountScreen = ({ navigation }) => {
   };
 
   const renderDailyStats = () => (
-    <View style={styles.statsContainer}>
-      <View style={styles.statCard}>
-        <View style={styles.goalHeader}>
+    <View>
+      <View>
+        <View>
           <MaterialCommunityIcons name="walk" size={24} color="#4B6CB7" />
           <TouchableOpacity onPress={() => setShowGoalModal(true)}>
             <Feather name="edit-2" size={18} color="#4B6CB7" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.statValue}>{steps.toLocaleString()}</Text>
-        <Text style={styles.statLabel}>Steps</Text>
-        <View style={styles.progressBar}>
+        <Text>{steps.toLocaleString()}</Text>
+        <Text>Steps</Text>
+        <View>
           <LinearGradient
             colors={['#4B6CB7', '#6B8CE8']}
-            style={[styles.progressFill, { width: `${Math.min(100, (steps/stepGoal)*100)}%` }]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            style={{ width: `${Math.min(100, (steps/stepGoal)*100)}%` }}
           />
         </View>
-        <Text style={styles.progressText}>
+        <Text>
           {Math.round((steps/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal
         </Text>
       </View>
 
-      <View style={styles.statCard}>
+      <View>
         <MaterialCommunityIcons name="map-marker-distance" size={24} color="#4B6CB7" />
-        <Text style={styles.statValue}>{distanceInKm}</Text>
-        <Text style={styles.statLabel}>Kilometers</Text>
+        <Text>{distanceInKm}</Text>
+        <Text>Kilometers</Text>
       </View>
 
-      <View style={styles.statCard}>
+      <View>
         <MaterialCommunityIcons name="speedometer" size={24} color="#4B6CB7" />
-        <Text style={styles.statValue}>{avgSpeed}</Text>
-        <Text style={styles.statLabel}>Avg Speed (km/h)</Text>
+        <Text>{avgSpeedKmh}</Text>
+        <Text>Avg Speed (km/h)</Text>
       </View>
 
-      <View style={styles.statCard}>
+      <View>
         <MaterialCommunityIcons name="fire" size={24} color="#4B6CB7" />
-        <Text style={styles.statValue}>{calories}</Text>
-        <Text style={styles.statLabel}>Calories Burned</Text>
+        <Text>{calories}</Text>
+        <Text>Calories Burned</Text>
+      </View>
+
+      {/* Raw Data Display */}
+      <View>
+        <Text>Raw Data from Hardware</Text>
+        <Text>Mode: {data?.mode || 'N/A'}</Text>
+        <Text>Steps: {steps}</Text>
+        <Text>Distance: {distanceInMeters}m</Text>
+        <Text>Speed: {speed}m/s</Text>
+        <Text>Strides: {data?.strideCount || 0}</Text>
       </View>
     </View>
   );
 
   const renderWeeklyStats = () => (
-    <View style={styles.weeklyContainer}>
-      <Text style={styles.sectionTitle}>Weekly Progress</Text>
-      <View style={styles.chartContainer}>
+    <View>
+      <Text>Weekly Progress</Text>
+      <View>
         <ProgressChart
           data={chartData}
           width={width - 40}
@@ -166,107 +171,70 @@ const StepCountScreen = ({ navigation }) => {
           chartConfig={chartConfig}
           hideLegend={true}
         />
-        <View style={styles.chartCenterText}>
-          <Text style={styles.chartPercentage}>{Math.round((steps/stepGoal)*100)}%</Text>
-          <Text style={styles.chartLabel}>Daily Goal</Text>
+        <View>
+          <Text>{Math.round((steps/stepGoal)*100)}%</Text>
+          <Text>Daily Goal</Text>
         </View>
       </View>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View>
       {/* Header */}
       <LinearGradient
         colors={['#4B6CB7', '#182848']}
-        style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Step Count</Text>
+        <Text>Step Count</Text>
         <TouchableOpacity onPress={syncWithDevice}>
           <Animated.View style={rotateStyle}>
-            <Feather 
-              name="refresh-cw" 
-              size={24} 
-              color="#fff" 
-              style={isSyncing ? null : { opacity: 0.8 }}
-            />
+            <Feather name="refresh-cw" size={24} color="#fff" />
           </Animated.View>
         </TouchableOpacity>
       </LinearGradient>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, selectedTab === 'today' && styles.activeTab]}
-          onPress={() => setSelectedTab('today')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'today' && styles.activeTabText]}>Today</Text>
+      <View>
+        <TouchableOpacity onPress={() => setSelectedTab('today')}>
+          <Text>Today</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, selectedTab === 'weekly' && styles.activeTab]}
-          onPress={() => setSelectedTab('weekly')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'weekly' && styles.activeTabText]}>Weekly</Text>
+        <TouchableOpacity onPress={() => setSelectedTab('weekly')}>
+          <Text>Weekly</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.rawDataContainer}>
-  <Text style={styles.rawDataTitle}>Raw Step Data</Text>
-  <View style={styles.rawDataContent}>
-    <Text style={styles.rawDataText}>
-      {JSON.stringify(data, null, 2) || 'No data available'}
-    </Text>
-  </View>
-</View>
-
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView>
         {selectedTab === 'today' ? renderDailyStats() : renderWeeklyStats()}
 
         {/* Activity History */}
-        <View style={styles.historyContainer}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <View>
+          <View>
+            <Text>Recent Activity</Text>
             <TouchableOpacity onPress={() => navigation.navigate('ActivityHistory')}>
-              <Text style={styles.seeAllText}>See All</Text>
+              <Text>See All</Text>
             </TouchableOpacity>
           </View>
           
-          <View style={styles.historyCard}>
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>Today</Text>
-                <Text style={styles.historyStats}>{steps.toLocaleString()} steps • {distanceInKm} km • {avgSpeed} km/h</Text>
+          <View>
+            <View>
+              <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
+              <View>
+                <Text>Today</Text>
+                <Text>{steps.toLocaleString()} steps • {distanceInKm} km • {avgSpeedKmh} km/h</Text>
               </View>
               <Feather name="chevron-right" size={20} color="#999" />
             </View>
 
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>Yesterday</Text>
-                <Text style={styles.historyStats}>8,542 steps • 4.1 km • 4.2 km/h</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#999" />
-            </View>
-
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>2 days ago</Text>
-                <Text style={styles.historyStats}>7,891 steps • 3.8 km • 3.9 km/h</Text>
+            <View>
+              <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
+              <View>
+                <Text>Yesterday</Text>
+                <Text>8,542 steps • 4.1 km • 4.2 km/h</Text>
               </View>
               <Feather name="chevron-right" size={20} color="#999" />
             </View>
@@ -280,41 +248,30 @@ const StepCountScreen = ({ navigation }) => {
         transparent={true}
         animationType="slide"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Set Daily Step Goal</Text>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={tempGoal}
-                onChangeText={setTempGoal}
-                placeholder="Enter step goal"
-              />
-              <Text style={styles.inputLabel}>steps per day</Text>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowGoalModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleGoalSave}
-              >
-                <Text style={styles.saveButtonText}>Save Goal</Text>
-              </TouchableOpacity>
-            </View>
+        <View>
+          <View>
+            <Text>Set Daily Step Goal</Text>
+            <TextInput
+              keyboardType="numeric"
+              value={tempGoal}
+              onChangeText={setTempGoal}
+              placeholder="Enter step goal"
+            />
+            <Text>steps per day</Text>
+            <TouchableOpacity onPress={() => setShowGoalModal(false)}>
+              <Text>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleGoalSave}>
+              <Text>Save Goal</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
     </View>
   );
 };
+
+
 
 
 
