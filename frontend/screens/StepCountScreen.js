@@ -24,11 +24,7 @@ const StepCountScreen = ({ navigation }) => {
   const { sendCommand, data } = useBLEStore();
   const { width, height } = useWindowDimensions();
   
-  // Use BLE data or fallback to defaults
-  const [steps, setSteps] = useState(data?.s ?? data?.steps ?? 7243);
-  const [distance, setDistance] = useState(data?.d ? (data.d / 1000) : 5.2); // Convert meters to km
-  const [avgSpeed, setAvgSpeed] = useState(4.8); // km/h
-  const [calories, setCalories] = useState(0);
+  // State for UI elements
   const [isSyncing, setIsSyncing] = useState(false);
   const [animation] = useState(new Animated.Value(0));
   const [selectedTab, setSelectedTab] = useState('today');
@@ -36,31 +32,21 @@ const StepCountScreen = ({ navigation }) => {
   const [stepGoal, setStepGoal] = useState(10000);
   const [tempGoal, setTempGoal] = useState('10000');
 
-  // Update state when BLE data changes
-  useEffect(() => {
-    if (data) {
-      if (data.s || data.steps) {
-        const newSteps = data.s ?? data.steps;
-        setSteps(newSteps);
-      }
-      if (data.d || data.walking_dist) {
-        const meters = data.d ?? data.walking_dist;
-        setDistance(+(meters / 1000).toFixed(2)); // Convert to km with 2 decimal places
-      }
-    }
-  }, [data]);
+  // Derived state from BLE data
+  const steps = data?.s ?? data?.steps ?? 0;
+  const distanceInMeters = data?.d ?? data?.walking_dist ?? 0;
+  const distanceInKm = +(distanceInMeters / 1000).toFixed(2);
+  
+  // Calculate calories based on distance and average speed (4.8 km/h as default)
+  const avgSpeed = 4.8; // km/h
+  const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
+  const calories = Math.round(distanceInKm * metValue * 70 / 1.6); // Assuming 70kg person
 
-  // Set mode and calculate calories
+  // Set mode when component mounts
   useEffect(() => {
     sendCommand('SET_MODE STEP_COUNTING');
-    
-    // MET values: 2.9 for slow walk (2 mph), 3.3 for moderate (3 mph), 3.8 for brisk (4 mph)
-    const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
-    const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
-    setCalories(calculatedCalories);
-    
     return () => sendCommand('SET_MODE SKATING_SPEED');
-  }, [distance, avgSpeed]);
+  }, []);
 
   // Mock data for the chart
   const chartData = {
@@ -104,14 +90,6 @@ const StepCountScreen = ({ navigation }) => {
   const syncWithDevice = () => {
     setIsSyncing(true);
     setTimeout(() => {
-      // Simulate data update after sync
-      const newSteps = Math.min(steps + 500 + Math.floor(Math.random() * 300), stepGoal);
-      const newDistance = +(distance + 0.3 + Math.random() * 0.2).toFixed(1);
-      const newSpeed = +(4.5 + Math.random() * 1.5).toFixed(1);
-      
-      setSteps(newSteps);
-      setDistance(newDistance);
-      setAvgSpeed(newSpeed);
       setIsSyncing(false);
     }, 2000);
   };
@@ -157,7 +135,7 @@ const StepCountScreen = ({ navigation }) => {
 
       <View style={styles.statCard}>
         <MaterialCommunityIcons name="map-marker-distance" size={24} color="#4B6CB7" />
-        <Text style={styles.statValue}>{distance}</Text>
+        <Text style={styles.statValue}>{distanceInKm}</Text>
         <Text style={styles.statLabel}>Kilometers</Text>
       </View>
 
@@ -175,9 +153,26 @@ const StepCountScreen = ({ navigation }) => {
     </View>
   );
 
-  // Rest of the component remains the same...
-  // [Keep all the other functions and JSX as they were in your original StepCountScreen.js]
-  // Only the parts shown above were modified to better handle BLE data
+  const renderWeeklyStats = () => (
+    <View style={styles.weeklyContainer}>
+      <Text style={styles.sectionTitle}>Weekly Progress</Text>
+      <View style={styles.chartContainer}>
+        <ProgressChart
+          data={chartData}
+          width={width - 40}
+          height={220}
+          strokeWidth={16}
+          radius={80}
+          chartConfig={chartConfig}
+          hideLegend={true}
+        />
+        <View style={styles.chartCenterText}>
+          <Text style={styles.chartPercentage}>{Math.round((steps/stepGoal)*100)}%</Text>
+          <Text style={styles.chartLabel}>Daily Goal</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -239,7 +234,7 @@ const StepCountScreen = ({ navigation }) => {
               </View>
               <View style={styles.historyDetails}>
                 <Text style={styles.historyDate}>Today</Text>
-                <Text style={styles.historyStats}>{steps.toLocaleString()} steps • {distance} km • {avgSpeed} km/h</Text>
+                <Text style={styles.historyStats}>{steps.toLocaleString()} steps • {distanceInKm} km • {avgSpeed} km/h</Text>
               </View>
               <Feather name="chevron-right" size={20} color="#999" />
             </View>
@@ -310,6 +305,8 @@ const StepCountScreen = ({ navigation }) => {
     </View>
   );
 };
+
+
 
 
 const styles = StyleSheet.create({
