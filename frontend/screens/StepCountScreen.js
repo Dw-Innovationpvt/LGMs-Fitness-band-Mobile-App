@@ -215,6 +215,16 @@ const StepCountScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.rawDataContainer}>
+  <Text style={styles.rawDataTitle}>Raw Step Data</Text>
+  <View style={styles.rawDataContent}>
+    <Text style={styles.rawDataText}>
+      {JSON.stringify(data, null, 2) || 'No data available'}
+    </Text>
+  </View>
+</View>
+
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {selectedTab === 'today' ? renderDailyStats() : renderWeeklyStats()}
 
@@ -310,6 +320,37 @@ const StepCountScreen = ({ navigation }) => {
 
 
 const styles = StyleSheet.create({
+
+   rawDataContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  rawDataTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4B6CB7',
+    marginBottom: 10,
+  },
+  rawDataContent: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+  },
+  rawDataText: {
+    fontFamily: 'Courier New',
+    fontSize: 12,
+    color: '#333',
+  },
+
+
   container: {
     flex: 1,
     backgroundColor: '#F5F7FB',
