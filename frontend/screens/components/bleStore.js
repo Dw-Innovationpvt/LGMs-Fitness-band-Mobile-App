@@ -29,7 +29,6 @@ function fixIncompleteJson(jsonString) {
   
   return fixedJson;
 }
-
 // Format BLE data to a consistent structure
 function formatBLEData(data) {
   if (!data) return null;

@@ -32,18 +32,18 @@ const HomeScreen = ({ navigation }) => {
   const { totalCaloriesBurned, getWorkoutCount } = useAuthStore();
   const {
     connectToDevice,
-    disconnect,
-    isConnected,
-    bandActive,
-    toggleBand,
+    // disconnect,
+    // isConnected,
+    // bandActive,
+    // toggleBand,
     data,
     sendCommand,
-    foundDevices,
-    scanForDevices,
-    activateSpeedSkating,
-    activateDistanceSkating,
-    activateFreestyleSkating,
-    skatingMode
+    // foundDevices,
+    // scanForDevices,
+    // activateSpeedSkating,
+    // activateDistanceSkating,
+    // activateFreestyleSkating,
+    // skatingMode
   } = useBLEStore();
 
   const userName = 'Madan';
@@ -499,7 +499,8 @@ const HomeScreen = ({ navigation }) => {
         <View style={[styles.card, styles.cardElevated]}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleContainer}>
-              <Feather name="activity" size={20} color="#00C853" />
+              {/* <Feather name="activity" size={20} color="#00C853" /> */}
+              <Feather name="activity" size={20} color="red" />
               <Text style={styles.cardTitle}>Step Count</Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
