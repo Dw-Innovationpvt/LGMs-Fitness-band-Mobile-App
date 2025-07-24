@@ -39,10 +39,18 @@ const StepCountScreen = ({ navigation }) => {
 
   // Calculate calories based on distance and speed (MET formula)
   useEffect(() => {
-    // MET values: 2.9 for slow walk (2 mph), 3.3 for moderate (3 mph), 3.8 for brisk (4 mph)
-    const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
-    const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
-    setCalories(calculatedCalories);
+        sendCommand('SET_MODE STEP_COUNTING');
+        // check if data is available & coming from BLE device or zustand
+        if (!data || !data.s || !data.d || !data.steps) {
+          console.log('No data available for step counting');
+          console.log('Data:', data);
+          console.log('47-step count screen.js');
+        }
+        // MET values: 2.9 for slow walk (2 mph), 3.3 for moderate (3 mph), 3.8 for brisk (4 mph)
+        const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
+        const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
+        setCalories(calculatedCalories);
+        return () => sendCommand('SET_MODE SKATING_SPEED');
   }, [distance, avgSpeed]);
     useEffect(() => {
     sendCommand('SET_MODE STEP_COUNTING');
