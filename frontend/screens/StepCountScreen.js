@@ -225,14 +225,14 @@ const StepCountScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.rawDataContainer}>
+      {/* <View style={styles.rawDataContainer}>
         <Text style={styles.rawDataTitle}>Raw Step Data</Text>
         <View style={styles.rawDataContent}>
           <Text style={styles.rawDataText}>
             {JSON.stringify(data, null, 2) || 'No data available'}
           </Text>
         </View>
-      </View>
+      </View> */}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {selectedTab === 'today' ? renderDailyStats() : renderWeeklyStats()}
