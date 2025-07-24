@@ -46,6 +46,8 @@ const HomeScreen = ({ navigation }) => {
     // skatingMode
   } = useBLEStore();
 
+  
+
   const userName = 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
   const [mealInputVisible, setMealInputVisible] = useState(false);

@@ -16,7 +16,8 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
 
-import { useBLEStore } from '../store/bleStore';
+// import { useBLEStore } from '../store/bleStore';
+import { useBLEStore } from './components/bleStore';
 
 const { width } = Dimensions.get('window');
 
@@ -160,6 +161,13 @@ const StepCountScreen = ({ navigation }) => {
         <Text style={styles.statValue}>{calories}</Text>
         <Text style={styles.statLabel}>Calories Burned</Text>
       </View>
+
+    <View style={styles.statCard}>
+            <Text style={{ fontSize: 22 }}>👣 Step Tracker</Text>
+            <Text>Steps: {data?.s ?? data?.steps ?? 0}</Text>
+            <Text>Distance: {data?.d ?? data?.walking_dist ?? 0} m</Text>
+    </View>
+
     </View>
   );
 
