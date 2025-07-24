@@ -65,6 +65,7 @@ export default function SkatingTrackerBLE() {
   };
 
   useEffect(() => {
+    console.log("Inside SkatingTrackerBLE useEffect 68");
     return () => disconnect();
   }, []);
 

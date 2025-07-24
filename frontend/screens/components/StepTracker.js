@@ -7,6 +7,7 @@ export default function StepTracker() {
   const { sendCommand, data } = useBLEStore();
 
   useEffect(() => {
+    console.log("stepTracker.js, 10");
     sendCommand('SET_MODE STEP_COUNTING');
     return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
