@@ -89,16 +89,16 @@ const HomeScreen = ({ navigation }) => {
   }, [waterError]);
 
   const handleScanDevices = async () => {
-    setPairingModalVisible(true);
-    try {
-      setIsScanning(true);
-      await scanForDevices();
-      setIsScanning(false);
-    } catch (error) {
-      console.error('Error in handleScanDevices:', error);
-      Alert.alert('Scan Error', error.message);
-      setIsScanning(false);
-    }
+    // setPairingModalVisible(true);
+    // try {
+    //   setIsScanning(true);
+    //   await scanForDevices();
+    //   setIsScanning(false);
+    // } catch (error) {
+    //   console.error('Error in handleScanDevices:', error);
+    //   Alert.alert('Scan Error', error.message);
+    //   setIsScanning(false);
+    // }
   };
 
   const handleAddWater = async () => {
@@ -126,13 +126,13 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleDeviceConnection = async (device) => {
-    try {
-      await connectToDevice(device);
-      setPairingModalVisible(false);
-      Alert.alert('Success', 'Device connected successfully');
-    } catch (error) {
-      Alert.alert('Connection Error', error.message);
-    }
+    // try {
+    //   await connectToDevice(device);
+    //   setPairingModalVisible(false);
+    //   Alert.alert('Success', 'Device connected successfully');
+    // } catch (error) {
+    //   Alert.alert('Connection Error', error.message);
+    // }
   };
 
   const handleSaveMeal = async () => {
@@ -193,25 +193,25 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handlePairDevicePress = () => {
-    setPairingModalVisible(true);
-    handleScanDevices();
+    // setPairingModalVisible(true);
+    // handleScanDevices();
   };
 
   const renderDeviceItem = ({ item }) => {
-    const [isConnecting, setIsConnecting] = useState(false);
+    // const [isConnecting, setIsConnecting] = useState(false);
 
-    const handleConnect = async () => {
-      setIsConnecting(true);
-      try {
-        await connectToDevice(item);
-        setPairingModalVisible(false);
-        Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
-      } catch (error) {
-        Alert.alert('Connection Failed', error.message);
-      } finally {
-        setIsConnecting(false);
-      }
-    };
+    // const handleConnect = async () => {
+    //   setIsConnecting(true);
+    //   try {
+    //     await connectToDevice(item);
+    //     setPairingModalVisible(false);
+    //     Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
+    //   } catch (error) {
+    //     Alert.alert('Connection Failed', error.message);
+    //   } finally {
+    //     setIsConnecting(false);
+    //   }
+    // };
 
     return (
       <TouchableOpacity
@@ -578,7 +578,7 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      <Modal visible={pairingModalVisible} animationType="slide" transparent>
+      {/* <Modal visible={pairingModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Pair Your Device</Text>
@@ -591,9 +591,9 @@ const HomeScreen = ({ navigation }) => {
               </View>
             ) : (
               <FlatList
-                data={foundDevices}
-                keyExtractor={(item) => item.id}
-                renderItem={renderDeviceItem}
+                // data={foundDevices}
+                // keyExtractor={(item) => item.id}
+                // renderItem={renderDeviceItem}
                 ListEmptyComponent={
                   <View style={styles.noDevicesContainer}>
                     <MaterialCommunityIcons name="bluetooth-off" size={40} color="#999" />
@@ -633,7 +633,7 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
 
       <Modal visible={skatingModalVisible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
