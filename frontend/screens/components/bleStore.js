@@ -77,7 +77,7 @@ export const useBLEStore = create((set, get) => ({
       // Try to increase MTU size for larger data packets
       try {
         await deviceConnection.requestMTU(185);
-        console.log('MTU set to 185');
+        // console.log('MTU set to 185');
       } catch (mtuError) {
         console.warn('MTU request failed, continuing with default:', mtuError);
       }

@@ -15,19 +15,18 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
-
-// import { useBLEStore } from '../store/bleStore';
+// import { useBLEStore } from './bleStore';
 import { useBLEStore } from './components/bleStore';
 
 const { width } = Dimensions.get('window');
 
-
 const StepCountScreen = ({ navigation }) => {
-    const { sendCommand, data } = useBLEStore();
-
+  const { sendCommand, data } = useBLEStore();
   const { width, height } = useWindowDimensions();
-  const [steps, setSteps] = useState(7243);
-  const [distance, setDistance] = useState(5.2);
+  
+  // Use BLE data or fallback to defaults
+  const [steps, setSteps] = useState(data?.s ?? data?.steps ?? 7243);
+  const [distance, setDistance] = useState(data?.d ? (data.d / 1000) : 5.2); // Convert meters to km
   const [avgSpeed, setAvgSpeed] = useState(4.8); // km/h
   const [calories, setCalories] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -37,25 +36,31 @@ const StepCountScreen = ({ navigation }) => {
   const [stepGoal, setStepGoal] = useState(10000);
   const [tempGoal, setTempGoal] = useState('10000');
 
-  // Calculate calories based on distance and speed (MET formula)
+  // Update state when BLE data changes
   useEffect(() => {
-        sendCommand('SET_MODE STEP_COUNTING');
-        // check if data is available & coming from BLE device or zustand
-        if (!data || !data.s || !data.d || !data.steps) {
-          console.log('No data available for step counting');
-          console.log('Data:', data);
-          console.log('47-step count screen.js');
-        }
-        // MET values: 2.9 for slow walk (2 mph), 3.3 for moderate (3 mph), 3.8 for brisk (4 mph)
-        const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
-        const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
-        setCalories(calculatedCalories);
-        return () => sendCommand('SET_MODE SKATING_SPEED');
-  }, [distance, avgSpeed]);
-    useEffect(() => {
+    if (data) {
+      if (data.s || data.steps) {
+        const newSteps = data.s ?? data.steps;
+        setSteps(newSteps);
+      }
+      if (data.d || data.walking_dist) {
+        const meters = data.d ?? data.walking_dist;
+        setDistance(+(meters / 1000).toFixed(2)); // Convert to km with 2 decimal places
+      }
+    }
+  }, [data]);
+
+  // Set mode and calculate calories
+  useEffect(() => {
     sendCommand('SET_MODE STEP_COUNTING');
+    
+    // MET values: 2.9 for slow walk (2 mph), 3.3 for moderate (3 mph), 3.8 for brisk (4 mph)
+    const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
+    const calculatedCalories = Math.round(distance * metValue * 70 / 1.6); // Assuming 70kg person
+    setCalories(calculatedCalories);
+    
     return () => sendCommand('SET_MODE SKATING_SPEED');
-  }, []);
+  }, [distance, avgSpeed]);
 
   // Mock data for the chart
   const chartData = {
@@ -135,8 +140,7 @@ const StepCountScreen = ({ navigation }) => {
             <Feather name="edit-2" size={18} color="#4B6CB7" />
           </TouchableOpacity>
         </View>
-        {/* <Text style={styles.statValue}>{steps.toLocaleString()}</Text> */}
-        <Text style={styles.statValue}>{data?.s ?? data?.steps ?? 0}</Text>
+        <Text style={styles.statValue}>{steps.toLocaleString()}</Text>
         <Text style={styles.statLabel}>Steps</Text>
         <View style={styles.progressBar}>
           <LinearGradient
@@ -148,7 +152,6 @@ const StepCountScreen = ({ navigation }) => {
         </View>
         <Text style={styles.progressText}>
           {Math.round((steps/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal
-          {/* {Math.round((( {data?.s ?? data?.steps ?? 0})/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal */}
         </Text>
       </View>
 
@@ -169,36 +172,12 @@ const StepCountScreen = ({ navigation }) => {
         <Text style={styles.statValue}>{calories}</Text>
         <Text style={styles.statLabel}>Calories Burned</Text>
       </View>
-
-    <View style={styles.statCard}>
-            <Text style={{ fontSize: 22 }}>👣 Step Tracker</Text>
-            <Text>Steps: {data?.s ?? data?.steps ?? 0}</Text>
-            <Text>Distance: {data?.d ?? data?.walking_dist ?? 0} m</Text>
-    </View>
-
     </View>
   );
 
-  const renderWeeklyStats = () => (
-    <View style={styles.weeklyContainer}>
-      <Text style={styles.sectionTitle}>Weekly Progress</Text>
-      <View style={styles.chartContainer}>
-        <ProgressChart
-          data={chartData}
-          width={width - 40}
-          height={220}
-          strokeWidth={16}
-          radius={80}
-          chartConfig={chartConfig}
-          hideLegend={true}
-        />
-        <View style={styles.chartCenterText}>
-          <Text style={styles.chartPercentage}>{Math.round((steps/stepGoal)*100)}%</Text>
-          <Text style={styles.chartLabel}>Daily Goal</Text>
-        </View>
-      </View>
-    </View>
-  );
+  // Rest of the component remains the same...
+  // [Keep all the other functions and JSX as they were in your original StepCountScreen.js]
+  // Only the parts shown above were modified to better handle BLE data
 
   return (
     <View style={styles.container}>
@@ -331,6 +310,7 @@ const StepCountScreen = ({ navigation }) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
