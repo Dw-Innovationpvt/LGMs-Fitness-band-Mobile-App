@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  Button,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
@@ -83,30 +84,30 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
 
   const config = skatingConfig[skatingType] || skatingConfig.speed;
 
-  const callCommands = () => {
-    if (call === 0) {
-       console.log('inside call commands');
-      if (skatingType === 'speed') {
-        sendCommand('SET_MODE SKATING_SPEED');
-      } else  {
-      sendCommand('SET_MODE SKATING_DISTANCE');
-    }
-    call = 1;
-    }
-    }
+  // const callCommands = () => {
+  //   if (call === 0) {
+  //      console.log('inside call commands');
+  //     if (skatingType === 'speed') {
+  //       sendCommand('SET_MODE SKATING_SPEED');
+  //     } else  {
+  //     sendCommand('SET_MODE SKATING_DISTANCE');
+  //   }
+  //   call = 1;
+  //   }
+  //   }
 
   useEffect(() => {
-    if (route.params.skatingType === 'speed') {
-      console.log("inside 87 spped skating useEffect");
-      callCommands();
-      // sendCommand('SET_MODE SKATING_SPEED');
-    }
-    else {
-      console.log("inside 91 spped skating useEffect");
-      callCommands();
-      // sendCommand('SET_MODE SKATING_DISTANCE');
-      // SKATING_DISTANCE
-    }
+    // if (route.params.skatingType === 'speed') {
+    //   console.log("inside 87 spped skating useEffect");
+    //   callCommands();
+    //   // sendCommand('SET_MODE SKATING_SPEED');
+    // }
+    // else {
+    //   console.log("inside 91 spped skating useEffect");
+    //   callCommands();
+    //   // sendCommand('SET_MODE SKATING_DISTANCE');
+    //   // SKATING_DISTANCE
+    // }
 
     // console.log('inside skating speed useEffect');
     // if (skatingType === 'speed') {
@@ -157,6 +158,13 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
       // Send start command to device
       await sendCommand('TURN_ON');
       setIsTracking(true);
+
+      if (skatingType === 'speed') {
+        sendCommand('SET_MODE SKATING_SPEED');
+        console.log('inside speed skating');
+      }else{
+        sendCommand('SET_MODE SKATING_DISTANCE');
+      }
       animatePulse();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
@@ -388,9 +396,9 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
         {isConnected && (
           <View style={styles.card}>
             <View>
-              <Button title="Set Skating Speed Mode" onPress={() => sendCommand('SET_MODE SKATING_SPEED')} />
+              {/* <Button title="Set Skating Speed Mode" onPress={() => sendCommand('SET_MODE SKATING_SPEED')} />
                         <Button title="Set Step Mode" onPress={() => sendCommand('SET_MODE STEP_COUNTING')} />
-                        <Button title="Set Step Mode" onPress={() => sendCommand('SET_MODE STEP_COUNTING')} />
+                        <Button title="Set Step Mode" onPress={() => sendCommand('SET_MODE STEP_COUNTING')} /> */}
             </View>
             {!isTracking ? (
               <TouchableOpacity 
