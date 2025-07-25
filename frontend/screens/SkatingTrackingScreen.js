@@ -373,6 +373,7 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
             <View>
               <Button title="Set Skating Speed Mode" onPress={() => sendCommand('SET_MODE SKATING_SPEED')} />
                         <Button title="Set Step Mode" onPress={() => sendCommand('SET_MODE STEP_COUNTING')} />
+                        <Button title="Set Step Mode" onPress={() => sendCommand('SET_MODE STEP_COUNTING')} />
             </View>
             {!isTracking ? (
               <TouchableOpacity 
