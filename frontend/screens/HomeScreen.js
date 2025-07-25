@@ -180,18 +180,27 @@ const HomeScreen = ({ navigation }) => {
 
   const handleSkatingPress = () => {
     setSkatingModalVisible(true);
+    console.log('183 skating press ');
+    //     console.log('183 navigation error hs')
+    // navigation.navigate('SkatingTracking', { skatingType: 'speed' });
   };
 
   const startSkatingSession = async (type) => {
     setSkatingModalVisible(false);
     if (type === 'speed') {
-      await activateSpeedSkating();
+      console.log('191 speed type');
+      // await activateSpeedSkating();
+      navigation.navigate('SkatingTracking', { skatingType: 'speed' });
     } else if (type === 'distance') {
-      await activateDistanceSkating();
+      navigation.navigate('SkatingTracking', { skatingType: type });
+      // await activateDistanceSkating();
     } else {
-      await activateFreestyleSkating();
+      console.log('removed freestyle')
+      // await activateFreestyleSkating();
     }
-    navigation.navigate('SkatingTracking', { skatingType: type });
+    // navigation.navigate('SkatingTracking', { skatingType: type });
+    console.log('195 navigation error hs')
+    // navigation.navigate('SkatingTracking', { skatingType: 'speed' });
   };
 
   const handlePairDevicePress = () => {

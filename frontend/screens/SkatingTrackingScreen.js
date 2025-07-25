@@ -29,9 +29,9 @@ const SkatingTrackingScreen = ({ navigation, route }) => {
   // BLE Store integration
   const {
     isConnected,
-    bandActive,
+    // bandActive,
     data: bleData,
-    toggleBand,
+    // toggleBand,
     sendCommand,
     disconnect
   } = useBLEStore();
@@ -43,11 +43,11 @@ const SkatingTrackingScreen = ({ navigation, route }) => {
   const timerRef = useRef(null);
 
   // Derived metrics from BLE data
-  const distance = bleData?.skating_dist || 0;
-  const speed = bleData?.speed || 0;
-  const strides = bleData?.strides || 0;
-  const laps = bleData?.laps || 0;
-  const calories = Math.floor(distance * 75); // Approximate calories based on distance
+const distance = bleData?.skatingDistance || 0;  // Note the camelCase change
+const speed = bleData?.speed || 0;
+const strides = bleData?.strideCount || 0;      // Changed from strides to strideCount
+const laps = bleData?.laps || 0;
+const calories = Math.floor(distance * 75);     // Same calorie calculation
 
   // Skating type configurations
   const skatingConfig = {
