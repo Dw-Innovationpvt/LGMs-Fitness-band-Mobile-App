@@ -23,6 +23,7 @@ import { useBLEStore } from './components/bleStore';
 const { width } = Dimensions.get('window');
 
 const SkatingTrackingScreen = ({ navigation, route }) => {
+  let call = 0;
   console.log(route.params, 'hello noo 26');
   const { skatingType = 'speed' } = route.params || {};
   // if (route.params === 'speed') {
@@ -82,12 +83,28 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
 
   const config = skatingConfig[skatingType] || skatingConfig.speed;
 
+  const callCommands = () => {
+    if (call === 0) {
+       console.log('inside call commands');
+      if (skatingType === 'speed') {
+        sendCommand('SET_MODE SKATING_SPEED');
+      } else  {
+      sendCommand('SET_MODE SKATING_DISTANCE');
+    }
+    call = 1;
+    }
+    }
+
   useEffect(() => {
     if (route.params.skatingType === 'speed') {
-      sendCommand('SET_MODE SKATING_SPEED');
+      console.log("inside 87 spped skating useEffect");
+      callCommands();
+      // sendCommand('SET_MODE SKATING_SPEED');
     }
     else {
-      sendCommand('SET_MODE SKATING_DISTANCE');
+      console.log("inside 91 spped skating useEffect");
+      callCommands();
+      // sendCommand('SET_MODE SKATING_DISTANCE');
       // SKATING_DISTANCE
     }
 
