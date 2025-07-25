@@ -63,10 +63,10 @@ const HomeScreen = ({ navigation }) => {
   if (isConnected && data) {
     if (data.mode === 'SS') {
       const distance = data?.skatingDistance || 0;  // Note the camelCase change
-      const speed = data?.speed || 0;
-      const strides = data?.strideCount || 0;      // Changed from strides to strideCount
-      const laps = data?.laps || 0;
-      const calories = Math.floor(distance * 75);     // Same calorie calculation
+      const skating_speed = data?.speed || 0;
+      // const strides = data?.strideCount || 0;skating_speed      // Changed from strides to strideCount
+      // const laps = data?.laps || 0;
+      // const calories = Math.floor(distance * 75);     // Same calorie calculation
     }
   }
 
@@ -609,7 +609,7 @@ const startSkatingSession = (type) => {
                 <Text style={styles.recentSessionTitle}>Speed Skating</Text>
                 {/* <Text style={styles.recentSessionStats}>{speed ?? 0} km/h • 92 strides • 32 min</Text> */}
                 {/* <Text style={styles.recentSessionStats}>0km/h •</Text> */}
-                {isConnected && <Text style={styles.recentSessionStats}>{speed ?? 0 }km/h •</Text>}
+                {isConnected && <Text style={styles.recentSessionStats}>{skating_speed ?? 0 }km/h •</Text>}
                 {/* {!isConnected && <Text style={styles.recentSessionStats}>0 km/h •</Text>} */}
 
                 <Text style={styles.recentSessionStats}>0km/h •</Text>
