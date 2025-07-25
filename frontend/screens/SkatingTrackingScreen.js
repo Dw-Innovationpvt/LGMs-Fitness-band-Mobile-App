@@ -175,7 +175,8 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
   const stopTracking = async () => {
     try {
       // Send stop command to device
-      await sendCommand('TURN_OFF');
+      // await sendCommand('TURN_OFF');
+      await sendCommand('SET_MODE STEP_COUNTING');
       setIsTracking(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
