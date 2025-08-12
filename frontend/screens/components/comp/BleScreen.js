@@ -11,7 +11,7 @@ export default function BleScreen() {
     isScanning,
     hasPermissions,
     scanForDevices,
-    connectToDevice,
+    connectToBlueDevice,
     cleanup
   } = useBlueStore();
 
@@ -41,7 +41,7 @@ export default function BleScreen() {
             <Text style={{ fontWeight: 'bold' }}>{device.name || 'Unnamed Device'}</Text>
             <Text>ID: {device.id}</Text>
             <Text>RSSI: {device.rssi}</Text>
-            <Button title="Connect" onPress={() => connectToDevice(device.id)} />
+            <Button title="Connect" onPress={() => connectToBlueDevice(device.id)} />
           </View>
         ))}
       </ScrollView>
