@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 //   longitude: Number,
 //   timestamp: Date,
 // });
-
+  
 const trackingHistorySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   date: { type: Date, default: Date.now },

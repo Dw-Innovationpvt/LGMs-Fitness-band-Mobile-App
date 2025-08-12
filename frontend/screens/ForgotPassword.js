@@ -17,6 +17,7 @@ import {
 // import { useAuthStore } from '../store/authStore';
 // import { useAuthStore } from '../store/authStore'; // Adjust the import based on your store setup
 import { useAuthStore } from '../store/authStore';
+import { imageURL } from '../constants/api';
 const ForgotPassword = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
     const [isDarkMode, setIsDarkMode] = useState(true);
@@ -103,7 +104,8 @@ const ForgotPassword = ({ navigation }) => {
 
     return (
         <ImageBackground
-            source={require('../assets/88.png')}
+            // source={require('../assets/88.png')}
+            source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >

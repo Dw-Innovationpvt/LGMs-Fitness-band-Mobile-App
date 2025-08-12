@@ -13,6 +13,7 @@ import {
     Alert
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { imageURL } from '../constants/api';
 
 const SignInScreen = ({ navigation, route }) => {
     const { width, height } = useWindowDimensions();
@@ -149,7 +150,8 @@ const onSignInPress = async () => {
 
     return (
         <ImageBackground
-            source={require('../assets/88.png')}
+            // source={require('../assets/88.png')}
+            source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >

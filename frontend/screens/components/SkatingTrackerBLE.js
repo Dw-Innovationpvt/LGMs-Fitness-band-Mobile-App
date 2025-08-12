@@ -76,6 +76,7 @@ export default function SkatingTrackerBLE() {
     bleManager.startDeviceScan(null, null, (error, device) => {
       if (error) {
         console.error('Scan error:', error);
+        // console.error('79, skatingtracejrble.js');
         setIsScanning(false);
         return;
       }

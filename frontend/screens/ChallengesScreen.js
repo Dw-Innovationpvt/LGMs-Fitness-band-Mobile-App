@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { imageURL } from '../constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -560,7 +561,8 @@ const ChallengesScreen = ({ navigation }) => {
         ) : (
           <View style={styles.emptyState}>
             <Image
-              source={require('../assets/88.png')}
+              // source={require('../assets/88.png')}
+              source={imageURL}
               style={styles.emptyImage}
             />
             <Text style={styles.emptyText}>

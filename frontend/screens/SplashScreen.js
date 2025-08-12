@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, useWindowDimensions } from 'react-native';
 
+import { imageURL } from '../constants/api';
 const SplashScreen = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
 
@@ -32,9 +33,11 @@ const SplashScreen = ({ navigation }) => {
         },
     });
 
+    
+
     return (
         <ImageBackground
-            source={require('../assets/88.png')}
+            source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >

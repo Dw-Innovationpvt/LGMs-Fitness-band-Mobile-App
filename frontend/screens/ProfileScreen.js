@@ -1,5 +1,4 @@
 // Update the ProfileScreen.js
-
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions,
@@ -10,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { imageBG2 } from '../constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -244,7 +244,7 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.profileContainer}>
                     <View style={styles.avatarContainer}>
                         <ImageBackground
-                            source={require('../assets/bg2.jpg')}
+                            source={imageBG2}
                             style={styles.avatar}
                             imageStyle={styles.avatarImage}
                         >

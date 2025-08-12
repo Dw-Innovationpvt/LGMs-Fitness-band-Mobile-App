@@ -9,6 +9,8 @@ import DailyActivitiesScreen from '../screens/DailyActivitiesScreen';
 import { useAuthStore } from '../store/authStore';
 import Apps from '../screens/components/Apps';
 
+import BleScreen from '../screens/components/comp/BleScreen';
+
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
 
@@ -138,7 +140,8 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
       <Tab.Screen name="Challenges" component={ChallengesScreen} />
-      <Tab.Screen name="Ble" component={Apps} /> 
+      {/* <Tab.Screen name="Ble" component={Apps} />  */}
+      <Tab.Screen name="Blue" component={BleScreen} />
     </Tab.Navigator>
   );
 }

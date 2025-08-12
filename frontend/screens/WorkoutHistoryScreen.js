@@ -16,6 +16,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAuthStore } from '../store/authStore';
+import { imageURL } from '../constants/api';
 // import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 const { width } = Dimensions.get('window');
@@ -495,7 +496,8 @@ const onRefresh = async () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Image 
-              source={require('../assets/88.png')} 
+              // source={require('../assets/88.png')} 
+              source={imageURL}
               style={styles.emptyImage}
             />
             <Text style={styles.emptyText}>No workouts recorded yet</Text>

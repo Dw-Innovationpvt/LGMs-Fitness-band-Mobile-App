@@ -30,6 +30,7 @@ class BLEService {
     this.manager.startDeviceScan(null, null, (error, device) => {
       if (error) {
         console.log('❌ Scan error:', error);
+        console.log('33, BLEManager');
         onError(error);
         return;
       }

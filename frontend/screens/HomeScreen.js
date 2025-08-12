@@ -8,8 +8,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
 import { useBLEStore } from './components/bleStore';
+// import { useBleStore } from './components/comp/useBlueStore';
+import { useBlueStore } from './components/comp/useBlueStore';
 import foodDatabase from '../constants/foodDatabase';
 import { DrawerActions } from '@react-navigation/native';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +38,16 @@ const HomeScreen = ({ navigation }) => {
     data,
     sendCommand,
   } = useBLEStore();
+
+  const {
+      devices,
+      isScanning,
+      hasPermissions,
+      datablue,
+      scanForDevices,
+      connectToBlueDevice,
+      cleanup
+    } = useBlueStore();
 
   // Initialize skating data
   const [skatingData, setSkatingData] = useState({
@@ -82,7 +95,7 @@ const HomeScreen = ({ navigation }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [skatingModalVisible, setSkatingModalVisible] = useState(false);
   const [pairingModalVisible, setPairingModalVisible] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
+  // const [isScanning, setIsScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredFoods, setFilteredFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
@@ -133,12 +146,12 @@ const HomeScreen = ({ navigation }) => {
   const handleScanDevices = async () => {
     setPairingModalVisible(true);
     try {
-      setIsScanning(true);
+      // setIsScanning(true);
       // await scanForDevices();
-      setIsScanning(false);
+      // setIsScanning(false);
     } catch (error) {
       console.error('Error in handleScanDevices:', error);
-      setIsScanning(false);
+      // setIsScanning(false);
     }
   };
 
@@ -795,7 +808,7 @@ const startSkatingSession = (type) => {
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.secondaryButton]}
-                onPress={handleScanDevices}
+                onPress={scanForDevices}
                 disabled={isScanning}
               >
                 {isScanning ? (

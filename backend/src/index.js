@@ -3,6 +3,7 @@ import "dotenv/config";
 import authRoutes from './routes/authRoutes.js'
 // import auth from './middleware/userAuth.js'
 import auth from "./middleware/auth.js";
+
 import trackingRoutes from './routes/trackingRoutes.js'
 import challengesRoutes from './routes/challengesRoutes.js';
 import waterRoutes from './routes/waterRoutes.js';
@@ -24,7 +25,9 @@ app.use(cors());
 
 app.use('/api/auth', authRoutes);
 // app.use('/api/tracking',auth , trackingRoutes);
-app.use('/api/tracking', trackingRoutes);
+// app.use('/api/tracking', trackingRoutes);
+
+app.use('/api/track', trackingRoutes);
 
 // /api/challenges
 app.use('/api/challenges', challengesRoutes);
@@ -61,6 +64,7 @@ app.listen(PORT, () => {
 connectDB()
   .then(() => {
     // console.log(`Server is running on port ${PORT}`);
+    console.error("wow we have successfully connected the database.")
   })
   .catch((error) => {
     console.error("Failed to connect to the database:", error);

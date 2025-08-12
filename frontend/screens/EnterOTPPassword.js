@@ -15,6 +15,7 @@ import {
     useWindowDimensions
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { imageURL } from '../constants/api';
 
 const EnterOTPPassword = ({ navigation }) => {
     const { width, height } = useWindowDimensions();
@@ -102,7 +103,8 @@ const EnterOTPPassword = ({ navigation }) => {
 
     return (
         <ImageBackground
-            source={require('../assets/88.png')}
+            // source={require('../assets/88.png')}
+            source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >
