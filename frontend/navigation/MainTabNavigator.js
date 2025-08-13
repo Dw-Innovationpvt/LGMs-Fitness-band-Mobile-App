@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import Apps from '../screens/components/Apps';
 
 import BleScreen from '../screens/components/comp/BleScreen';
+import SimpleBLEComponent from '../helper/SimpleBLEComponent';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -142,6 +143,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Challenges" component={ChallengesScreen} />
       {/* <Tab.Screen name="Ble" component={Apps} />  */}
       <Tab.Screen name="Blue" component={BleScreen} />
+      <Tab.Screen name="Simple" component={SimpleBLEComponent} />
     </Tab.Navigator>
   );
 }
