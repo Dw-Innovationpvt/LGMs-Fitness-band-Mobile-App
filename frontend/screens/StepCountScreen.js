@@ -15,7 +15,9 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
-import { useBLEStore } from './components/bleStore';
+// import { useBLEStore } from './components/bleStore';
+
+import { useBLEStore } from '../store/augBleStore';
 
 const { width } = Dimensions.get('window');
 

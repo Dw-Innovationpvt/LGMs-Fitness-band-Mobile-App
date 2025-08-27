@@ -6,7 +6,6 @@ import auth from '../middleware/auth.js';
 const router = express.Router();
 
 
-
 router.post('/tracker-data', async (req, res) => {
   const { mode, stepCount, walkingDistance, strideCount, skatingDistance, speed, laps } = req.body;
 

@@ -140,10 +140,10 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
-      <Tab.Screen name="Challenges" component={ChallengesScreen} />
+      {/* <Tab.Screen name="Challenges" component={ChallengesScreen} /> */}
       {/* <Tab.Screen name="Ble" component={Apps} />  */}
-      <Tab.Screen name="Blue" component={BleScreen} />
-      <Tab.Screen name="Simple" component={SimpleBLEComponent} />
+      {/* <Tab.Screen name="Blue" component={BleScreen} /> */}
+      {/* <Tab.Screen name="Simple" component={SimpleBLEComponent} /> */}
     </Tab.Navigator>
   );
 }

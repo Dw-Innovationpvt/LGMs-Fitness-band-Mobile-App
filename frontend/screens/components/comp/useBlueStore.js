@@ -98,7 +98,7 @@ export const useBlueStore = create((set, get) => ({
   },
 
   // Connect to a device
-  connectToBlueDevice: async (deviceId) => {
+  connectToDevice: async (deviceId) => {
     try {
       const device = await bleManager.connectToBlueDevice(deviceId);
       await device.discoverAllServicesAndCharacteristics();

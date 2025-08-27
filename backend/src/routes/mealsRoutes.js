@@ -43,32 +43,66 @@ router.get('/',auth, async (req, res) => {
   }
 });
 
-router.get('/get',auth, async (req, res) => {
+// router.get('/get',auth, async (req, res) => {
+//   try {
+//     const user = req.user._id;
+//     // Validate userId as ObjectId
+//     // if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+//     //   return res.status(400).json({ error: 'Invalid user ID format' });
+//     // }
+//     // Get today's start and end time
+//     const now = new Date();
+//     const startOfDay = new Date(now);
+//     startOfDay.setHours(0, 0, 0, 0);
+//     const endOfDay = new Date(now);
+//     endOfDay.setHours(23, 59, 59, 999);
+
+//     const query = {
+//       // user: req.params.userId,
+//       user,
+//       createdAt: { $gte: startOfDay, $lte: endOfDay }
+//     };
+
+//     const meals = await Meal.find(query).sort({ createdAt: -1 }).populate('user', '_id');
+//     res.json(meals);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+//// ----------------- New code for calender based date or data ----------
+// GET /meals/get?date=2025-08-23
+router.get('/get', auth, async (req, res) => {
   try {
     const user = req.user._id;
-    // Validate userId as ObjectId
-    // if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
-    //   return res.status(400).json({ error: 'Invalid user ID format' });
-    // }
-    // Get today's start and end time
-    const now = new Date();
-    const startOfDay = new Date(now);
+
+    // Get date from query or fallback to today
+    const { date } = req.query;
+    const selectedDate = date ? new Date(date) : new Date();
+
+    // Start & end of the selected day
+    const startOfDay = new Date(selectedDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
+
+    const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
 
+    // Query meals
     const query = {
-      // user: req.params.userId,
       user,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     };
 
-    const meals = await Meal.find(query).sort({ createdAt: -1 }).populate('user', '_id');
+    const meals = await Meal.find(query)
+      .sort({ createdAt: -1 })
+      .populate('user', '_id');
+
     res.json(meals);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Get total calories per day for a user
 // router.get('/:userId/total-calories', async (req, res) => {

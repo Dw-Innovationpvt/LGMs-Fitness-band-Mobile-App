@@ -19,7 +19,8 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 // import { useBLEStore } from '../store/bleStore';
-import { useBLEStore } from './components/bleStore';
+// import { useBLEStore } from './components/bleStore';
+import { useBLEStore } from '../store/augBleStore';
 
 const { width } = Dimensions.get('window');
 
@@ -373,7 +374,8 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
             </Text>
             <TouchableOpacity 
               style={[styles.button, { backgroundColor: '#4B6CB7' }]} 
-              onPress={() => navigation.navigate('PairDevice')}
+              // onPress={() => navigation.navigate('PairDevice')}
+              onPress={() => navigation.navigate('HomeMain')}
             >
               <LinearGradient
                 colors={['#4B6CB7', '#182848']}

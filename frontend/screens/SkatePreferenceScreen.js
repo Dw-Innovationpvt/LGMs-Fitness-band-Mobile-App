@@ -25,6 +25,8 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     // Reset wheel diameter when skate type changes
+    console.log('Inside skate preference screen, 28 for set check setup true')
+    console.log(route.params)
     setWheelDiameter('');
     setCustomDiameter('');
   }, [skateType]);
@@ -44,11 +46,23 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
       skateType,
       wheelDiameter: selectedDiameter
     });
-    
+
+    // console.log('SkatePreference, ', )
+
     // Go back to profile
     // navigation.goBack();
     // navigation.navigate('Home');
-    navigation.replace('Main');
+    // navigation.replace('Main');
+    // navigation.navigate('MealTimingScreen', route) 
+
+    navigation.navigate('MealTiming', {
+      ...route.params, 
+      skatePreferences: {
+        skateType,
+        wheelDiameter: selectedDiameter
+      }
+    })
+
 
   };
 

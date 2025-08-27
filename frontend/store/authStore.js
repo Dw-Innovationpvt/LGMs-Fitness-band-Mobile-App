@@ -94,6 +94,7 @@ export const useAuthStore = create((set) => ({
     set({ isLoading: true });
 
     try {
+      // const response = await fetch(`${API_URL}/auth/login`, {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -469,26 +470,55 @@ const data = await response.json();
       return { success: false, error: error.message };
     }
   },
-  getMeals: async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const response = await fetch(`${API_URL}/meals/get`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to fetch meal data");
-      console.log(data, "mealData");
-      set({ mealData: data });
-      return { success: true, data };
-    } catch (error) {
-      console.error("Error fetching meal data:", error);
-      return { success: false, error: error.message };
-    }
-  },
+  // getMeals: async () => {
+  //   try {
+  //     const token = await AsyncStorage.getItem("token");
+  //     const response = await fetch(`${API_URL}/meals/get`, {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
+  //     const data = await response.json();
+  //     if (!response.ok) throw new Error(data.message || "Failed to fetch meal data");
+  //     console.log(data, "mealData");
+  //     set({ mealData: data });
+  //     return { success: true, data };
+  //   } catch (error) {
+  //     console.error("Error fetching meal data:", error);
+  //     return { success: false, error: error.message };
+  //   }
+  // },
+
+  /// -----new for meals to get based on calender date
+  getMeals: async (date) => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+
+    // Build API URL with date query param
+    const url = date 
+      ? `${API_URL}/meals/get?date=${date}` 
+      : `${API_URL}/meals/get`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Failed to fetch meal data");
+
+    set({ mealData: data });
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error fetching meal data:", error);
+    return { success: false, error: error.message };
+  }
+},
 
   checkSetup: async () => {
     try {
