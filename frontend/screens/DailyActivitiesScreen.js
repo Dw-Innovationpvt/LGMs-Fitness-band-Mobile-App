@@ -58,15 +58,51 @@ const DailyActivitiesScreen = ({ navigation }) => {
     fetchTodayTotal,
     fetchTarget,
     addIntake,
-    getProgress
-  } = useWaterStore();
+    getProgress,
+    refreshAll
+  } = useWaterStore();  
+
+  // const waterTarget = target || 2000; // Default to 2000ml if no target set
+  // const sumOfIntakes = todayTotal || 0;
+
+  // useEffect(() => {
+  //   // useWaterStore.persist.rehydrate();
+  //   // todayTotal && fetchTarget();
+  //   // target && fetchTodayTotal();
+  //   refreshAll();
+
+  // }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        await Promise.all([fetchIntakes(), fetchTodayTotal(), fetchTarget()]);
+      } catch (error) {
+        console.error('Failed to fetch water data:', error);
+      }
+    };
+    fetchData();
+  }, []); // Run on mount
+
 
   // Goals data
   const [goals, setGoals] = useState([
-    { id: '1', title: 'Drink 2L water', completed: false },
+    { id: '1', title: `Drink ${target / 1000}L water out of ${todayTotal / 1000}L`, completed: todayTotal >= target },
     { id: '2', title: '10,000 steps', completed: true },
-    { id: '3', title: '30 min workout', completed: true },
+    { id: '3', title: 'K calories Earn', completed: true },
+    { id: '4', title: 'K calories Burn', completed: true },
   ]);
+
+    useEffect(() => {
+    setGoals([
+      {
+        id: '1', title: `Drink ${target / 1000}L water out of ${todayTotal / 1000}L`, completed: todayTotal >= target
+      },
+      ...goals.slice(1), // Preserve other goals
+    ]);
+
+  }, [todayTotal, target]);
+
 
   // Generate week dates
   const generateWeekDates = () => {
@@ -75,7 +111,13 @@ const DailyActivitiesScreen = ({ navigation }) => {
     for (let i = 0; i < 7; i++) {
       dates.push(addDays(startDate, i));
     }
-    return dates;
+    return dates
+    ;
+  //   const dates = [];
+  // for (let i = 6; i >= 0; i--) {
+  //   dates.push(subDays(new Date(), i));
+  // }
+  // return dates;
   };
 
   const weekDates = generateWeekDates();
@@ -234,7 +276,8 @@ const DailyActivitiesScreen = ({ navigation }) => {
   const renderGoalItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.itemCard}
-      onPress={() => toggleGoalCompletion(item.id)}
+      // onPress={() => toggleGoalCompletion(item.id)}
+      onPress={() => {}}
     >
       <View style={styles.goalContent}>
         <MaterialCommunityIcons 

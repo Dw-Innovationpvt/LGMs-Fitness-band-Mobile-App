@@ -11,6 +11,7 @@ import Apps from '../screens/components/Apps';
 
 import BleScreen from '../screens/components/comp/BleScreen';
 import SimpleBLEComponent from '../helper/SimpleBLEComponent';
+import DevicePairingModal from '../screens/components/DevicePairingModal';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -140,6 +141,7 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
+      {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}
       {/* <Tab.Screen name="Challenges" component={ChallengesScreen} /> */}
       {/* <Tab.Screen name="Ble" component={Apps} />  */}
       {/* <Tab.Screen name="Blue" component={BleScreen} /> */}
@@ -152,6 +154,8 @@ export default MainTabNavigator;
 
 const styles = StyleSheet.create({
   tabContainer: {
+    // marginBottom: 10,
+    // paddingBottom: 25,
     position: 'absolute',
     bottom: 0,
     width: '100%',
@@ -159,6 +163,8 @@ const styles = StyleSheet.create({
   gradient: {
     flexDirection: 'row',
     paddingVertical: 10,
+    // marginBottom: 10,
+    paddingBottom: 25,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     elevation: 5,
@@ -168,6 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    paddingBottom: 5,
   },
   iconContainer: {
     position: 'relative',
@@ -177,21 +184,70 @@ const styles = StyleSheet.create({
     height: 40,
   },
   circleBackground: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    // position: 'absolute',
+    // width: 40,
+    // height: 40,
+    // marginTop: 2,
+    // paddingTop: 2,
+    // alignContent: 'center',
+    // justifyContent: 'center',
+    // borderRadius: 20,
   },
   iconWrapper: {
-    zIndex: 1,
+    // zIndex: 1,
   },
   label: {
     fontSize: 12,
     marginTop: 4,
     color: '#4B6CB7',
+    // color: 'pink',
     fontWeight: '500',
   },
 });
+// const styles = StyleSheet.create({
+//   tabContainer: {
+//     position: 'absolute',
+//     bottom: 0,
+//     width: '100%',
+//   },
+//   gradient: {
+//     flexDirection: 'row',
+//     paddingVertical: 10,
+//     borderTopLeftRadius: 16,
+//     borderTopRightRadius: 16,
+//     elevation: 5,
+//   },
+//   tabButton: {
+//     flex: 1,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     paddingVertical: 8,
+//   },
+//   iconContainer: {
+//     position: 'relative',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     width: 40,
+//     height: 40,
+//   },
+//   circleBackground: {
+//     position: 'absolute',
+//     width: 40,
+//     height: 40,
+//     borderRadius: 20,
+//     alignContent: 'center',
+//     justifyContent: 'center',
+//   },
+//   iconWrapper: {
+//     zIndex: 1,
+//   },
+//   label: {
+//     fontSize: 12,
+//     marginTop: 4,
+//     color: '#4B6CB7',
+//     fontWeight: '500',
+//   },
+// });
 
 // import React, { useEffect, useRef } from 'react';
 // import { View, TouchableOpacity, StyleSheet, Text, Animated, Dimensions } from 'react-native';

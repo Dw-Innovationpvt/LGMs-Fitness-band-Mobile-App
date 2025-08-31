@@ -257,7 +257,8 @@ const ProfileScreen = ({ navigation }) => {
                     <Text style={styles.userName}>{userData.name}</Text>
                     <Text style={styles.userBio}>{userData.bio}</Text>
                 </View>
-                <View style={styles.statsContainer}>
+                <View style={{ height: 12 }} />
+                {/* <View style={styles.statsContainer}>
                     <View style={styles.statCard}>
                         <Text style={styles.statNumber}>{userData.stats.workouts}</Text>
                         <Text style={styles.statLabel}>Workouts</Text>
@@ -270,7 +271,7 @@ const ProfileScreen = ({ navigation }) => {
                         <Text style={styles.statNumber}>{userData.stats.streak}</Text>
                         <Text style={styles.statLabel}>Day Streak</Text>
                     </View>
-                </View>
+                </View> */}
                 
                 {/* Updated tab bar with skating preferences tab */}
                 <View style={styles.tabBar}>

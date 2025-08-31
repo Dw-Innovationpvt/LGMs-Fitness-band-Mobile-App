@@ -123,7 +123,12 @@ const useWaterStore = create((set, get) => ({
     const { todayTotal, target } = get();
     return target > 0 ? Math.min((todayTotal / target) * 100, 100) : 0;
   },
-  
+
+  refreshAll: async () => {
+    await get().fetchIntakes();
+    await get().fetchTodayTotal();
+    await get().fetchTarget();
+  },
   // Reset all water data
   reset: () => set({ 
     intakes: [], 

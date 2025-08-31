@@ -6,7 +6,7 @@
 
 
 // Madan
-// export const API_URL = "http://192.168.1.3:3000/api";
+// export const API_URL = "http://192.168.1.7:3000/api";
 
 // Backend AWS
 export const API_URL = 'http://backend-env.eba-v68r8vi2.ap-south-1.elasticbeanstalk.com/api';
