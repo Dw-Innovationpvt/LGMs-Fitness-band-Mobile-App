@@ -18,6 +18,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Circle } from 'react-native-progress';
 import { LinearGradient } from 'expo-linear-gradient';
 import useWaterStore from '../store/waterStore';
+import { format } from 'date-fns'; // Added for date formatting
 
 const WaterIntakeScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
@@ -32,6 +33,7 @@ const WaterIntakeScreen = ({ navigation }) => {
     error,
     fetchTarget,
     fetchTodayTotal,
+    fetchIntakes, // Added to fetch intakes
     addIntake,
     updateTarget,
     getProgress
@@ -44,7 +46,9 @@ const WaterIntakeScreen = ({ navigation }) => {
 
   // Initialize data
   useEffect(() => {
-    fetchTodayTotal();
+    const dateString = format(new Date(), 'yyyy-MM-dd'); // Use current date
+    fetchTodayTotal(dateString);
+    fetchIntakes(dateString); // Added to fetch intakes
     fetchTarget();
   }, []);
 
@@ -66,12 +70,19 @@ const WaterIntakeScreen = ({ navigation }) => {
 
   const handleAddWater = async (amount = null) => {
     const intakeAmount = amount || parseInt(inputValue);
+    const dateString = format(new Date(), 'yyyy-MM-dd'); // Use current date
     if (intakeAmount > 0) {
-      const result = await addIntake(intakeAmount);
+      const result = await addIntake(intakeAmount, dateString);
       if (result.success) {
         setInputValue('');
         animateProgress();
+        await Promise.all([
+          fetchTodayTotal(dateString), // Refresh total
+          fetchIntakes(dateString) // Refresh intakes list
+        ]);
       }
+    } else {
+      Alert.alert('Error', 'Please enter a valid amount');
     }
   };
 
@@ -84,6 +95,8 @@ const WaterIntakeScreen = ({ navigation }) => {
         setGoalModalVisible(false);
         animateProgress();
       }
+    } else {
+      Alert.alert('Error', 'Please enter a valid goal amount');
     }
   };
 
@@ -242,6 +255,7 @@ const WaterIntakeScreen = ({ navigation }) => {
     </View>
   );
 };
+
 
 
 // import React, { useEffect, useState } from 'react';

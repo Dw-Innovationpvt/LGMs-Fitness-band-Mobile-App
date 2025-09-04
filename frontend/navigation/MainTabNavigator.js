@@ -12,6 +12,7 @@ import Apps from '../screens/components/Apps';
 import BleScreen from '../screens/components/comp/BleScreen';
 import SimpleBLEComponent from '../helper/SimpleBLEComponent';
 import DevicePairingModal from '../screens/components/DevicePairingModal';
+import CaloriesScreenTemp from '../screens/components/CaloriesScreenTemp';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -81,12 +82,13 @@ const TabButton = ({ iconName, isFocused, onPress, label }) => {
             styles.circleBackground, 
             { 
               opacity: bgOpacity,
-              transform: [{ scale: bgScale }],
+              // transform: [{ scale: bgScale }],
               backgroundColor: isFocused ? '#4B6CB7' : '#888'
             }
           ]} 
         />
-        <Animated.View style={[styles.iconWrapper, { transform: [{ translateY }] }]}>
+        {/* <Animated.View style={[styles.iconWrapper, { transform: [{ translateY }] }]}> */}
+        <Animated.View style={styles.iconWrapper}>
           <Feather 
             name={iconName} 
             size={24} 
@@ -141,6 +143,7 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
+      {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
       {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}
       {/* <Tab.Screen name="Challenges" component={ChallengesScreen} /> */}
       {/* <Tab.Screen name="Ble" component={Apps} />  */}

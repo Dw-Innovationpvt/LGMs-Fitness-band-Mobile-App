@@ -62,6 +62,67 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "Fitness enthusiast & Professional skater",
     },
+    burnTarget: {
+      type: Number,
+      default: 500, // default daily burn target
+    },
+    // ...existing code...
+    mealCalorieTarget: {
+      type: Number,
+      default: 2000, // Default daily meal calorie intake target
+    },
+    stepGoal : {
+      type: Number,
+      default: 7000, // Default daily step goal
+    },
+    // ...existing code...
+    mealFlag: {
+      type: Boolean,
+      default: false,
+    },
+    burnFlag: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ... your existing fields
+  dailyTargets: {
+    water: { type: Number, default: 2000 },
+    steps: { type: Number, default: 10000 },
+    caloriesEarn: { type: Number, default: 2000 },
+    caloriesBurn: { type: Number, default: 500 }
+  },
+  targetProgress: {
+    water: { type: Number, default: 0 },
+    steps: { type: Number, default: 0 },
+    caloriesEarn: { type: Number, default: 0 },
+    caloriesBurn: { type: Number, default: 0 },
+    date: { type: Date, default: Date.now }
+  },
+  targetHistory: [{
+    date: { type: Date, required: true },
+    targets: {
+      water: { type: Number, default: 2000 },
+      steps: { type: Number, default: 10000 },
+      caloriesEarn: { type: Number, default: 2000 },
+      caloriesBurn: { type: Number, default: 500 }
+    },
+    progress: {
+      water: { type: Number, default: 0 },
+      steps: { type: Number, default: 0 },
+      caloriesEarn: { type: Number, default: 0 },
+      caloriesBurn: { type: Number, default: 0 }
+    },
+    completed: {
+      water: { type: Boolean, default: false },
+      steps: { type: Boolean, default: false },
+      caloriesEarn: { type: Boolean, default: false },
+      caloriesBurn: { type: Boolean, default: false }
+    },
+    }],
+
+// ...existing code...
+// ...existing code...
 
     // --- ADDED MEAL TIMES HERE ---
     mealTimes: {

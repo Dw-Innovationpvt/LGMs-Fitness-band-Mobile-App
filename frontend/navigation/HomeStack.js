@@ -10,6 +10,9 @@ import WaterIntakeScreen from '../screens/WaterIntakeScreen';
 import SetGoalScreen from '../screens/SetGoalScreen';  
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import PrivacyScreen from '../screens/PrivacyScreen';
+import DevicePairingScreen from '../screens/DevicePairingScreen';
+
+import GoalSettingScreen from '../screens/GoalSettingScreen';
 
 // import TempMealScreen from '../screens/back/TempMealScreen'; // Adjust the import path as necessary
 
@@ -29,6 +32,8 @@ const HomeStack = () => (
     <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
 {/* <Stack.Screen name="MealScreen" component={TempMealScreen} /> */}
   <Stack.Screen name="Privacy" component={PrivacyScreen} />
+  <Stack.Screen name="DevicePairing" component={DevicePairingScreen} />
+  <Stack.Screen name="Goal" component={GoalSettingScreen} />
   </Stack.Navigator>
 );
 export default HomeStack;

@@ -5,14 +5,19 @@ import {
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+// import stores 
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
+
 import { useBLEStore } from '../store/augBleStore';
+import { useCaloriesStore } from '../store/caloriesStore';
+
 import foodDatabase from '../constants/foodDatabase';
-import { DrawerActions } from '@react-navigation/native';
-// import DevicePairingModal from './DevicePairingModal'; // Import the new component
-import DevicePairingModal from './components/DevicePairingModal';
+// import { DrawerActions } from '@react-navigation/native';
+import { format } from 'date-fns'; // Added for date formattingrr
+
 const { width, height } = Dimensions.get('window');
+
 
 const HomeScreen = ({ navigation }) => {
   const { postMeals } = useAuthStore();
@@ -29,7 +34,19 @@ const HomeScreen = ({ navigation }) => {
   } = useWaterStore();
 
   // calories related
-  const { totalCaloriesBurned, getWorkoutCount } = useAuthStore();
+  const {
+    totalCaloriesEaten,
+    totalCaloriesBurned,
+    mealTarget,
+    mealTargetMet,
+    mealFlag,
+    fetchCaloriesEaten,
+    fetchCaloriesBurned,
+    fetchMealTargetStatus,
+    burnTarget, setBurnTarget, fetchBurnTarget,
+    stepGoal, fetchStepGoal, setStepGoal
+  } = useCaloriesStore();
+
   const {
     connectToDevice,
     isConnected,
@@ -79,7 +96,12 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [data, isConnected]);
 
-  const userName = 'Madan';
+  useEffect(() => {
+    fetchStepGoal();
+    fetchBurnTarget();
+  }, [burnTarget, stepGoal]);
+
+  const userName = 'Madan' || 'Madan';
   const [modalVisible, setModalVisible] = useState(null);
   const [mealInputVisible, setMealInputVisible] = useState(false);
   const [currentMealType, setCurrentMealType] = useState('');
@@ -105,15 +127,17 @@ const HomeScreen = ({ navigation }) => {
     ],
     goals: [
       { id: '1', title: 'Drink 2L water', completed: false },
-      { id: '2', title: '10,000 steps', completed: true },
-      { id: '3', title: '30 min workout', completed: true },
+      { id: '2', title: '10,000 steps', completed: false },
+      { id: '3', title: '30 min workout', completed: false },
+      { id: '4', title: '30 min workout', completed: false },
     ],
   });
 
   useEffect(() => {
-    fetchTodayTotal();
+    const dateString = format(new Date(), 'yyyy-MM-dd'); // Fetch for current date
+    fetchTodayTotal(dateString); // realted to water store
     fetchTarget();
-    getWorkoutCount();
+    
     if (isConnected) {
       sendCommand('SET_MODE STEP_COUNTING');
     }
@@ -141,14 +165,24 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [searchQuery]);
 
+  useEffect(() => {
+    fetchCaloriesEaten();
+    fetchMealTargetStatus();
+  }, [mealInputVisible, totalCaloriesEaten]);
+
   const handleScanDevices = async () => {
     setPairingModalVisible(true);
   };
 
   const handleAddWater = async () => {
-    const result = await addIntake(400);
+    const amount = 400;
+    const dateString = format(new Date(), 'yyyy-MM-dd'); // Use current date
+    const result = await addIntake(amount, dateString);
     if (!result.success) {
-      Alert.alert('Error', result.error);
+      Alert.alert('Error', result.error || 'Failed to add water intake');
+    } else {
+      const dateString = format(new Date(), 'yyyy-MM-dd');
+      await fetchTodayTotal(dateString); // Refresh total after adding intake
     }
   };
 
@@ -190,7 +224,8 @@ const HomeScreen = ({ navigation }) => {
       name: mealItem,
       time: currentTime,
       calories: calculatedCalories,
-      id: Date.now().toString()
+      id: Date.now().toString(),
+      date: format(new Date(), 'yyyy-MM-dd') // Ensure date is included
     };
     
     console.log('New meal to be added:', newMeal);
@@ -235,7 +270,6 @@ const HomeScreen = ({ navigation }) => {
   const startSkatingSession = (type) => {
     try {
       setSkatingModalVisible(false);
-      // Navigate directly to the tracking screen with the skating type
       navigation.navigate('SkatingTracking', { skatingType: type });
     } catch (error) {
       console.error('Navigation error:', error);
@@ -244,7 +278,9 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handlePairDevicePress = () => {
-    setPairingModalVisible(true);
+    // setPairingModalVisible(true);
+    // navigation.navigate('DevicePairing');
+    navigation.navigate('Simple')
   };
 
   return (
@@ -423,11 +459,12 @@ const HomeScreen = ({ navigation }) => {
                 <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
                   <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
                 </View>
-                <Text style={styles.metricValue}>{totalCalories}</Text>
+                <Text style={styles.metricValue}>{totalCaloriesEaten}/{mealTarget}</Text>
+                {/* <Text style={styles.metricValue}>1000/1000</Text> */}
                 <Text style={styles.metricLabel}>Calories In</Text>
                 <View style={styles.metricTrend}>
                   <Feather name="arrow-up" size={14} color="#48BB78" />
-                  <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>0%</Text>
+                  <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>{(totalCaloriesEaten / mealTarget) * 100}%</Text>
                 </View>
               </View>
 
@@ -435,11 +472,11 @@ const HomeScreen = ({ navigation }) => {
                 <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
                   <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
                 </View>
-                <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
+                <Text style={styles.metricValue}>{totalCaloriesBurned}/{burnTarget}</Text>
                 <Text style={styles.metricLabel}>Calories Out</Text>
                 <View style={styles.metricTrend}>
                   <Feather name="arrow-up" size={14} color="#FC8181" />
-                  <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
+                  <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>0%</Text>
                 </View>
               </View>
 
@@ -475,11 +512,11 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
               <View style={styles.fullProgressBar}>
                 <View style={[styles.activityProgressFill, {
-                  width: '65%',
+                  width: `${totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}%`,
                   backgroundColor: '#4C51BF'
                 }]} />
               </View>
-              <Text style={styles.activityProgressPercent}>67% Complete</Text>
+              <Text style={styles.activityProgressPercent}>{totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}% Complete</Text>
             </View>
           </View>
 
@@ -526,7 +563,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.stepProgressContainer}>
               <View style={styles.stepProgressText}>
                 <Text style={styles.stepCount}>{stepData.steps ?? 0}</Text>
-                <Text style={styles.stepGoal}>/ 10,000 steps</Text>
+                <Text style={styles.stepGoal}> /{stepGoal} steps</Text>
               </View>
               <View style={styles.progressBarContainer}>
                 <LinearGradient
@@ -656,11 +693,17 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Device Pairing Modal - Using the new component */}
-      <DevicePairingModal
+      {/* Device Pairing Modal */}
+      {/* <DevicePairingModal
         visible={pairingModalVisible}
         onClose={() => setPairingModalVisible(false)}
-      />
+        foundDevices={foundDevices}
+        connectToDevice={connectToDevice}
+        isScanning={isScanning}
+        scanForDevices={scanForDevices}
+        isConnected={isConnected}
+        connectedDevice={connectedDevice}
+      /> */}
 
       {/* Skating Type Selection Modal */}
       <Modal visible={skatingModalVisible} animationType="slide" transparent>
@@ -700,931 +743,7 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-// Keep your existing styles here
-// const styles = StyleSheet.create({
-//   // ... (all your existing styles remain the same)
-// });
 
-// export default HomeScreen;
-
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator,
-//   ScrollView, Dimensions, Modal, SafeAreaView, TextInput, FlatList, Linking
-// } from 'react-native';
-// import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-// import { LinearGradient } from 'expo-linear-gradient';
-// import { useAuthStore } from '../store/authStore';
-// import useWaterStore from '../store/waterStore';
-// // import { useBLEStore } from './components/bleStore';
-// import { useBLEStore } from '../store/augBleStore';
-// // import { useBleStore } from './components/comp/useBlueStore';
-// // import { useBlueStore } from './components/comp/useBlueStore';
-// // import useA
-// import foodDatabase from '../constants/foodDatabase';
-// import { DrawerActions } from '@react-navigation/native';
-
-
-// const { width, height } = Dimensions.get('window');
-
-// const HomeScreen = ({ navigation }) => {
-//   const { postMeals } = useAuthStore();
-
-//   // Water store integration
-//   const {
-//     todayTotal,
-//     target,
-//     addIntake,
-//     fetchTodayTotal,
-//     fetchTarget,
-//     loading: waterLoading,
-//     error: waterError
-//   } = useWaterStore();
-
-//   // calories related
-//   const { totalCaloriesBurned, getWorkoutCount } = useAuthStore();
-//   const {
-//     connectToDevice,
-//     isConnected,
-//     scanForDevices,
-//     data,
-//     sendCommand,
-//     isScanning,
-//     hasPermissions
-//   } = useBLEStore();
-
-//   // const {
-//   //     devices,
-//   //     isScanning,
-//   //     hasPermissions,
-//   //     datablue,
-//   //     scanForDevices,
-//   //     connectToBlueDevice,
-//   //     cleanup
-//   //   } = useBlueStore();
-
-//   // Initialize skating data
-//   const [skatingData, setSkatingData] = useState({
-//     speed: 0,
-//     distance: 0,
-//     strideCount: 0,
-//     mode: 'N/A'
-//   });
-
-//   // steps related data
-//   const stepData = data && data.mode === 'S' ? {
-//     steps: data.stepCount || 0,
-//     distance: data.walkingDistance || 0,
-//     strideCount: data.strideCount || 0,
-//     speed: data.speed || 0,
-//     mode: data.mode
-//   } : {
-//     steps: 0,
-//     distance: 0,
-//     strideCount: 0,
-//     speed: 0,
-//     mode: 'N/A'
-//   };
-
-//   // Update skating data when BLE data changes
-//   useEffect(() => {
-//     if (isConnected && data) {
-//       if (data.mode === 'SS') {
-//         setSkatingData({
-//           speed: data?.speed || 0,
-//           distance: data?.skatingDistance || 0,
-//           strideCount: data?.strideCount || 0,
-//           mode: data.mode
-//         });
-//       }
-//     }
-//   }, [data, isConnected]);
-
-//   const userName = 'Madan';
-//   const [modalVisible, setModalVisible] = useState(null);
-//   const [mealInputVisible, setMealInputVisible] = useState(false);
-//   const [currentMealType, setCurrentMealType] = useState('');
-//   const [mealItem, setMealItem] = useState('');
-//   const [quantity, setQuantity] = useState('');
-//   const [currentTime, setCurrentTime] = useState('');
-//   const [skatingModalVisible, setSkatingModalVisible] = useState(false);
-//   const [pairingModalVisible, setPairingModalVisible] = useState(false);
-//   // const [isScanning, setIsScanning] = useState(false);
-//   const [searchQuery, setSearchQuery] = useState('');
-//   const [filteredFoods, setFilteredFoods] = useState([]);
-//   const [selectedFood, setSelectedFood] = useState(null);
-
-//   const [dailyData, setDailyData] = useState({
-//     meals: [
-//       { id: '1', type: 'Breakfast', items: 'Oatmeal (200g)', calories: 0, time: '08:30 AM' },
-//       { id: '2', type: 'Lunch', items: 'Grilled Chicken (150g), Rice (200g)', calories: 0, time: '01:15 PM' },
-//       { id: '3', type: 'Snack', items: 'Protein Shake (300ml)', calories: 0, time: '04:45 PM' },
-//     ],
-//     waterIntake: [
-//       { id: '1', amount: '500ml', time: '08:30 AM' },
-//       { id: '2', amount: '250ml', time: '10:45 AM' },
-//       { id: '3', amount: '750ml', time: '01:15 PM' },
-//     ],
-//     goals: [
-//       { id: '1', title: 'Drink 2L water', completed: false },
-//       { id: '2', title: '10,000 steps', completed: true },
-//       { id: '3', title: '30 min workout', completed: true },
-//     ],
-//   });
-
-//   useEffect(() => {
-//     fetchTodayTotal();
-//     fetchTarget();
-//     getWorkoutCount();
-//     sendCommand('SET_MODE STEP_COUNTING');
-//     return () => sendCommand('SET_MODE SKATING_SPEED');
-//   }, []);
-
-//   useEffect(() => {
-//     if (waterError) {
-//       Alert.alert('Water Error', waterError);
-//     }
-//   }, [waterError]);
-
-//   useEffect(() => {
-//     if (searchQuery.length > 0) {
-//       const filtered = foodDatabase.filter(food => 
-//         food.food_item.toLowerCase().includes(searchQuery.toLowerCase())
-//       );
-//       setFilteredFoods(filtered);
-//     } else {
-//       setFilteredFoods([]);
-//     }
-//   }, [searchQuery]);
-
-//   const handleScanDevices = async () => {
-//     setPairingModalVisible(true);
-//     try {
-//       // setIsScanning(true);
-//       // await scanForDevices();
-//       // setIsScanning(false);
-//     } catch (error) {
-//       console.error('Error in handleScanDevices:', error);
-//       // setIsScanning(false);
-//     }
-//   };
-
-//   const handleAddWater = async () => {
-//     const result = await addIntake(400);
-//     if (!result.success) {
-//       Alert.alert('Error', result.error);
-//     }
-//   };
-
-//   const totalCalories = dailyData.meals.reduce((sum, meal) => sum + meal.calories, 0);
-//   const completedGoals = dailyData.goals.filter(goal => goal.completed).length;
-//   const totalGoals = dailyData.goals.length || 0;
-
-//   const handleMealCardPress = (mealType) => {
-//     setModalVisible(null);
-//     setCurrentMealType(mealType);
-//     setMealInputVisible(true);
-//     setMealItem('');
-//     setQuantity('');
-//     setSelectedFood(null);
-
-//     const now = new Date();
-//     const hours = now.getHours();
-//     const minutes = now.getMinutes();
-//     const ampm = hours >= 12 ? 'PM' : 'AM';
-//     const formattedHours = hours % 12 || 12;
-//     const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
-//     setCurrentTime(`${formattedHours}:${formattedMinutes} ${ampm}`);
-//   };
-
-//   const handleDeviceConnection = async (device) => {
-//     try {
-//       await connectToDevice(device);
-//       setPairingModalVisible(false);
-//       Alert.alert('Success', 'Device connected successfully');
-//     } catch (error) {
-//       Alert.alert('Connection Error', error.message);
-//     }
-//   };
-
-//   const handleSaveMeal = async () => {
-//     if (!mealItem.trim() || !quantity.trim()) {
-//       Alert.alert('Error', 'Please enter both food item and quantity');
-//       return;
-//     }
-
-//     // Calculate calories if a food is selected from the database
-//     let calculatedCalories = 0;
-//     if (selectedFood) {
-//       calculatedCalories = Math.round(selectedFood.calories_per_serve * (parseFloat(quantity) || 1));
-//     }
-
-//     const newMeal = {
-//             mealType: currentMealType,
-//         name: mealItem,
-//         time: currentTime,
-//         calories: calculatedCalories,
-//       id: Date.now().toString()
-//     //   type: currentMealType,
-//     //   items: `${mealItem} (${quantity}g)`,
-//     //   calories: calculatedCalories,
-//     //   time: currentTime
-//     };
-//     console.log('New meal to be added:', newMeal);
-//     const responseMeal = await postMeals(newMeal);
-//     console.log('postMeals response:', responseMeal);
-//     setDailyData(prev => ({
-//       ...prev,
-//       meals: [...prev.meals, newMeal]
-//     }));
-
-//     setMealItem('');
-//     setQuantity('');
-//     setMealInputVisible(false);
-//     setSelectedFood(null);
-
-
-
-//   // --- new code for handleing meals ---
-//     // if (mealItem.trim()) {
-//     //   const newMeal = {
-//     //     mealType: currentMealType,
-//     //     name: mealItem,
-//     //     time: currentTime,
-//     //     calories: 10
-//     //   };
-//     // }
-
-//     //   const responseWorkout = await postMeals(newMeal);
-
-//     //   setDailyData(prev => ({
-//     //     ...prev,
-//     //     meals: [...prev.meals, newMeal]
-//     //   }));
-
-//     //   setMealItem('');
-//     //   setMealInputVisible(false);
-
-
-//   };
-
-//   const getMealColor = () => {
-//     switch (currentMealType) {
-//       case 'Breakfast': return '#FFF3E0';
-//       case 'Lunch': return '#E8F5E9';
-//       case 'Snack': return '#F3E5F5';
-//       case 'Dinner': return '#E3F2FD';
-//       default: return '#F5F5F5';
-//     }
-//   };
-
-//   const getMealIcon = () => {
-//     switch (currentMealType) {
-//       case 'Breakfast': return <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />;
-//       case 'Lunch': return <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />;
-//       case 'Snack': return <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />;
-//       case 'Dinner': return <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />;
-//       default: return <MaterialCommunityIcons name="food" size={24} color="#666" />;
-//     }
-//   };
-
-//   const handleSkatingPress = () => {
-//     setSkatingModalVisible(true);
-//   };
-
-// // const startSkatingSession = async (type) => {
-// const startSkatingSession = (type) => {
-//   try {
-//     setSkatingModalVisible(false);
-//     // Navigate directly to the tracking screen with the skating type
-//     navigation.navigate('SkatingTracking', { skatingType: type });
-//   } catch (error) {
-//     console.error('Navigation error:', error);
-//     Alert.alert('Error', 'Could not start skating session');
-//   }
-// };
-
-//   const handlePairDevicePress = () => {
-//     setPairingModalVisible(true);
-//     handleScanDevices();
-//   };
-
-//   const renderDeviceItem = ({ item }) => {
-//     const [isConnecting, setIsConnecting] = useState(false);
-
-//     const handleConnect = async () => {
-//       setIsConnecting(true);
-//       try {
-//         await connectToDevice(item);
-//         setPairingModalVisible(false);
-//         Alert.alert('Connected', `Successfully connected to ${item.name || 'device'}`);
-//       } catch (error) {
-//         Alert.alert('Connection Failed', error.message);
-//       } finally {
-//         setIsConnecting(false);
-//       }
-//     };
-
-//     return (
-//       <TouchableOpacity
-//         style={[
-//           styles.deviceItem,
-//           isConnecting && styles.deviceItemConnecting
-//         ]}
-//         onPress={handleConnect}
-//         disabled={isConnecting}
-//       >
-//         <View style={styles.deviceIconContainer}>
-//           <MaterialCommunityIcons
-//             name="bluetooth"
-//             size={24}
-//             color={isConnecting ? "#999" : "#4B6CB7"}
-//           />
-//         </View>
-
-//         <View style={styles.deviceInfoContainer}>
-//           <Text
-//             style={[
-//               styles.deviceName,
-//               isConnecting && styles.deviceNameConnecting
-//             ]}
-//             numberOfLines={1}
-//             ellipsizeMode="tail"
-//           >
-//             {item.name || 'Unknown Device'}
-//           </Text>
-//           <Text style={styles.deviceId}>
-//             {item.id}
-//           </Text>
-//         </View>
-
-//         {isConnecting ? (
-//           <ActivityIndicator size="small" color="#4B6CB7" />
-//         ) : (
-//           <MaterialCommunityIcons
-//             name="chevron-right"
-//             size={24}
-//             color="#666"
-//           />
-//         )}
-//       </TouchableOpacity>
-//     );
-//   };
-
-//   return (
-//     <>
-//       <SafeAreaView style={styles.safeArea}>
-//         <LinearGradient
-//           colors={['#4B6CB7', '#182848']}
-//           style={styles.headerGradient}
-//           start={{ x: 0, y: 0 }}
-//           end={{ x: 1, y: 0 }}
-//         >
-//           <View style={styles.headerSection}>
-//             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-start', marginTop: 10 }}>
-//               <Text style={styles.greetingText}>Good Morning,</Text>
-//               <Text style={styles.headerText}>{userName}</Text>
-//             </View>
-//             <TouchableOpacity
-//               onPress={() => navigation.navigate('Profile')}
-//               activeOpacity={0.8}
-//             >
-//               <View style={styles.profileIcon}>
-//                 <Feather name="user" size={20} color="#fff" />
-//               </View>
-//             </TouchableOpacity>
-//           </View>
-
-//           <View style={styles.topActions}>
-//             <TouchableOpacity
-//               style={styles.actionCard}
-//               onPress={() => setModalVisible('meal')}
-//               activeOpacity={0.7}
-//             >
-//               <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
-//                 <MaterialCommunityIcons name="food" size={24} color="#fff" />
-//               </View>
-//               <Text style={styles.actionLabel}>Add Meal</Text>
-//             </TouchableOpacity>
-
-//             <TouchableOpacity
-//               style={styles.actionCard}
-//               onPress={() => navigation.navigate('Goal')}
-//               // onPress={() => {}}
-//               activeOpacity={0.7}
-//             >
-//               <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
-//                 <MaterialCommunityIcons name="target" size={24} color="#fff" />
-//               </View>
-//               <Text style={styles.actionLabel}>Set Goal</Text>
-//             </TouchableOpacity>
-
-//             <TouchableOpacity
-//               style={styles.actionCard}
-//               onPress={handlePairDevicePress}
-//               activeOpacity={0.7}
-//             >
-//               <View style={[styles.actionIconContainer, styles.actionIconShadow]}>
-//                 <MaterialCommunityIcons name="watch" size={24} color="#fff" />
-//               </View>
-//               <Text style={styles.actionLabel}>Pair Device</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </LinearGradient>
-
-//         <ScrollView
-//           style={styles.scrollView}
-//           contentContainerStyle={styles.scrollContent}
-//           showsVerticalScrollIndicator={false}
-//         >
-//           {mealInputVisible && (
-//             <View style={[styles.card, styles.cardElevated, { backgroundColor: getMealColor() }]}>
-//               <View style={styles.cardHeader}>
-//                 <View style={styles.cardTitleContainer}>
-//                   {getMealIcon()}
-//                   <Text style={styles.cardTitle}>Add {currentMealType}</Text>
-//                 </View>
-//                 <Text style={styles.timeText}>{currentTime}</Text>
-//               </View>
-
-//               <View style={styles.mealInputContainer}>
-//                 <View style={styles.inputRow}>
-//                   <MaterialCommunityIcons name="magnify" size={20} color="#666" style={styles.inputIcon} />
-//                   <TextInput
-//                     placeholder="Search or enter food item"
-//                     style={styles.input}
-//                     value={mealItem}
-//                     onChangeText={(text) => {
-//                       setMealItem(text);
-//                       setSearchQuery(text);
-//                     }}
-//                     placeholderTextColor="#999"
-//                   />
-//                 </View>
-
-//                 <View style={styles.inputRow}>
-//                   <MaterialCommunityIcons name="scale" size={20} color="#666" style={styles.inputIcon} />
-//                   <TextInput
-//                     placeholder="Quantity"
-//                     style={styles.input}
-//                     value={quantity}
-//                     onChangeText={setQuantity}
-//                     placeholderTextColor="#999"
-//                     keyboardType="numeric"
-//                   />
-//                 </View>
-
-//                 {selectedFood && (
-//                   <View style={styles.foodDetailsContainer}>
-//                     <Text style={styles.foodDetailsText}>
-//                       {selectedFood.food_item} ({selectedFood.serving_size}): {selectedFood.calories_per_serve} cal
-//                     </Text>
-//                     {quantity && (
-//                       <Text style={styles.calorieCalculation}>
-//                         {selectedFood.calories_per_serve} cal × {quantity}g = {Math.round(selectedFood.calories_per_serve * (parseFloat(quantity) || 1))} cal
-//                       </Text>
-//                     )}
-//                   </View>
-//                 )}
-
-//                 {filteredFoods.length > 0 && (
-//                   <View style={styles.suggestionsContainer}>
-//                     <FlatList
-//                       data={filteredFoods}
-//                       keyExtractor={(item) => item.food_item}
-//                       renderItem={({ item }) => (
-//                         <TouchableOpacity
-//                           style={styles.suggestionItem}
-//                           onPress={() => {
-//                             setMealItem(item.food_item);
-//                             setSelectedFood(item);
-//                             setFilteredFoods([]);
-//                           }}
-//                          >
-//                           <Text style={styles.suggestionText}>{item.food_item}</Text>
-//                           <Text style={styles.suggestionCalories}>
-//                             {item.calories_per_serve} cal per {item.serving_size}
-//                           </Text>
-//                         </TouchableOpacity>
-//                       )}
-//                       style={styles.suggestionsList}
-//                     />
-//                   </View>
-//                 )}
-//               </View>
-
-//               <View style={styles.mealButtonRow}>
-//                 <TouchableOpacity
-//                   style={[styles.mealButton, styles.cancelButton]}
-//                   onPress={() => setMealInputVisible(false)}
-//                   activeOpacity={0.8}
-//                 >
-//                   <Text style={styles.mealButtonText}>Cancel</Text>
-//                 </TouchableOpacity>
-//                 <TouchableOpacity
-//                   style={[styles.mealButton, styles.saveButton]}
-//                   onPress={handleSaveMeal}
-//                   activeOpacity={0.8}
-//                   disabled={!mealItem || !quantity}
-//                 >
-//                   <Text style={[styles.mealButtonText, { color: '#fff' }]}>Save Meal</Text>
-//                 </TouchableOpacity>
-//               </View>
-//             </View>
-//           )}
-
-//           <View style={[styles.card, styles.cardElevated]}>
-//             <View style={styles.cardHeader}>
-//               <View style={styles.cardTitleContainer}>
-//                 <MaterialCommunityIcons name="chart-line" size={20} color="#2E3A59" />
-//                 <Text style={[styles.cardTitle, { color: '#2E3A59' }]}>Today's Activity</Text>
-//               </View>
-            
-//             </View>
-
-//             <View style={styles.activityGrid}>
-//               <View style={[styles.activityMetricCard, { backgroundColor: '#FFF8F0' }]}>
-//                 <View style={[styles.metricIconContainer, { backgroundColor: '#FFEDD5' }]}>
-//                   <MaterialCommunityIcons name="food" size={18} color="#ED8936" />
-//                 </View>
-//                 <Text style={styles.metricValue}>{totalCalories}</Text>
-//                 <Text style={styles.metricLabel}>Calories In</Text>
-//                 <View style={styles.metricTrend}>
-//                   <Feather name="arrow-up" size={14} color="#48BB78" />
-//                   <Text style={[styles.metricTrendText, { color: '#48BB78' }]}>0%</Text>
-//                 </View>
-//               </View>
-
-//               <View style={[styles.activityMetricCard, { backgroundColor: '#FFF5F5' }]}>
-//                 <View style={[styles.metricIconContainer, { backgroundColor: '#FED7D7' }]}>
-//                   <MaterialCommunityIcons name="fire" size={18} color="#F56565" />
-//                 </View>
-//                 <Text style={styles.metricValue}>{totalCaloriesBurned}</Text>
-//                 <Text style={styles.metricLabel}>Calories Out</Text>
-//                 <View style={styles.metricTrend}>
-//                   <Feather name="arrow-up" size={14} color="#FC8181" />
-//                   <Text style={[styles.metricTrendText, { color: '#FC8181' }]}>18%</Text>
-//                 </View>
-//               </View>
-
-//               <View style={[styles.activityMetricCard, { backgroundColor: '#F0F9FF' }]}>
-//                 <View style={[styles.metricIconContainer, { backgroundColor: '#DBEAFE' }]}>
-//                   <MaterialCommunityIcons name="clock-outline" size={18} color="#4299E1" />
-//                 </View>
-//                 <Text style={styles.metricValue}>0</Text>
-//                 <Text style={styles.metricLabel}>Active Min</Text>
-//                 <View style={styles.metricTrend}>
-//                   <Feather name="arrow-down" size={14} color="#ED8936" />
-//                   <Text style={[styles.metricTrendText, { color: '#ED8936' }]}>0%</Text>
-//                 </View>
-//               </View>
-
-//               <View style={[styles.activityMetricCard, { backgroundColor: '#FAF5FF' }]}>
-//                 <View style={[styles.metricIconContainer, { backgroundColor: '#E9D8FD' }]}>
-//                   <MaterialCommunityIcons name="target" size={18} color="#9F7AEA" />
-//                 </View>
-//                 <Text style={styles.metricValue}>
-//                   {completedGoals}/{totalGoals}
-//                 </Text>
-//                 <Text style={styles.metricLabel}>Goals Met</Text>
-//                 <View style={styles.progressCircle}>
-//                   <Text style={styles.progressCircleText}>
-//                     {totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}%
-//                   </Text>
-//                 </View>
-//               </View>
-//             </View>
-
-//             <View style={styles.activityProgressContainer}>
-//               <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
-//               <View style={styles.fullProgressBar}>
-//                 <View style={[styles.activityProgressFill, {
-//                   width: '65%',
-//                   backgroundColor: '#4C51BF'
-//                 }]} />
-//               </View>
-//               <Text style={styles.activityProgressPercent}>67% Complete</Text>
-//             </View>
-//           </View>
-
-
-
-//           <View style={[styles.card, styles.cardElevated]}>
-//             <View style={styles.cardHeader}>
-//               <View style={styles.cardTitleContainer}>
-//                 <MaterialCommunityIcons name="skate" size={20} color="#7B1FA2" />
-//                 <Text style={styles.cardTitle}>Skating Tracking</Text>
-//               </View>
-//               <TouchableOpacity onPress={handleSkatingPress}>
-//                 <Feather name="chevron-right" size={24} color="#666" />
-//               </TouchableOpacity>
-//             </View>
-
-//             <View style={styles.recentSessionContainer}>
-//               <View style={styles.recentSessionIcon}>
-//                 <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
-//               </View>
-//               <View style={styles.recentSessionDetails}>
-//                 <Text style={styles.recentSessionTitle}>Speed Skating</Text>
-//                 {/* <Text style={styles.recentSessionStats}>{speed ?? 0} km/h • 92 strides • 32 min</Text> */}
-//                 {/* <Text style={styles.recentSessionStats}>0km/h •</Text> */}
-// {isConnected && <Text style={styles.recentSessionStats}>{skatingData.speed ?? 0}km/h •</Text>}
-//                 {/* {!isConnected && <Text style={styles.recentSessionStats}>0 km/h •</Text>} */}
-
-//                 <Text style={styles.recentSessionStats}>0km/h •</Text>
-//               </View>
-//               <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
-//             </View>
-//           </View>
-
-//           <View style={[styles.card, styles.cardElevated]}>
-//             <View style={styles.cardHeader}>
-//               <View style={styles.cardTitleContainer}>
-//                 <Feather name="activity" size={20} color="#00C853" />
-//                 <Text style={styles.cardTitle}>Step Count</Text>
-//               </View>
-//               <TouchableOpacity onPress={() => navigation.navigate('StepCount')}>
-//                 <Feather name="chevron-right" size={24} color="#666" />
-//               </TouchableOpacity>
-//             </View>
-
-//             <View style={styles.stepProgressContainer}>
-//               <View style={styles.stepProgressText}>
-//                 <Text style={styles.stepCount}>{stepData.steps ?? 0}</Text>
-//                 <Text style={styles.stepGoal}>/ 10,000 steps</Text>
-//               </View>
-//               <View style={styles.progressBarContainer}>
-//                 <LinearGradient
-//                   colors={['#4B6CB7', '#6B8CE8']}
-//                   style={[styles.progressFill, { width: `${((stepData.steps ?? 0) / 10000) * 100}%` }]}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 0 }}
-//                 />
-//               </View>
-//               <Text style={styles.progressPercentage}>{Math.round(((data?.s ?? data?.steps ?? 0) / 10000) * 100)}% of daily goal</Text>
-//             </View>
-//           </View>
-
-//                     <View style={[styles.card, styles.cardElevated]}>
-//             <View style={styles.cardHeader}>
-//               <View style={styles.cardTitleContainer}>
-//                 <MaterialCommunityIcons name="cup-water" size={20} color="#00B0FF" />
-//                 <Text style={styles.cardTitle}>Water Intake</Text>
-//               </View>
-//               <TouchableOpacity onPress={() => navigation.navigate('WaterIntake')}>
-//                 <Feather name="chevron-right" size={24} color="#666" />
-//               </TouchableOpacity>
-//             </View>
-
-//             <View style={styles.waterCardContent}>
-//               <View style={styles.waterInfo}>
-//                 <View style={styles.intakeRow}>
-//                   <Text style={styles.intakeText}>
-//                     <Text style={styles.intakeBold}>{todayTotal}</Text> /{target} ml
-//                   </Text>
-//                 </View>
-//                 <TouchableOpacity
-//                   style={styles.addButton}
-//                   onPress={handleAddWater}
-//                   activeOpacity={0.8}
-//                 >
-//                   <Text style={styles.addButtonText}>+ 400 ml</Text>
-//                 </TouchableOpacity>
-//               </View>
-
-//               <View style={styles.waterBottleContainer}>
-//                 <View style={styles.waterBottle}>
-//                   <View style={[
-//                     styles.waterFill,
-//                     { height: `${Math.min((todayTotal / target) * 100, 100)}%` }
-//                   ]} />
-//                 </View>
-//               </View>
-//             </View>
-//           </View>
-                
-//                 <View style={{ height: 30 }} />
-
-//         </ScrollView>
-//       </SafeAreaView>
-
-//       {/* Meal Type Selection Modal */}
-//       <Modal visible={modalVisible === 'meal'} animationType="slide" transparent>
-//         <View style={styles.mealModalOverlay}>
-//           <View style={styles.mealModalContainer}>
-//             <Text style={styles.mealModalTitle}>Add Your Meal</Text>
-//             <Text style={styles.mealModalSubtitle}>Select the meal type you want to add</Text>
-
-//             <View style={styles.mealOptionsContainer}>
-//               <TouchableOpacity
-//                 style={[styles.mealOptionCard, styles.breakfastOption]}
-//                 onPress={() => handleMealCardPress('Breakfast')}
-//               >
-//                 <View style={styles.mealOptionContent}>
-//                   <View style={[styles.mealIconContainer, styles.breakfastIconBg]}>
-//                     <MaterialCommunityIcons name="weather-sunny" size={24} color="#FF9800" />
-//                   </View>
-//                   <Text style={styles.mealOptionText}>Breakfast</Text>
-//                 </View>
-//                 <Feather name="chevron-right" size={20} color="#FF9800" />
-//               </TouchableOpacity>
-
-//               <TouchableOpacity
-//                 style={[styles.mealOptionCard, styles.lunchOption]}
-//                 onPress={() => handleMealCardPress('Lunch')}
-//               >
-//                 <View style={styles.mealOptionContent}>
-//                   <View style={[styles.mealIconContainer, styles.lunchIconBg]}>
-//                     <MaterialCommunityIcons name="food" size={24} color="#4CAF50" />
-//                   </View>
-//                   <Text style={styles.mealOptionText}>Lunch</Text>
-//                 </View>
-//                 <Feather name="chevron-right" size={20} color="#4CAF50" />
-//               </TouchableOpacity>
-
-//               <TouchableOpacity
-//                 style={[styles.mealOptionCard, styles.snackOption]}
-//                 onPress={() => handleMealCardPress('Snack')}
-//               >
-//                 <View style={styles.mealOptionContent}>
-//                   <View style={[styles.mealIconContainer, styles.snackIconBg]}>
-//                     <MaterialCommunityIcons name="food-apple" size={24} color="#9C27B0" />
-//                   </View>
-//                   <Text style={styles.mealOptionText}>Snack</Text>
-//                 </View>
-//                 <Feather name="chevron-right" size={20} color="#9C27B0" />
-//               </TouchableOpacity>
-
-//               <TouchableOpacity
-//                 style={[styles.mealOptionCard, styles.dinnerOption]}
-//                 onPress={() => handleMealCardPress('Dinner')}
-//               >
-//                 <View style={styles.mealOptionContent}>
-//                   <View style={[styles.mealIconContainer, styles.dinnerIconBg]}>
-//                     <MaterialCommunityIcons name="weather-night" size={24} color="#2196F3" />
-//                   </View>
-//                   <Text style={styles.mealOptionText}>Dinner</Text>
-//                 </View>
-//                 <Feather name="chevron-right" size={20} color="#2196F3" />
-//               </TouchableOpacity>
-//             </View>
-
-//             <TouchableOpacity
-//               style={styles.mealModalCancelButton}
-//               onPress={() => setModalVisible(null)}
-//               activeOpacity={0.8}
-//             >
-//               <Text style={styles.mealModalCancelText}>Cancel</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       </Modal>
-
-//       {/* Device Pairing Modal */}
-//       <Modal visible={pairingModalVisible} animationType="slide" transparent>
-//         <View style={styles.modalOverlay}>
-//           <View style={styles.pairingModalContent}>
-//             <LinearGradient 
-//               colors={['#4B6CB7', '#1A2980']} 
-//               start={{x: 0, y: 0}} 
-//               end={{x: 1, y: 0}}
-//               style={styles.modalHeader}
-//             >
-//               <Text style={[styles.modalTitle, { color: '#fff' }]}>Connect Your Device</Text>
-//               <TouchableOpacity 
-//                 onPress={() => setPairingModalVisible(false)}
-//                 style={styles.closeButton}
-//               >
-//                 <Feather name="x" size={24} color="white" />
-//               </TouchableOpacity>
-//             </LinearGradient>
-
-//             <View style={styles.modalBody}>
-//               {isScanning ? (
-//                 <View style={styles.scanningContainer}>
-//                   <View style={styles.scanningAnimation}>
-//                     <MaterialCommunityIcons 
-//                       name="bluetooth" 
-//                       size={48} 
-//                       color="#4B6CB7" 
-//                       style={styles.bluetoothIcon}
-//                     />
-//                   </View>
-//                   <Text style={styles.scanningTitle}>Searching for nearby devices...</Text>
-//                   <View style={styles.requirementsContainer}>
-//                     <View style={styles.requirementItem}>
-//                       <MaterialCommunityIcons name="check-circle" size={20} color="#A5D6A7" />
-//                       <Text style={styles.requirementText}>Turn on your fitness tracker</Text>
-//                     </View>
-//                     <View style={styles.requirementItem}>
-//                       <MaterialCommunityIcons name="check-circle" size={20} color="#A5D6A7" />
-//                       <Text style={styles.requirementText}>Enable Bluetooth pairing mode</Text>
-//                     </View>
-//                     <View style={styles.requirementItem}>
-//                       <MaterialCommunityIcons name="check-circle" size={20} color="#A5D6A7" />
-//                       <Text style={styles.requirementText}>Keep device within 3-5 feet</Text>
-//                     </View>
-//                   </View>
-//                 </View>
-//               ) : (
-//                 <View style={styles.devicesContainer}>
-//                   {foundDevices.length > 0 ? (
-//                     <>
-//                       <Text style={styles.devicesFoundText}>
-//                         {foundDevices.length} DEVICES FOUND
-//                       </Text>
-//                       <FlatList
-//                         data={foundDevices}
-//                         keyExtractor={(item) => item.id}
-//                         renderItem={renderDeviceItem}
-//                         style={styles.deviceList}
-//                         contentContainerStyle={styles.deviceListContent}
-//                       />
-//                     </>
-//                   ) : (
-//                     <View style={styles.noDevicesContainer}>
-//                       <Text style={styles.noDevicesTitle}>No devices detected</Text>
-//                       <Text style={styles.noDevicesSubtitle}>
-//                         Ensure your device is powered on, in pairing mode, and nearby. Then try scanning again.
-//                       </Text>
-//                     </View>
-//                   )}
-//                 </View>
-//               )}
-//             </View>
-
-//             <View style={styles.modalFooter}>
-//               <TouchableOpacity
-//                 style={[styles.modalButton, styles.secondaryButton]}
-//                 onPress={scanForDevices}
-//                 disabled={isScanning}
-//               >
-//                 {isScanning ? (
-//                   <ActivityIndicator size="small" color="white" />
-//                 ) : (
-//                   <>
-//                     <MaterialCommunityIcons name="magnify" size={20} color="#4B6CB7" />
-//                     <Text style={styles.secondaryButtonText}>Scan Again</Text>
-//                   </>
-//                 )}
-//               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.modalButton, styles.primaryButton]}
-//                 onPress={() => setPairingModalVisible(false)}
-//               >
-//                 <Text style={styles.primaryButtonText}>Done</Text>
-//               </TouchableOpacity>
-//             </View>
-//           </View>
-//         </View>
-//       </Modal>
-
-//       {/* Skating Type Selection Modal */}
-//       <Modal visible={skatingModalVisible} animationType="slide" transparent>
-//         <View style={styles.modalOverlay}>
-//           <View style={styles.modalContent}>
-//             <Text style={styles.modalTitle}>Select Skating Type</Text>
-
-//             <TouchableOpacity
-//               style={[styles.skatingTypeCard, { backgroundColor: '#EDE7F6' }]}
-//               onPress={() => startSkatingSession('speed')}
-//             >
-//               <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
-//               <Text style={styles.skatingTypeText}>Speed Skating</Text>
-//               <Feather name="chevron-right" size={20} color="#666" />
-//             </TouchableOpacity>
-
-//             <TouchableOpacity
-//               style={[styles.skatingTypeCard, { backgroundColor: '#E3F2FD' }]}
-//               onPress={() => startSkatingSession('distance')}
-//             >
-//               <MaterialCommunityIcons name="map-marker-distance" size={24} color="#2196F3" />
-//               <Text style={styles.skatingTypeText}>Distance Skating</Text>
-//               <Feather name="chevron-right" size={20} color="#666" />
-//             </TouchableOpacity>
-
-//             {/* <TouchableOpacity
-//               style={[styles.skatingTypeCard, { backgroundColor: '#FFF3E0' }]}
-//               onPress={() => startSkatingSession('freestyle')}
-//             >
-//               <MaterialCommunityIcons name="skate" size={24} color="#FF9800" />
-//               <Text style={styles.skatingTypeText}>Freestyle Skating</Text>
-//               <Feather name="chevron-right" size={20} color="#666" />
-//             </TouchableOpacity> */}
-
-//             <TouchableOpacity
-//               style={styles.cancelButton}
-//               onPress={() => setSkatingModalVisible(false)}
-//               activeOpacity={0.8}
-//             >
-//               <Text style={styles.cancelText}>Cancel</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       </Modal>
-//     </>
-//   );
-// };
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -24,6 +24,7 @@ app.use(express.urlencoded({ extended: true })); // For form data
 app.use(cors());
 
 app.use('/api/auth', authRoutes);
+// app.use('')
 // app.use('/api/tracking',auth , trackingRoutes);
 // app.use('/api/tracking', trackingRoutes);
 

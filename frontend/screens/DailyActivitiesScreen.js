@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import useWaterStore from '../store/waterStore';
+import { useCaloriesStore } from '../store/caloriesStore';
+
 import {
   View,
   Text,
@@ -18,7 +20,8 @@ import {
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format, addDays, subDays, isSameDay, isWithinInterval, addHours } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -47,7 +50,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
     totalCaloriesIn,
     workoutData,
     getWorkout,
-    totalCaloriesBurned
+    // totalCaloriesBurned
   } = useAuthStore();
   
   const {
@@ -60,80 +63,204 @@ const DailyActivitiesScreen = ({ navigation }) => {
     addIntake,
     getProgress,
     refreshAll
-  } = useWaterStore();  
+  } = useWaterStore();
 
-  // const waterTarget = target || 2000; // Default to 2000ml if no target set
-  // const sumOfIntakes = todayTotal || 0;
+    const {
+      totalCaloriesEaten,
+      totalCaloriesBurned,
+      mealTarget,
+      mealTargetMet,
+      mealFlag,
+      fetchCaloriesEaten,
+      fetchCaloriesBurned,
+      fetchMealTargetStatus,
+      fetchBurnTarget,
+      burnTarget, 
+      setBurnTarget,
+      stepGoal, 
+      fetchStepGoal, 
+      setStepGoal,
+      setMealTarget // Add this function to your caloriesStore
+    } = useCaloriesStore();
 
-  // useEffect(() => {
-  //   // useWaterStore.persist.rehydrate();
-  //   // todayTotal && fetchTarget();
-  //   // target && fetchTodayTotal();
-  //   refreshAll();
-
-  // }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchIntakes(), fetchTodayTotal(), fetchTarget()]);
-      } catch (error) {
-        console.error('Failed to fetch water data:', error);
-      }
-    };
-    fetchData();
-  }, []); // Run on mount
-
-
+  // console.log('Meal Data:', mealData);
   // Goals data
-  const [goals, setGoals] = useState([
-    { id: '1', title: `Drink ${target / 1000}L water out of ${todayTotal / 1000}L`, completed: todayTotal >= target },
-    { id: '2', title: '10,000 steps', completed: true },
-    { id: '3', title: 'K calories Earn', completed: true },
-    { id: '4', title: 'K calories Burn', completed: true },
-  ]);
+//   const [goals, setGoals] = useState([
+//     {
+//       id: '1',
+//       title: `Drink ${(todayTotal || 0) / 1000}L water out of ${(target || 2000) / 1000}L`,
+//       completed: (todayTotal || 0) >= (target || 2000),
+//     },
+//     { id: '2', title: `${stepGoal} steps`, completed: false },
+//     { id: '3', title: `${mealTarget}K calories Earn`, completed: (totalCaloriesEaten || 0) >= (mealTarget || 2000) },
+//     { id: '4', title: `${totalCaloriesBurned || 0}kcal out of ${burnTarget || 500}kcal`, completed: (totalCaloriesBurned || 0) >= (burnTarget || 500) },
+//   ]);
 
-    useEffect(() => {
+//   useEffect(() => {
+//   setGoals(prevGoals => [
+//     {
+//       id: '1',
+//       title: `Drink ${((todayTotal || 0) / 1000).toFixed(1)}L water out of ${((target || 2000) / 1000).toFixed(1)}L`,
+//       completed: (todayTotal || 0) >= (target || 2000),
+//     },
+//     { id: '2', title: `${stepGoal || 10000} steps`, completed: false },
+//     { id: '3', title: `${mealTarget || 2000}Kcal to Earn`, completed: (totalCaloriesEaten || 0) >= (mealTarget || 2000) },
+//     { id: '4', title: `${totalCaloriesBurned || 0} cal out of ${burnTarget || 500}`, completed: (totalCaloriesBurned || 0) >= (burnTarget || 500) },
+//   ]);
+// }, [todayTotal, target, stepGoal, mealTarget, burnTarget, totalCaloriesEaten, totalCaloriesBurned]); // Add all target dependencies
+
+
+const [goals, setGoals] = useState([
+  {
+    id: '1',
+    title: `Drink ${(todayTotal || 0) / 1000}L out of ${(target || 2000) / 1000}L`,
+    completed: (todayTotal || 0) >= (target || 2000),
+  },
+  { 
+    id: '2', 
+    title: `0 steps out of ${stepGoal || 10000}`, 
+    completed: false 
+  },
+  { 
+    id: '3', 
+    title: `${totalCaloriesEaten || 0} cal out of ${mealTarget || 2000}`, 
+    completed: (totalCaloriesEaten || 0) >= (mealTarget || 2000) 
+  },
+  { 
+    id: '4', 
+    title: `${totalCaloriesBurned || 0} cal out of ${burnTarget || 500}`, 
+    completed: (totalCaloriesBurned || 0) >= (burnTarget || 500) 
+  },
+]);
+
+useEffect(() => {
+  setGoals([
+    {
+      id: '1',
+      title: `Drink ${((todayTotal || 0) / 1000).toFixed(1)}L out of ${((target || 2000) / 1000).toFixed(1)}L`,
+      completed: (todayTotal || 0) >= (target || 2000),
+    },
+    { 
+      id: '2', 
+      title: `0 steps out of ${stepGoal || 10000}`, 
+      completed: false // You'll need to implement step tracking
+    },
+    { 
+      id: '3', 
+      title: `${totalCaloriesEaten || 0} cal out of ${mealTarget || 2000}`, 
+      completed: (totalCaloriesEaten || 0) >= (mealTarget || 2000) 
+    },
+    { 
+      id: '4', 
+      title: `${totalCaloriesBurned || 0} cal out of ${burnTarget || 500}`, 
+      completed: (totalCaloriesBurned || 0) >= (burnTarget || 500) 
+    },
+  ]);
+}, [todayTotal, target, stepGoal, mealTarget, burnTarget, totalCaloriesEaten, totalCaloriesBurned]);
+
+  const calculateTotalCalories = (meals) => {
+  // The reduce method iterates over the array and accumulates a single value.
+  // 'total' is the accumulator, initialized to 0.
+  // 'meal' is the current item in the array.
+  return meals.reduce((total, meal) => {
+    // Add the calories from the current meal to the running total.
+    return total + meal.calories;
+  }, 0); // The 0 is the initial value for the 'total' accumulator.
+};
+const totalCalEat = calculateTotalCalories(mealData);
+
+  // Update goals when todayTotal or target changes
+  useEffect(() => {
+    const waterTarget = target || 2000;
+    const sumOfIntakes = todayTotal || 0;
     setGoals([
       {
-        id: '1', title: `Drink ${target / 1000}L water out of ${todayTotal / 1000}L`, completed: todayTotal >= target
+        id: '1',
+        title: `Drink ${(sumOfIntakes / 1000).toFixed(1)}L water out of ${(waterTarget / 1000).toFixed(1)}L`,
+        completed: sumOfIntakes >= waterTarget,
       },
-      ...goals.slice(1), // Preserve other goals
+      ...goals.slice(1),
     ]);
-
   }, [todayTotal, target]);
 
+  // Fetch data on mount and when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          setRefreshing(true);
+          const dateString = format(selectedDate, 'yyyy-MM-dd');
+          await Promise.all([
+            getMeals(dateString),
+            fetchIntakes(dateString),
+            fetchTodayTotal(dateString),
+            fetchTarget(),
+            getWorkout(dateString),
+          ]);
+        } catch (error) {
+          console.error('Failed to fetch data:', error);
+        } finally {
+          setRefreshing(false);
+        }
+      };
+      fetchData();
+    }, [selectedDate])
+  );
 
-  // Generate week dates
+//   useEffect(() => async () => {
+//     // await 
+//     await fetchTarget();
+//         await fetchBurnTarget();
+//         await fetchStepGoal();
+//         await fetchMealTargetStatus();
+// }, [mealData, workoutData, intakes, todayTotal, target, mealTarget, burnTarget, stepGoal]);
+
+    useEffect(() => {
+  const fetchTargets = async () => {
+    await fetchTarget();
+    await fetchBurnTarget();
+    await fetchStepGoal();
+    await fetchMealTargetStatus();
+  };
+  fetchTargets();
+}, []); // 
+
+  // Generate 10 days: 6 days before today, today, and 3 days after
   const generateWeekDates = () => {
-    const startDate = addDays(selectedDate, -3);
+    const today = new Date();
     const dates = [];
-    for (let i = 0; i < 7; i++) {
-      dates.push(addDays(startDate, i));
+    for (let i = 6; i >= 1; i--) {
+      dates.push(subDays(today, i));
     }
-    return dates
-    ;
-  //   const dates = [];
-  // for (let i = 6; i >= 0; i--) {
-  //   dates.push(subDays(new Date(), i));
-  // }
-  // return dates;
+    dates.push(today);
+    for (let i = 1; i <= 3; i++) {
+      dates.push(addDays(today, i));
+    }
+    return dates;
   };
 
   const weekDates = generateWeekDates();
+  const today = new Date();
+  const sevenDaysAgo = subDays(today, 6);
+  const clickableRange = { start: sevenDaysAgo, end: today };
 
-  // Load data on mount + when selectedDate changes
-  useEffect(() => {
-    loadData();
-  }, [selectedDate]);
-
+  // Load data when selectedDate changes
   const loadData = async () => {
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    await getMeals(dateString);            // ✅ get meals for selected date
-    await fetchIntakes(dateString);
-    await fetchTodayTotal(dateString);
-    await fetchTarget();
-    await getWorkout(dateString);
+    try {
+      setRefreshing(true);
+      await Promise.all([
+        getMeals(dateString),
+        fetchIntakes(dateString),
+        fetchTodayTotal(dateString),
+        fetchTarget(),
+        getWorkout(dateString),
+      ]);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Pull to refresh
@@ -182,7 +309,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
         calories: mealsInput.calories ? parseInt(mealsInput.calories) : 0,
         time: mealsInput.time,
         notes: mealsInput.notes,
-        date: format(selectedDate, 'yyyy-MM-dd')   // ✅ include date
+        date: format(selectedDate, 'yyyy-MM-dd')
       };
 
       const result = await addMeal(mealToAdd);
@@ -197,7 +324,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
         });
         setModalVisible(false);
         animate();
-        loadData();  // reload meals for updated list
+        await loadData();
       } else {
         alert(result.error || 'Failed to save meal');
       }
@@ -222,7 +349,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
       setWaterAmount('');
       setWaterModalVisible(false);
       animate();
-      loadData(); // reload water data
+      await loadData();
     } else {
       alert(result.error || 'Failed to add water intake');
     }
@@ -261,6 +388,35 @@ const DailyActivitiesScreen = ({ navigation }) => {
     </View>
   );
 
+  // import { format, addHours } from 'date-fns'; // Import addHours for explicit IST conversion
+
+// Map intakes to display format
+const intakeHistory = intakes.map(intake => {
+  const dateObj = new Date(intake.date); // UTC timestamp from backend
+  const istDate = addHours(dateObj, 5.5); // Convert UTC to IST (+5:30)
+  const isMidnight = dateObj.getUTCHours() === 0 && dateObj.getUTCMinutes() === 0 && dateObj.getUTCSeconds() === 0;
+  return {
+    _id: intake._id,
+    amount: intake.amount,
+    timestamp: isMidnight ? 'Manual Entry' : format(istDate, 'hh:mm a')
+  };
+});
+  // Sort and format water intake history for display, newest first
+// const intakeHistory = intakes
+//   .sort((a, b) => new Date(b.date) - new Date(a.date))
+//   .map(intake => ({
+//     amount: intake.amount,
+//     timestamp: new Date(intake.date)
+//   }));
+// Sort and format water intake history for display, newest first
+// const intakeHistory = intakes
+//   .sort((a, b) => new Date(b.date) - new Date(a.date))
+//   .map(intake => ({
+//     _id: intake._id, // Preserve _id for keyExtractor
+//     amount: intake.amount,
+//     timestamp: format(new Date(intake.date), 'hh:mm a') // Format time as hh:mm AM/PM
+//   }));
+
   // Render water intake
   const renderWaterItem = ({ item }) => (
     <View style={styles.itemCard}>
@@ -292,21 +448,6 @@ const DailyActivitiesScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Render workout
-  const renderWorkoutItem = ({ item }) => (
-    <View style={styles.itemCard}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemType}>{item.exerciseType || 'Workout'}</Text>
-        <Text style={styles.itemTime}>{formatTime(item.createdAt)}</Text>
-      </View>
-      <View style={styles.workoutDetails}>
-        <Text style={styles.workoutStat}>{item.duration} min</Text>
-        <Text style={styles.workoutStat}>{item.caloriesBurned} cal</Text>
-      </View>
-    </View>
-  );
-
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -323,11 +464,15 @@ const DailyActivitiesScreen = ({ navigation }) => {
           <Text style={styles.headerTitle}>Daily Activities</Text>
           <Text style={styles.headerDate}>{format(selectedDate, 'MMMM yyyy')}</Text>
         </View>
-        <TouchableOpacity onPress={() => {
+        <TouchableOpacity onPress={() => {}}>
+        {/* () => {
           if (activeTab === 'meals') setModalVisible(true);
           if (activeTab === 'water') setWaterModalVisible(true);
-        }}>
-          <Feather name="plus" size={1} color="#fff" />
+        }}> */}
+          {/* <Feather name="plus" size={24} color="#fff" /> */}
+          {/* <View><Text>mjkh<
+          /Text></View> */}
+          <View style={{height:24, width: 24}}/>
         </TouchableOpacity>
       </LinearGradient>
 
@@ -341,6 +486,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
           {weekDates.map((date, index) => {
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());
+            const isClickable = isWithinInterval(date, clickableRange);
             
             return (
               <TouchableOpacity
@@ -348,21 +494,25 @@ const DailyActivitiesScreen = ({ navigation }) => {
                 style={[
                   styles.dateContainer,
                   isSelected && styles.selectedDateContainer,
-                  isToday && !isSelected && styles.todayDateContainer
+                  isToday && !isSelected && styles.todayDateContainer,
+                  !isClickable && styles.disabledDateContainer
                 ]}
-                onPress={() => setSelectedDate(date)}
+                onPress={() => isClickable && setSelectedDate(date)}
+                disabled={!isClickable}
               >
                 <Text style={[
                   styles.dayText,
                   isSelected && styles.selectedDayText,
-                  isToday && !isSelected && styles.todayDayText
+                  isToday && !isSelected && styles.todayDayText,
+                  !isClickable && styles.disabledDayText
                 ]}>
                   {format(date, 'EEE')}
                 </Text>
                 <Text style={[
                   styles.dateText,
                   isSelected && styles.selectedDateText,
-                  isToday && !isSelected && styles.todayDateText
+                  isToday && !isSelected && styles.todayDateText,
+                  !isClickable && styles.disabledDateText
                 ]}>
                   {format(date, 'd')}
                 </Text>
@@ -379,7 +529,8 @@ const DailyActivitiesScreen = ({ navigation }) => {
           onPress={() => setActiveTab('meals')}
         >
           <MaterialCommunityIcons name="food" size={20} color={activeTab === 'meals' ? '#fff' : '#4B6CB7'} />
-          <Text style={[styles.statValue, activeTab === 'meals' && styles.activeStatValue]}>{totalCaloriesIn || 0}</Text>
+          {/* <Text style={[styles.statValue, activeTab === 'meals' && styles.activeStatValue]}>{totalCaloriesIn || 0}</Text> */}
+          <Text style={[styles.statValue, activeTab === 'meals' && styles.activeStatValue]}>{totalCalEat || 0}</Text>
           <Text style={[styles.statLabel, activeTab === 'meals' && styles.activeStatLabel]}>Calories</Text>
         </TouchableOpacity>
 
@@ -400,15 +551,6 @@ const DailyActivitiesScreen = ({ navigation }) => {
           <Text style={[styles.statValue, activeTab === 'goals' && styles.activeStatValue]}>{completedGoals}/{goals.length}</Text>
           <Text style={[styles.statLabel, activeTab === 'goals' && styles.activeStatLabel]}>Goals</Text>
         </TouchableOpacity>
-
-        {/* <TouchableOpacity 
-          style={[styles.statCard, activeTab === 'workouts' && styles.activeStatCard]}
-          onPress={() => setActiveTab('workouts')}
-        >
-          <MaterialCommunityIcons name="dumbbell" size={20} color={activeTab === 'workouts' ? '#fff' : '#4B6CB7'} />
-          <Text style={[styles.statValue, activeTab === 'workouts' && styles.activeStatValue]}>{totalCaloriesBurned || 0}</Text>
-          <Text style={[styles.statLabel, activeTab === 'workouts' && styles.activeStatLabel]}>Workout</Text>
-        </TouchableOpacity> */}
       </View>
 
       {/* Content Area */}
@@ -432,8 +574,9 @@ const DailyActivitiesScreen = ({ navigation }) => {
         )}
 
         {activeTab === 'water' && (
+          // <ScrollView>
           <>
-            <View style={styles.progressContainer}>
+            {/* <View style={styles.progressContainer}>
               <View style={styles.progressHeader}>
                 <Text style={styles.progressText}>Today's Progress</Text>
                 <Text style={styles.progressAmount}>{todayTotal || 0}ml / {target || 0}ml</Text>
@@ -447,9 +590,11 @@ const DailyActivitiesScreen = ({ navigation }) => {
                 />
               </View>
               <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
-            </View>
+            </View> */}
+            {/* {console.log('Intake History:', intakes)} */}
             <FlatList
-              data={intakes}
+              // data={intakes}
+              data={intakeHistory}
               renderItem={renderWaterItem}
               keyExtractor={item => item._id || Math.random().toString()}
               contentContainerStyle={styles.listContent}
@@ -463,7 +608,12 @@ const DailyActivitiesScreen = ({ navigation }) => {
                 <Text style={styles.emptyText}>No water intake recorded for {format(selectedDate, 'MMMM d')}</Text>
               }
             />
-          </>
+            {/* <View style={{ height: '200' }}></View> */}
+          {/* </ ScrollView>
+           */}
+           {/* <View style={{ height: '500' }}></View> */}
+
+           </>
         )}
 
         {activeTab === 'goals' && (
@@ -497,140 +647,12 @@ const DailyActivitiesScreen = ({ navigation }) => {
         )}
       </View>
 
-      {/* Add Meal Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Meal</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Feather name="x" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView>
-              <Text style={styles.inputLabel}>Meal Type</Text>
-              <View style={styles.mealTypeContainer}>
-                {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.mealTypeButton,
-                      mealsInput.mealType === type && styles.selectedMealType
-                    ]}
-                    onPress={() => setMealsInput({...mealsInput, mealType: type})}
-                  >
-                    <Text style={mealsInput.mealType === type ? styles.selectedMealTypeText : styles.mealTypeText}>
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Food Name*</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="What did you eat?"
-                value={mealsInput.foodName}
-                onChangeText={(text) => setMealsInput({...mealsInput, foodName: text})}
-              />
-
-              <Text style={styles.inputLabel}>Description (optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Any details about the meal"
-                value={mealsInput.description}
-                onChangeText={(text) => setMealsInput({...mealsInput, description: text})}
-                multiline
-              />
-
-              <Text style={styles.inputLabel}>Calories</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter calories"
-                value={mealsInput.calories}
-                onChangeText={(text) => setMealsInput({...mealsInput, calories: text})}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.inputLabel}>Time</Text>
-              <TextInput
-                style={styles.input}
-                value={mealsInput.time}
-                onChangeText={(text) => setMealsInput({...mealsInput, time: text})}
-                placeholder="HH:MM AM/PM"
-              />
-
-              <Text style={styles.inputLabel}>Notes (optional)</Text>
-              <TextInput
-                style={[styles.input, {height: 80}]}
-                placeholder="Any additional notes"
-                value={mealsInput.notes}
-                onChangeText={(text) => setMealsInput({...mealsInput, notes: text})}
-                multiline
-              />
-            </ScrollView>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleSaveMeal}
-              >
-                <Text style={styles.saveButtonText}>Save Meal</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Add Water Modal */}
-      <Modal visible={waterModalVisible} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Water Intake</Text>
-              <TouchableOpacity onPress={() => setWaterModalVisible(false)}>
-                <Feather name="x" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Amount (ml)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter amount in milliliters"
-                value={waterAmount}
-                onChangeText={setWaterAmount}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setWaterModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleAddWater}
-              >
-                <Text style={styles.saveButtonText}>Add Intake</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
+
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -639,8 +661,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.04,
-    // paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    // paddingTop
     paddingHorizontal: width * 0.05,
     paddingBottom: height * 0.02,
     flexDirection: 'row',
@@ -689,6 +709,9 @@ const styles = StyleSheet.create({
   todayDateContainer: {
     backgroundColor: 'rgba(75, 108, 183, 0.1)',
   },
+  disabledDateContainer: {
+    backgroundColor: '#f0f0f0',
+  },
   dayText: {
     fontSize: 12,
     color: '#666',
@@ -701,6 +724,9 @@ const styles = StyleSheet.create({
   todayDayText: {
     color: '#4B6CB7',
   },
+  disabledDayText: {
+    color: '#aaa',
+  },
   dateText: {
     fontSize: 16,
     fontWeight: '600',
@@ -711,6 +737,9 @@ const styles = StyleSheet.create({
   },
   todayDateText: {
     color: '#4B6CB7',
+  },
+  disabledDateText: {
+    color: '#aaa',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -802,7 +831,8 @@ const styles = StyleSheet.create({
     paddingTop: height * 0.02,
   },
   listContent: {
-    paddingBottom: height * 0.1,
+    // paddingBottom: height * 0.1,
+    paddingBottom: 150,
   },
   itemCard: {
     backgroundColor: '#fff',
@@ -994,5 +1024,3 @@ const styles = StyleSheet.create({
 });
 
 export default DailyActivitiesScreen;
-
-

@@ -18,20 +18,28 @@ import { ProgressChart } from 'react-native-chart-kit';
 // import { useBLEStore } from './components/bleStore';
 
 import { useBLEStore } from '../store/augBleStore';
+import { useCaloriesStore } from '../store/caloriesStore';
 
 const { width } = Dimensions.get('window');
 
 const StepCountScreen = ({ navigation }) => {
   const { sendCommand, data } = useBLEStore();
-  const { width, height } = useWindowDimensions();
+      const {     stepGoal,
+      fetchStepGoal, 
+      setStepGoal,
+      setMealTarget // Add this function to your caloriesStore
+    } = useCaloriesStore();
+
+  const { height } = useWindowDimensions();
   
   // State for UI elements
   const [isSyncing, setIsSyncing] = useState(false);
   const [animation] = useState(new Animated.Value(0));
   const [selectedTab, setSelectedTab] = useState('today');
   const [showGoalModal, setShowGoalModal] = useState(false);
-  const [stepGoal, setStepGoal] = useState(10000);
+  // const [stepGoal, setStepGoal] = useState(10000);
   const [tempGoal, setTempGoal] = useState('10000');
+
 
   // Extract data from BLE with fallback values
   const stepData = data && data.mode === 'S' ? {
