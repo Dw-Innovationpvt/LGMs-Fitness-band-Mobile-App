@@ -13,6 +13,7 @@ import PrivacyScreen from '../screens/PrivacyScreen';
 import DevicePairingScreen from '../screens/DevicePairingScreen';
 
 import GoalSettingScreen from '../screens/GoalSettingScreen';
+import SimpleBLEComponent from '../helper/SimpleBLEComponent';
 
 // import TempMealScreen from '../screens/back/TempMealScreen'; // Adjust the import path as necessary
 
@@ -34,6 +35,7 @@ const HomeStack = () => (
   <Stack.Screen name="Privacy" component={PrivacyScreen} />
   <Stack.Screen name="DevicePairing" component={DevicePairingScreen} />
   <Stack.Screen name="Goal" component={GoalSettingScreen} />
+  <Stack.Screen name="Simple" component={SimpleBLEComponent} />
   </Stack.Navigator>
 );
 export default HomeStack;

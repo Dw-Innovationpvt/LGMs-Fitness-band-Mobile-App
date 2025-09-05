@@ -12,6 +12,11 @@ import stepsRoutes from './routes/stepsRoutes.js';
 import mealsRoutes from './routes/mealsRoutes.js';
 import bmiRoutes from './routes/bmiRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+
+import goalRoutes from './routes/goalRoutes.js';
+
+import targetsRoutes from './routes/targetsRoutes.js';
+
 import { connectDB } from "./lib/db.js";
 import cors from 'cors';
 
@@ -47,6 +52,13 @@ app.use('/api/steps', stepsRoutes);
 // for bmi setup making true... bmiSCreen frontedn
 app.use('/api/bmi', bmiRoutes);
 app.use('/api/user', userRoutes);
+console.log('Targets route loadeinf');
+
+// for daily activities goals targets
+// app.use('/api/targets', targetsRoutes);
+app.use('/api/targets',targetsRoutes)
+app.use('/api/goals', goalRoutes);
+console.log('Targets route loaded');
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

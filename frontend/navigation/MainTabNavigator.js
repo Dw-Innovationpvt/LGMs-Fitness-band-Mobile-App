@@ -13,6 +13,7 @@ import BleScreen from '../screens/components/comp/BleScreen';
 import SimpleBLEComponent from '../helper/SimpleBLEComponent';
 import DevicePairingModal from '../screens/components/DevicePairingModal';
 import CaloriesScreenTemp from '../screens/components/CaloriesScreenTemp';
+import WeeklyGoalsScreen from '../screens/WeeklyGoalsScreen';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -143,6 +144,7 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
+      {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
       {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}
       {/* <Tab.Screen name="Challenges" component={ChallengesScreen} /> */}

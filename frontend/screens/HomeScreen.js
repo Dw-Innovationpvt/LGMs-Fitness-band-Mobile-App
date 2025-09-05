@@ -186,6 +186,49 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+function calculateTotalProgress(goals) {
+  // Define the percentage each goal contributes to the total.
+  const contributionPerGoal = 25;
+
+  let totalProgress = 0;
+
+  // Function to calculate progress for a single goal
+  const calculateGoalProgress = (current, target) => {
+    // Handle the case where the target is zero to avoid division by zero.
+    if (target === 0) {
+      return 0;
+    }
+    // Calculate the completion percentage for this goal.
+    const completionRatio = Math.min(current / target, 1);
+    // Add the proportional contribution to the total.
+    return completionRatio * contributionPerGoal;
+  };
+
+  // Calculate progress for each of the four goals.
+  totalProgress += calculateGoalProgress(goals.caloriesEaten.current, goals.caloriesEaten.target);
+  totalProgress += calculateGoalProgress(goals.caloriesBurned.current, goals.caloriesBurned.target);
+  totalProgress += calculateGoalProgress(goals.water.current, goals.water.target);
+  totalProgress += calculateGoalProgress(goals.steps.current, goals.steps.target);
+
+  return totalProgress;
+}
+// {totalCaloriesEaten}/{mealTarget}
+// {totalCaloriesBurned}/{burnTarget}
+// {stepData.steps ?? 0}</Text>
+// //                 <Text style={styles.stepGoal}> /{stepGoal} steps
+// {todayTotal}</Text> /{target} ml
+  const dailyGoals = {
+  caloriesEaten: { current: totalCaloriesEaten, target: mealTarget },
+  caloriesBurned: { current: totalCaloriesBurned, target: burnTarget },
+  water: { current: todayTotal, target: target },
+  steps: { current: stepData.steps ? stepData.steps : 0, target: stepGoal },
+};
+  // Calculate the total progress
+const totalProgress = calculateTotalProgress(dailyGoals);
+
+
+
+
   const totalCalories = dailyData.meals.reduce((sum, meal) => sum + meal.calories, 0);
   const completedGoals = dailyData.goals.filter(goal => goal.completed).length;
   const totalGoals = dailyData.goals.length || 0;
@@ -512,11 +555,13 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.activityProgressText}>Daily Activity Progress</Text>
               <View style={styles.fullProgressBar}>
                 <View style={[styles.activityProgressFill, {
-                  width: `${totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}%`,
+                  // width: `${totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}%`,
+                  width: `${totalProgress}%`,
                   backgroundColor: '#4C51BF'
                 }]} />
               </View>
-              <Text style={styles.activityProgressPercent}>{totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}% Complete</Text>
+              {/* <Text style={styles.activityProgressPercent}>{totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}% Complete</Text> */}
+              <Text style={styles.activityProgressPercent}>{totalProgress}% Complete</Text>
             </View>
           </View>
 

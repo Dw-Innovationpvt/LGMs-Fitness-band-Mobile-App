@@ -5,13 +5,16 @@ import {
   TouchableOpacity, 
   FlatList, 
   StyleSheet,
-  ActivityIndicator 
+  ActivityIndicator,
+  Dimensions,
+  Platform
 } from 'react-native';
-// import { useBLEStore } from './useBLEStore'; // Import your store
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBLEStore } from '../store/augBleStore';
-// import 
 
-const SimpleBLEComponent = () => {
+const { width, height } = Dimensions.get('window');
+
+const SimpleBLEComponent = ({ navigation }) => {
   // Get state and actions from the store
   const {
     foundDevices,
@@ -41,7 +44,10 @@ const SimpleBLEComponent = () => {
       onPress={() => connectToDevice(item)}
       disabled={isConnected || isScanning}
     >
-      <View style={styles.deviceInfo}>
+      <View style={styles.deviceIconContainer}>
+        <Text style={styles.deviceIcon}>📱</Text>
+      </View>
+      <View style={styles.deviceInfoContainer}>
         <Text style={styles.deviceName}>
           {item.name || item.localName || 'Unknown Device'}
         </Text>
@@ -57,111 +63,142 @@ const SimpleBLEComponent = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Text style={styles.title}>BLE Device Manager</Text>
-
-      {/* Connection Status */}
-      <View style={[
-        styles.statusCard,
-        isConnected ? styles.connectedCard : styles.disconnectedCard
-      ]}>
-        <Text style={styles.statusTitle}>Connection Status</Text>
-        <Text style={styles.statusText}>
-          {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
-        </Text>
-        {isConnected && connectedDevice && (
-          <Text style={styles.connectedDeviceText}>
-            📱 {connectedDevice.name || connectedDevice.id}
-          </Text>
-        )}
-        {error && (
-          <Text style={styles.errorText}>❌ {error}</Text>
-        )}
-      </View>
-
-      {/* Data Display */}
-      {data && (
-        <View style={styles.dataCard}>
-          <Text style={styles.dataTitle}>Received Data</Text>
-          <Text style={styles.dataText}>
-            {JSON.stringify(data, null, 2)}
-          </Text>
+      <View style={styles.headerGradient}>
+        <View style={styles.headerSection}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation?.goBack()}
+          >
+            {/* <Text style={styles.backButtonText}>←</Text> */}
+                      <Feather name="arrow-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerText}>Pair Device</Text>
+          <View style={styles.headerSpacer} />
         </View>
-      )}
-
-      {/* Control Buttons */}
-      <View style={styles.buttonContainer}>
-        {!isConnected ? (
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.scanButton,
-              isScanning && styles.disabledButton
-            ]}
-            onPress={scanForDevices}
-            disabled={isScanning}
-          >
-            {isScanning ? (
-              <View style={styles.scanningContainer}>
-                <ActivityIndicator color="white" size="small" />
-                <Text style={styles.buttonText}>Scanning...</Text>
-              </View>
-            ) : (
-              <Text style={styles.buttonText}>🔍 Scan for Devices</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.button, styles.disconnectButton]}
-            onPress={disconnect}
-          >
-            <Text style={styles.buttonText}>🔌 Disconnect</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* Device List */}
-      {!isConnected && (
-        <View style={styles.deviceListContainer}>
-          <Text style={styles.deviceListTitle}>
-            Found Devices ({foundDevices.length})
-          </Text>
-          
-          {foundDevices.length === 0 && !isScanning && !error && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                🔍 No devices found yet
-              </Text>
-              <Text style={styles.emptySubText}>
-                Tap "Scan for Devices" to start searching
-              </Text>
+      <View style={styles.scrollContent}>
+        {/* Connection Status */}
+        <View style={[
+          styles.card,
+          styles.cardElevated,
+          isConnected ? styles.connectedCard : styles.disconnectedCard
+        ]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <Text style={styles.cardTitle}>Connection Status</Text>
             </View>
+          </View>
+          <Text style={styles.statusText}>
+            {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+          </Text>
+          {isConnected && connectedDevice && (
+            <Text style={styles.connectedDeviceText}>
+              📱 {connectedDevice.name || connectedDevice.id}
+            </Text>
           )}
-
-          <FlatList
-            data={foundDevices}
-            keyExtractor={(item) => item.id}
-            renderItem={renderDevice}
-            style={styles.deviceList}
-            showsVerticalScrollIndicator={false}
-          />
+          {error && (
+            <Text style={styles.errorText}>❌ {error}</Text>
+          )}
         </View>
-      )}
 
-      {/* Connection Info */}
-      {isConnected && (
-        <View style={styles.connectionInfo}>
-          <Text style={styles.infoTitle}>Connection Details</Text>
-          <Text style={styles.infoText}>
-            • Device connected successfully
-          </Text>
-          <Text style={styles.infoText}>
-            • Listening for data...
-          </Text>
-          <Text style={styles.infoText}>
-            • Ready to send commands
-          </Text>
+        {/* Data Display */}
+        {data && (
+          <View style={[styles.card, styles.cardElevated]}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleContainer}>
+                <Text style={styles.cardTitle}>Received Data</Text>
+              </View>
+            </View>
+            <Text style={styles.dataText}>
+              {JSON.stringify(data, null, 2)}
+            </Text>
+          </View>
+        )}
+
+        {/* Control Buttons */}
+        <View style={styles.buttonContainer}>
+          {!isConnected ? (
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                isScanning && styles.disabledButton
+              ]}
+              onPress={scanForDevices}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <View style={styles.scanningContainer}>
+                  <ActivityIndicator color="white" size="small" />
+                  <Text style={styles.addButtonText}>Scanning...</Text>
+                </View>
+              ) : (
+                <Text style={styles.addButtonText}>🔍 Scan for Devices</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.addButton, styles.disconnectButton]}
+              onPress={disconnect}
+            >
+              <Text style={styles.addButtonText}>🔌 Disconnect</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      )}
+
+        {/* Device List */}
+        {!isConnected && (
+          <View style={[styles.card, styles.cardElevated]}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleContainer}>
+                <Text style={styles.cardTitle}>
+                  Found Devices ({foundDevices.length})
+                </Text>
+              </View>
+            </View>
+            
+            {foundDevices.length === 0 && !isScanning && !error && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  🔍 No devices found yet
+                </Text>
+                <Text style={styles.emptySubText}>
+                  Tap "Scan for Devices" to start searching
+                </Text>
+              </View>
+            )}
+
+            <FlatList
+              data={foundDevices}
+              keyExtractor={(item) => item.id}
+              renderItem={renderDevice}
+              style={styles.deviceList}
+              contentContainerStyle={styles.deviceListContent}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        )}
+
+        {/* Connection Info */}
+        {isConnected && (
+          <View style={[styles.card, styles.cardElevated]}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleContainer}>
+                <Text style={styles.cardTitle}>Connection Details</Text>
+              </View>
+            </View>
+            <Text style={styles.infoText}>
+              • Device connected successfully
+            </Text>
+            <Text style={styles.infoText}>
+              • Listening for data...
+            </Text>
+            <Text style={styles.infoText}>
+              • Ready to send commands
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -169,24 +206,84 @@ const SimpleBLEComponent = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F5F7FB',
   },
-  title: {
-    fontSize: 28,
+  headerGradient: {
+    paddingHorizontal: '6%',
+    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
+    paddingBottom: height * 0.02,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    backgroundColor: '#4B6CB7',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
+    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
+    elevation: Platform.OS === 'android' ? 10 : 0,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '8%',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    // borderRadius: 20,
+    // backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  headerText: {
+    fontSize: width * 0.055,
+    color: '#fff',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#2c3e50',
+    flex: 1,
   },
-  statusCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    elevation: 3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  headerSpacer: {
+    width: 40,
+  },
+  scrollContent: {
+    paddingTop: 30,
+    padding: '4%',
+    paddingBottom: '8%',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    overflow: 'hidden',
+  },
+  cardElevated: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  cardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: width * 0.045,
+    color: '#2E3A59',
+    marginLeft: '2%',
+    fontWeight: '500',
   },
   connectedCard: {
     backgroundColor: '#d4edda',
@@ -198,16 +295,11 @@ const styles = StyleSheet.create({
     borderColor: '#dc3545',
     borderWidth: 1,
   },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#2c3e50',
-  },
   statusText: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 5,
+    color: '#2E3A59',
   },
   connectedDeviceText: {
     fontSize: 14,
@@ -220,41 +312,32 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontStyle: 'italic',
   },
-  dataCard: {
-    backgroundColor: '#e3f2fd',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    borderColor: '#2196f3',
-    borderWidth: 1,
-  },
-  dataTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#1976d2',
-  },
   dataText: {
     fontSize: 12,
     fontFamily: 'monospace',
     color: '#333',
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FB',
     padding: 10,
     borderRadius: 4,
   },
   buttonContainer: {
     marginBottom: 20,
   },
-  button: {
-    padding: 15,
-    borderRadius: 8,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  scanButton: {
-    backgroundColor: '#007AFF',
+  addButton: {
+    backgroundColor: '#4B6CB7',
+    borderRadius: 24,
+    paddingVertical: '2.5%',
+    paddingHorizontal: '5%',
+    alignSelf: 'center',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: '70%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
   },
   disconnectButton: {
     backgroundColor: '#FF3B30',
@@ -267,21 +350,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: {
+  addButtonText: {
     color: '#fff',
-    textAlign: 'center',
+    fontSize: width * 0.04,
     fontWeight: '600',
-    fontSize: 16,
-    marginLeft: 5,
-  },
-  deviceListContainer: {
-    flex: 1,
-  },
-  deviceListTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#2c3e50',
   },
   emptyState: {
     alignItems: 'center',
@@ -300,54 +372,59 @@ const styles = StyleSheet.create({
   },
   deviceList: {
     flex: 1,
+    // maxHeight: 300,
+  },
+  deviceListContent: {
+    paddingBottom: 16,
   },
   deviceItem: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 8,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#4B6CB7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  deviceInfo: {
+  deviceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  deviceIcon: {
+    fontSize: 20,
+  },
+  deviceInfoContainer: {
     flex: 1,
   },
   deviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#2E3A59',
     marginBottom: 4,
   },
   deviceId: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    color: '#9AA5B9',
+    fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier New',
   },
   deviceRssi: {
     fontSize: 12,
-    color: '#999',
+    color: '#5A6A8C',
   },
   tapText: {
     fontSize: 12,
     color: '#007AFF',
     fontStyle: 'italic',
-  },
-  connectionInfo: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 8,
-    elevation: 2,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#2c3e50',
   },
   infoText: {
     fontSize: 14,
