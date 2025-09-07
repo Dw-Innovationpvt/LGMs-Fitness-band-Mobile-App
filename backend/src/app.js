@@ -17,6 +17,9 @@ import goalRoutes from './routes/goalRoutes.js';
 
 import targetsRoutes from './routes/targetsRoutes.js';
 
+// import { createGoalForToday } from "./controllers/goalController.js";
+// import { createGoalForToday } from "./controllers/goalController.js";
+
 import { connectDB } from "./lib/db.js";
 import cors from 'cors';
 
@@ -59,6 +62,8 @@ console.log('Targets route loadeinf');
 app.use('/api/targets',targetsRoutes)
 app.use('/api/goals', goalRoutes);
 console.log('Targets route loaded');
+
+// router.post('/api/create-today', auth, createGoalForToday);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

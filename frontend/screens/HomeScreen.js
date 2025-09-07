@@ -175,6 +175,9 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleAddWater = async () => {
+    if (target > todayTotal){
+
+
     const amount = 400;
     const dateString = format(new Date(), 'yyyy-MM-dd'); // Use current date
     const result = await addIntake(amount, dateString);
@@ -184,6 +187,8 @@ const HomeScreen = ({ navigation }) => {
       const dateString = format(new Date(), 'yyyy-MM-dd');
       await fetchTodayTotal(dateString); // Refresh total after adding intake
     }
+        }
+        
   };
 
 function calculateTotalProgress(goals) {

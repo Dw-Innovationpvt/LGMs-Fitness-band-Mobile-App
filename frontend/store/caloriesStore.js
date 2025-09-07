@@ -2,6 +2,7 @@
 import { create } from "zustand";
 // import api from "../utils/api"; // adjust the path to your api.js
 import api from "./api";
+import useTargetStore from './targetStore';
 
 export const useCaloriesStore = create((set) => ({
   totalCaloriesEaten: 0,
@@ -16,13 +17,12 @@ export const useCaloriesStore = create((set) => ({
   // Add to your caloriesStore.js
 setMealTarget: async (mealTarget) => {
   try {
-    // if (!mealTarget || mealTarget <= 0) {
-    //   throw new Error('Meal target must be a positive number');
-    // }
-    console.log("Setting meal target to:", mealTarget);
     const res = await api.put("/meals/set-meal-calorie-target", { mealCalorieTarget: mealTarget });
     set({ mealTarget: res.data.mealTarget });
-    
+
+    // Sync with targetStore
+    await useTargetStore.getState().setGoalTarget('meal', res.data.mealTarget, new Date());
+
     return { success: true, mealTarget: res.data.mealTarget };
   } catch (err) {
     console.error("Error setting meal target:", err);
@@ -126,15 +126,12 @@ setMealTarget: async (mealTarget) => {
   // Set burn target
   setBurnTarget: async (burnTarget) => {
     try {
-      if (!burnTarget || burnTarget <= 0) {
-        throw new Error('Burn target must be a positive number');
-      }
-      
-      const res = await api.put("/meals/set-burn-target", { burnTarget });
-      
-      // Update the local state with the new burn target
+      const res = await api.put("/meals/set-burn-calorie-target", { burnCalorieTarget: burnTarget });
       set({ burnTarget: res.data.burnTarget });
-      
+
+      // Sync with targetStore
+      await useTargetStore.getState().setGoalTarget('burn', res.data.burnTarget, new Date());
+      console.log("Burn target set and synced with targetStore");
       return { success: true, burnTarget: res.data.burnTarget };
     } catch (err) {
       console.error("Error setting burn target:", err);
@@ -146,54 +143,3 @@ setMealTarget: async (mealTarget) => {
     }}
 
 }));
-
-
-// // caloriesStore.js
-// import { create } from 'zustand';
-// import api from './api';
-
-// export const useCaloriesStore = create((set) => ({
-//   totalCaloriesEaten: 0,
-//   totalCaloriesBurned: 0,
-//   mealTarget: 0,
-//   mealTargetMet: false,
-//   mealFlag: false,
-
-//   // Fetch total calories eaten today
-//   fetchCaloriesEaten: async () => {
-//     // const res = await fetch('/api/meals/get/total-calories', {
-//     //   headers: { Authorization: `Bearer ${token}` }
-//     // });
-//     const res = await api.get(`/get/total-calories`);
-
-
-//         //   const response = await api.get(`/water?date=${dateString}`);
-//     const data = await res.json();
-//     console.log('Total calories eaten data calories store 22:', data);
-//     set({ totalCaloriesEaten: data.totalCalories || 0 });
-//   },
-
-//   // Fetch total calories burned today
-//   fetchCaloriesBurned: async () => {
-//     // const res = await fetch('/api/exercises/get/burned-today', {
-//     //   headers: { Authorization: `Bearer ${token}` }
-//     // });
-//     const res = await api.get(`/get/burned-today`);
-//     const data = await res.json();
-//     set({ totalCaloriesBurned: res.data.totalBurned || 0 });
-//   },
-
-//   // Fetch meal target and if met
-//   fetchMealTargetStatus: async () => {
-//     // const res = await fetch('/api/meals/get/today-calorie-target', {
-//     //   headers: { Authorization: `Bearer ${token}` }
-//     // });
-//     const res = await api.get(`/meals/get/today-calorie-target`);
-//     const data = await res.json();
-//     set({
-//       mealTarget: data.mealCalorieTarget || 0,
-//       mealTargetMet: data.status || false,
-//       mealFlag: data.mealFlag || false
-//     });
-//   },
-// }));

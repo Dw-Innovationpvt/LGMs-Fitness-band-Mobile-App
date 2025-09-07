@@ -3,6 +3,9 @@ import auth from '../middleware/auth.js';
 import Meal from '../models/Meal.js';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+
+import Exercise from '../models/Exercise.js';
+
 const router = express.Router();
 
 // Set step goal
@@ -236,6 +239,43 @@ router.put('/set-burn-target', auth, async (req, res) => {
     res.json({ burnTarget: user.burnTarget });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Add this to your mealsRoutes.js or (preferably) to a new/existing exercisesRoutes.js
+
+
+router.get('/get/burned-today', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get today's start and end time
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Aggregate total calories burned today
+    const result = await Exercise.aggregate([
+      {
+        $match: {
+          user: userId,
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBurned: { $sum: '$caloriesBurned' }
+        }
+      }
+    ]);
+
+    const totalBurned = result.length > 0 ? result[0].totalBurned : 0;
+    res.json({ totalBurned });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

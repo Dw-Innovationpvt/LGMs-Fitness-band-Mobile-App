@@ -5,7 +5,12 @@ import User from '../models/User.js';
 import Goal from '../models/Goal.js';
 import Meal from '../models/Meal.js';
 
+// import { createGoalForToday } from '../controllers/goalController.js';
+// import { createGoalForToday } from '../controllers/goalController.js';
+import { createGoalForToday } from '../controllers/goalController.js';
 const router = express.Router();
+// import { createGoalForToday } from '../controllers/goalController.js';
+router.post('/create-today', auth, createGoalForToday);
 
 // Set goal target (water, steps, caloriesEarned, caloriesBurned)
 router.put('/set-target', auth, async (req, res) => {

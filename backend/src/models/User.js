@@ -99,6 +99,20 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 500, // Default daily burn target
     },
+
+  wheelOptions: {
+    inline: {
+      type: Number,
+      enum: [90, 100, 110],
+      default: 90
+    },
+    quad: {
+      type: Number,
+      enum: [56, 58, 62, 65],
+      default: 56
+    }
+  },
+
     mealTimes: {
       breakfast: {
         type: String,

@@ -165,7 +165,7 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Custom Size</Text>
+          {/* <Text style={styles.sectionTitle}>Custom Size</Text>
           <TextInput
             style={styles.input}
             placeholder={`Enter custom diameter in mm (${skateType === 'inline' ? '72-110' : '50-65'}mm)`}
@@ -176,7 +176,7 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
               setCustomDiameter(text);
               setWheelDiameter('');
             }}
-          />
+          /> */}
         </View>
 
         <TouchableOpacity 

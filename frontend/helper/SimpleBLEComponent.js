@@ -179,7 +179,7 @@ const SimpleBLEComponent = ({ navigation }) => {
           </View>
         )}
 
-        {/* Connection Info */}
+        {/* Connection Info
         {isConnected && (
           <View style={[styles.card, styles.cardElevated]}>
             <View style={styles.cardHeader}>
@@ -197,7 +197,7 @@ const SimpleBLEComponent = ({ navigation }) => {
               • Ready to send commands
             </Text>
           </View>
-        )}
+        )} */}
       </View>
     </View>
   );
