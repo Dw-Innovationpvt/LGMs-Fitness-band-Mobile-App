@@ -69,6 +69,11 @@ const WaterIntakeScreen = ({ navigation }) => {
   };
 
   const handleAddWater = async (amount = null) => {
+
+    if (target > todayTotal ) {
+
+      // console.log('Adding water intake');
+              console.log('Goal already achieved for the day!');
     const intakeAmount = amount || parseInt(inputValue);
     const dateString = format(new Date(), 'yyyy-MM-dd'); // Use current date
     if (intakeAmount > 0) {
@@ -83,7 +88,11 @@ const WaterIntakeScreen = ({ navigation }) => {
       }
     } else {
       Alert.alert('Error', 'Please enter a valid amount');
-    }
+    } 
+
+    } else {
+
+      }
   };
 
   const handleUpdateGoal = async () => {
@@ -166,8 +175,10 @@ const WaterIntakeScreen = ({ navigation }) => {
             ))}
           </View>
         </View>
-
-        {/* Custom Input */}
+            {
+             
+             target > todayTotal &&        
+    
         <View style={styles.inputContainer}>
           <Text style={styles.sectionTitle}>Custom Amount</Text>
           <View style={styles.inputRow}>
@@ -188,8 +199,8 @@ const WaterIntakeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* History Section */}
+    }
+        {/* History Section
         <View style={styles.historyContainer}>
           <Text style={styles.sectionTitle}>Recent Intakes</Text>
           {intakes.length > 0 ? (
@@ -212,7 +223,7 @@ const WaterIntakeScreen = ({ navigation }) => {
           ) : (
             <Text style={styles.emptyHistory}>No recent water intake recorded</Text>
           )}
-        </View>
+        </View> */}
       </ScrollView>
 
       {/* Goal Setting Modal */}
