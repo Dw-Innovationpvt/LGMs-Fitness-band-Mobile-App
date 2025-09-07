@@ -112,6 +112,11 @@ const userSchema = new mongoose.Schema(
       default: 56
     }
   },
+  activeWheelType: {
+  type: String,
+  enum: ['inline', 'quad'],
+  default: 'inline'
+},
 
     mealTimes: {
       breakfast: {

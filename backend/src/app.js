@@ -16,6 +16,7 @@ import userRoutes from './routes/userRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 
 import targetsRoutes from './routes/targetsRoutes.js';
+import skatePrefRoutes from './routes/skatePrefRoutes.js';
 
 // import { createGoalForToday } from "./controllers/goalController.js";
 // import { createGoalForToday } from "./controllers/goalController.js";
@@ -62,6 +63,11 @@ console.log('Targets route loadeinf');
 app.use('/api/targets',targetsRoutes)
 app.use('/api/goals', goalRoutes);
 console.log('Targets route loaded');
+
+app.use('/api/skate', skatePrefRoutes);
+
+// app.use('/api/goals', goalRoutes);
+// console.log('Goal route loaded');
 
 // router.post('/api/create-today', auth, createGoalForToday);
 

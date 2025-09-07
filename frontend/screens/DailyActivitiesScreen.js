@@ -103,46 +103,129 @@ const DailyActivitiesScreen = ({ navigation }) => {
   // Get steps data (you'll need to implement this in your steps store)
   // For now, I'll assume you have a steps store or can get steps data
   const [stepsData, setStepsData] = useState(0); // Replace with actual steps data
-
+  const todayVarCheck = new Date();
+  console.log(todayVarCheck);
   // Create goals array for the selected date with real-time data mapping
   const selectedGoals = goals && isSameDay(new Date(goals.date), selectedDate) ? [
-    {
-      id: '1',
-      type: 'water',
-      title: `Drink ${(totalWaterIntake || 0) / 1000}L out of ${(goals.water?.target || 2000) / 1000}L`,
-      progress: totalWaterIntake || 0,
-      target: goals.water?.target || 2000,
-      completed: (totalWaterIntake || 0) >= (goals.water?.target || 2000),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-    },
-    { 
-      id: '2', 
-      type: 'steps',
-      title: `${stepsData || 0} steps out of ${goals.steps?.target || 7000}`, 
-      progress: stepsData || 0,
-      target: goals.steps?.target || 7000,
-      completed: (stepsData || 0) >= (goals.steps?.target || 7000),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-    },
-    { 
-      id: '3', 
-      type: 'caloriesEarned',
-      title: `${totalCalEat || 0} cal out of ${goals.caloriesEarned?.target || 2000}`, 
-      progress: totalCalEat || 0,
-      target: goals.caloriesEarned?.target || 2000,
-      completed: (totalCalEat || 0) >= (goals.caloriesEarned?.target || 2000),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-    },
-    { 
-      id: '4', 
-      type: 'caloriesBurned',
-      title: `${totalCaloriesBurned || 0} cal out of ${goals.caloriesBurned?.target || 500}`, 
-      progress: totalCaloriesBurned || 0,
-      target: goals.caloriesBurned?.target || 500,
-      completed: (totalCaloriesBurned || 0) >= (goals.caloriesBurned?.target || 500),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-    },
-  ] : [];
+// const selectedGoals = isSameDay(new Date(goals.date), selectedDate) ? [
+  {
+    id: '1',
+    type: 'water',
+    title: `Drink ${(totalWaterIntake || 0) / 1000}L out of ${
+      isSameDay(todayVarCheck, selectedDate)
+        ? (target || 2000) / 1000
+        : (goals.water?.target || 2000) / 1000
+    }L`,
+    progress: totalWaterIntake || 0,
+    target: isSameDay(todayVarCheck, selectedDate) ? (target || 2000) : (goals.water?.target || 2000),
+    completed: (totalWaterIntake || 0) >= (isSameDay(todayVarCheck, selectedDate) ? (target || 2000) : (goals.water?.target || 2000)),
+    date: selectedDate,
+  },
+  { 
+    id: '2', 
+    type: 'steps',
+    title: `${stepsData || 0} steps out of ${
+      isSameDay(todayVarCheck, selectedDate)
+        ? (stepGoal || 7000)
+        : (goals.steps?.target || 7000)
+    }`, 
+    progress: stepsData || 0,
+    target: isSameDay(todayVarCheck, selectedDate) ? (stepGoal || 7000) : (goals.steps?.target || 7000),
+    completed: (stepsData || 0) >= (isSameDay(todayVarCheck, selectedDate) ? (stepGoal || 7000) : (goals.steps?.target || 7000)),
+    date: selectedDate,
+  },
+  { 
+    id: '3', 
+    type: 'caloriesEarned',
+    title: `${totalCaloriesEaten || 0} cal out of ${
+      isSameDay(todayVarCheck, selectedDate)
+        ? (mealTarget || 2000)
+        : (goals.caloriesEarned?.target || 2000)
+    }`, 
+    progress: totalCaloriesEaten || 0,
+    target: isSameDay(todayVarCheck, selectedDate) ? (mealTarget || 2000) : (goals.caloriesEarned?.target || 2000),
+    completed: (totalCaloriesEaten || 0) >= (isSameDay(todayVarCheck, selectedDate) ? (mealTarget || 2000) : (goals.caloriesEarned?.target || 2000)),
+    date: selectedDate,
+  },
+  { 
+    id: '4', 
+    type: 'caloriesBurned',
+    title: `${totalCaloriesBurned || 0} cal out of ${
+      isSameDay(todayVarCheck, selectedDate)
+        ? (burnTarget || 500)
+        : (goals.caloriesBurned?.target || 500)
+    }`, 
+    progress: totalCaloriesBurned || 0,
+    target: isSameDay(todayVarCheck, selectedDate) ? (burnTarget || 500) : (goals.caloriesBurned?.target || 500),
+    completed: (totalCaloriesBurned || 0) >= (isSameDay(todayVarCheck, selectedDate) ? (burnTarget || 500) : (goals.caloriesBurned?.target || 500)),
+    date: selectedDate,
+  },
+] : [];    // {
+  //     id: '1',
+  //     type: 'water',
+  //     // title: `Drink ${(totalWaterIntake || 0) / 1000}L out of ${(goals.water?.target || 2000) / 1000}L`,
+  //     // title: `Drink ${(totalWaterIntake || 0) / 1000}L out of ${(target || 2000) / 1000}L`,
+  //     title: `Drink ${todayVarCheck.getDate()===selectedDate.getDate() ? (totalWaterIntake || 0) / 1000 : 0}L out of ${(target || 2000) / 1000}L`,
+  //     progress: totalWaterIntake || 0,
+  //     target: target || 2000,
+  //     completed: (totalWaterIntake || 0) >= (target || 2000),
+  //     date: format(selectedDate, 'yyyy-MM-dd'),
+  //   },
+  //   { 
+  //     id: '2', 
+  //     type: 'steps',
+  //     // title: `${stepsData || 0} steps out of ${goals.steps?.target || 7000}`, 
+  //     title: `${stepsData || 0} steps out of ${goals.steps?.target || 7000}`, 
+  //     progress: stepsData || 0,
+  //     target: goals.steps?.target || 7000,
+  //     completed: (stepsData || 0) >= (goals.steps?.target || 7000),
+  //     date: format(selectedDate, 'yyyy-MM-dd'),
+  //   },
+  //   {
+  //   id: '1',
+  //   type: 'water',
+  //   title: `Drink ${(totalWaterIntake || 0) / 1000}L out of ${
+  //     isSameDay(todayVarCheck, selectedDate)
+  //       ? (target || 2000) / 1000
+  //       : (goals.water?.target || 2000) / 1000
+  //   }L`,
+  //   progress: totalWaterIntake || 0,
+  //   target: isSameDay(todayVarCheck, selectedDate) ? (target || 2000) : (goals.water?.target || 2000),
+  //   completed: (totalWaterIntake || 0) >= (target || 2000),
+  //   date: selectedDate, // Assuming format() is applied later for display
+  // },
+  // { 
+  //   id: '2', 
+  //   type: 'steps',
+  //   title: `${stepsData || 0} steps out of ${
+  //     isSameDay(todayVarCheck, selectedDate)
+  //       ? (stepGoal || 7000)
+  //       : (goals.steps?.target || 7000)
+  //   }`, 
+  //   progress: stepsData || 0,
+  //   target: isSameDay(todayVarCheck, selectedDate) ? (stepGoal || 7000) : (goals.steps?.target || 7000),
+  //   completed: (stepsData || 0) >= (stepGoal || 7000),
+  //   date: selectedDate, // Assuming format() is applied later for display
+  // },
+  //   { 
+  //     id: '3', 
+  //     type: 'caloriesEarned',
+  //     title: `${totalCaloriesEaten || 0} cal out of ${goals.caloriesEarned?.target || 2000}`, 
+  //     progress: totalCaloriesEaten || 0,
+  //     target: goals.caloriesEarned?.target || 2000,
+  //     completed: (totalCalEat || 0) >= (goals.caloriesEarned?.target || 2000),
+  //     date: format(selectedDate, 'yyyy-MM-dd'),
+  //   },
+  //   { 
+  //     id: '4', 
+  //     type: 'caloriesBurned',
+  //     title: `${totalCaloriesBurned || 0} cal out of ${goals.caloriesBurned?.target || 500}`, 
+  //     progress: totalCaloriesBurned || 0,
+  //     target: goals.caloriesBurned?.target || 500,
+  //     completed: (totalCaloriesBurned || 0) >= (goals.caloriesBurned?.target || 500),
+  //     date: format(selectedDate, 'yyyy-MM-dd'),
+  //   },
+  // ] : [];
 
   // Fetch data when screen is focused or selectedDate changes
   useFocusEffect(
@@ -293,7 +376,7 @@ const DailyActivitiesScreen = ({ navigation }) => {
 
   const completedGoals = selectedGoals.filter(goal => goal.completed).length;
 
-  console.log('selcted goals', selectedGoals);
+  // console.log('selcted goals', selectedGoals);
 
   // Render meal item
   const renderMealItem = ({ item }) => (

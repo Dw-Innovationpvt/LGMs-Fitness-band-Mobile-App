@@ -2,9 +2,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions,
-    ImageBackground, Modal, TextInput, Alert, Platform
+    ImageBackground, Modal, TextInput, Alert, Platform, ActivityIndicator
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { useSkatePreferencesStore } from '../store/skatePreferencesStore'; // Import the skate preferences store
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,10 +16,20 @@ const { width } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation }) => {
     const { user, getUserData, updateHealtData, logout } = useAuthStore();
+    
+    // Get skate preferences from Zustand store
+    const { 
+        activeWheelType, 
+        activeWheelDiameter, 
+        fetchPreferences,
+        loading: preferencesLoading 
+    } = useSkatePreferencesStore();
+
     useEffect(() => {
         getUserData();
+        fetchPreferences(); // Fetch skate preferences when component mounts
     }, []);
-    
+
     const [activeTab, setActiveTab] = useState('profile');
     const [showHealthModal, setShowHealthModal] = useState(false);
     const [tempHealthData, setTempHealthData] = useState({
@@ -44,11 +55,11 @@ const ProfileScreen = ({ navigation }) => {
         weight: user?.weight || 68,
     });
 
-    // Add skating preferences state
-    const [skatingPreferences, setSkatingPreferences] = useState({
-        skateType: 'inline',
-        wheelDiameter: '90 mm'
-    });
+    // Remove local skating preferences state and use store values directly
+    const skatingPreferences = {
+        skateType: activeWheelType || 'inline',
+        wheelDiameter: activeWheelDiameter ? `${activeWheelDiameter} mm` : '90 mm'
+    };
 
     const showCustomAlert = (title, message, onConfirm) => {
         Alert.alert(
@@ -114,13 +125,6 @@ const ProfileScreen = ({ navigation }) => {
         navigation.navigate('SignIn');
     };
 
-    // Function to handle skating preferences update
-    const handleSkatingPreferencesUpdate = (updatedPrefs) => {
-        setSkatingPreferences(updatedPrefs);
-        // You might want to save these to your backend as well
-        AsyncStorage.setItem('skatingPreferences', JSON.stringify(updatedPrefs));
-    };
-
     const renderProfileTab = () => (
         <View style={styles.tabContent}>
             <View style={styles.infoCard} accessible={true} accessibilityLabel="User email">
@@ -177,46 +181,52 @@ const ProfileScreen = ({ navigation }) => {
         </View>
     );
 
-    // New tab for skating preferences
+    // Updated skating tab to use store data
     const renderSkatingTab = () => (
         <View style={styles.tabContent}>
-            <View style={styles.infoCard}>
-                <View style={styles.infoRow}>
-                    <MaterialCommunityIcons 
-                        name={skatingPreferences.skateType === 'inline' ? 'rollerblade' : 'roller-skate'} 
-                        size={24} 
-                        color="#4B6CB7" 
-                    />
-                    <Text style={styles.infoText}>
-                        {skatingPreferences.skateType === 'inline' ? 'Inline Skates' : 'Quad Skates'}
-                    </Text>
+            {preferencesLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#4B6CB7" />
+                    <Text style={styles.loadingText}>Loading preferences...</Text>
                 </View>
-            </View>
-            
-            <View style={styles.infoCard}>
-                <View style={styles.infoRow}>
-                    <MaterialCommunityIcons name="circle-slice-8" size={24} color="#4B6CB7" />
-                    <Text style={styles.infoText}>
-                        Wheel Diameter: {skatingPreferences.wheelDiameter}
-                    </Text>
-                </View>
-            </View>
-            
-            <TouchableOpacity
-                style={styles.optionCard}
-                onPress={() => navigation.navigate('SkatePreference', {
-                    currentPreferences: skatingPreferences,
-                    onUpdatePreferences: handleSkatingPreferencesUpdate
-                })}
-                accessible={true}
-                accessibilityLabel="Update skating preferences"
-            >
-                <View style={styles.optionContent}>
-                    <MaterialCommunityIcons name="cog" size={24} color="#4B6CB7" />
-                    <Text style={styles.optionText}>Update Skating Preferences</Text>
-                </View>
-                <Feather name="chevron-right" size={20} color="#999" />
-            </TouchableOpacity>
+            ) : (
+                <>
+                    <View style={styles.infoCard}>
+                        <View style={styles.infoRow}>
+                            <MaterialCommunityIcons 
+                                name={skatingPreferences.skateType === 'inline' ? 'rollerblade' : 'roller-skate'} 
+                                size={24} 
+                                color="#4B6CB7" 
+                            />
+                            <Text style={styles.infoText}>
+                                {skatingPreferences.skateType === 'inline' ? 'Inline Skates' : 'Quad Skates'}
+                            </Text>
+                        </View>
+                    </View>
+                    
+                    <View style={styles.infoCard}>
+                        <View style={styles.infoRow}>
+                            <MaterialCommunityIcons name="circle-slice-8" size={24} color="#4B6CB7" />
+                            <Text style={styles.infoText}>
+                                Wheel Diameter: {skatingPreferences.wheelDiameter}
+                            </Text>
+                        </View>
+                    </View>
+                    
+                    <TouchableOpacity
+                        style={styles.optionCard}
+                        onPress={() => navigation.navigate('SkatePref')}
+                        accessible={true}
+                        accessibilityLabel="Update skating preferences"
+                    >
+                        <View style={styles.optionContent}>
+                            <MaterialCommunityIcons name="cog" size={24} color="#4B6CB7" />
+                            <Text style={styles.optionText}>Update Skating Preferences</Text>
+                        </View>
+                        <Feather name="chevron-right" size={20} color="#999" />
+                    </TouchableOpacity>
+                </>
+            )}
         </View>
     );
 
@@ -258,20 +268,6 @@ const ProfileScreen = ({ navigation }) => {
                     <Text style={styles.userBio}>{userData.bio}</Text>
                 </View>
                 <View style={{ height: 12 }} />
-                {/* <View style={styles.statsContainer}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{userData.stats.workouts}</Text>
-                        <Text style={styles.statLabel}>Workouts</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{userData.stats.challenges}</Text>
-                        <Text style={styles.statLabel}>Challenges</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{userData.stats.streak}</Text>
-                        <Text style={styles.statLabel}>Day Streak</Text>
-                    </View>
-                </View> */}
                 
                 {/* Updated tab bar with skating preferences tab */}
                 <View style={styles.tabBar}>
@@ -353,7 +349,376 @@ const ProfileScreen = ({ navigation }) => {
     );
 };
 
+
+
+// // Update the ProfileScreen.js
+// import React, { useState, useMemo, useEffect } from 'react';
+// import {
+//     View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions,
+//     ImageBackground, Modal, TextInput, Alert, Platform
+// } from 'react-native';
+// import { useAuthStore } from '../store/authStore';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import * as Haptics from 'expo-haptics';
+// import { imageBG2 } from '../constants/api';
+
+// const { width } = Dimensions.get('window');
+
+// const ProfileScreen = ({ navigation }) => {
+//     const { user, getUserData, updateHealtData, logout } = useAuthStore();
+//     useEffect(() => {
+//         getUserData();
+//     }, []);
+    
+//     const [activeTab, setActiveTab] = useState('profile');
+//     const [showHealthModal, setShowHealthModal] = useState(false);
+//     const [tempHealthData, setTempHealthData] = useState({
+//         age: '',
+//         height: '',
+//         weight: ''
+//     });
+
+//     const [userData] = useState({
+//         name: user?.username || 'Madan',
+//         email: user?.email || 'charandusary@gmail.com',
+//         bio: user?.bio || 'Professional skater',
+//         stats: {
+//             workouts: 42,
+//             challenges: 18,
+//             streak: 7
+//         },
+//     });
+
+//     const [healthData, setHealthData] = useState({
+//         age: user.age || 25,
+//         height: user.height || 175,
+//         weight: user?.weight || 68,
+//     });
+
+//     // Add skating preferences state
+//     const [skatingPreferences, setSkatingPreferences] = useState({
+//         skateType: 'inline',
+//         wheelDiameter: '90 mm'
+//     });
+
+//     const showCustomAlert = (title, message, onConfirm) => {
+//         Alert.alert(
+//             title,
+//             message,
+//             [
+//                 { text: 'Cancel', style: 'cancel' },
+//                 { text: 'OK', onPress: onConfirm, style: 'default' }
+//             ],
+//             { cancelable: false }
+//         );
+//     };
+
+//     const calculateBMI = () => {
+//         const bmi = (healthData.weight / ((healthData.height / 100) ** 2)).toFixed(1);
+//         return {
+//             value: bmi,
+//             status: bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese',
+//             color: bmi < 18.5 ? '#FFC107' : bmi < 25 ? '#4CAF50' : bmi < 30 ? '#FF9800' : '#F44336'
+//         };
+//     };
+
+//     const bmi = useMemo(() => calculateBMI(), [healthData]);
+
+//     const openHealthModal = () => {
+//         setTempHealthData({ age: '', height: '', weight: '' });
+//         setShowHealthModal(true);
+//         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//     };
+
+//     const handleHealthUpdate = async () => {
+//         const newAge = tempHealthData.age ? parseInt(tempHealthData.age) : healthData.age;
+//         const newHeight = tempHealthData.height ? parseInt(tempHealthData.height) : healthData.height;
+//         const newWeight = tempHealthData.weight ? parseInt(tempHealthData.weight) : healthData.weight;
+
+//         if ((tempHealthData.age && (newAge < 10 || newAge > 120)) ||
+//             (tempHealthData.height && (newHeight < 100 || newHeight > 250)) ||
+//             (tempHealthData.weight && (newWeight < 30 || newWeight > 300))) {
+//             showCustomAlert(
+//                 'Invalid Input',
+//                 'Please enter valid values:\nAge: 10-120 years\nHeight: 100-250 cm\nWeight: 30-300 kg',
+//                 () => {}
+//             );
+//             return;
+//         }
+
+//         const updatedData = { age: newAge, height: newHeight, weight: newWeight };
+//         const res = updateHealtData(updatedData);
+//         console.log("Health data updated successfully:", res);
+//         setHealthData(updatedData);
+//         setShowHealthModal(false);
+//         await AsyncStorage.setItem('healthData', JSON.stringify(updatedData));
+//         showCustomAlert('Success', 'Your health data has been updated successfully!', () => {});
+//         Haptics.trigger('notificationSuccess');
+//     };
+
+//     const handleNavigation = (screen) => {
+//         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//         navigation.navigate(screen);
+//     };
+
+//     const handleLogout = async () => {
+//         navigation.navigate('SignIn');
+//     };
+
+//     // Function to handle skating preferences update
+//     const handleSkatingPreferencesUpdate = (updatedPrefs) => {
+//         setSkatingPreferences(updatedPrefs);
+//         // You might want to save these to your backend as well
+//         AsyncStorage.setItem('skatingPreferences', JSON.stringify(updatedPrefs));
+//     };
+
+//     const renderProfileTab = () => (
+//         <View style={styles.tabContent}>
+//             <View style={styles.infoCard} accessible={true} accessibilityLabel="User email">
+//                 <View style={styles.infoRow}>
+//                     <MaterialCommunityIcons name="email" size={20} color="#4B6CB7" />
+//                     <Text style={styles.infoText}>{userData.email}</Text>
+//                 </View>
+//             </View>
+//             <TouchableOpacity
+//                 style={styles.optionCard}
+//                 onPress={openHealthModal}
+//                 accessible={true}
+//                 accessibilityLabel="Update health data"
+//             >
+//                 <View style={styles.optionContent}>
+//                     <MaterialCommunityIcons name="human" size={24} color="#4B6CB7" />
+//                     <Text style={styles.optionText}>Update Health Data</Text>
+//                 </View>
+//                 <Feather name="chevron-right" size={20} color="#999" />
+//             </TouchableOpacity>
+            
+//             {['AccountSettings', 'Privacy'].map((screen) => (
+//                 <TouchableOpacity
+//                     key={screen}
+//                     style={styles.optionCard}
+//                     onPress={() => handleNavigation(screen)}
+//                     accessible={true}
+//                     accessibilityLabel={`${screen} option`}
+//                 >
+//                     <View style={styles.optionContent}>
+//                         <MaterialCommunityIcons
+//                             name={screen === 'AccountSettings' ? 'account' : 'shield'}
+//                             size={24}
+//                             color="#4B6CB7"
+//                         />
+//                         <Text style={styles.optionText}>{screen.replace(/([A-Z])/g, ' $1').trim()}</Text>
+//                     </View>
+//                     <Feather name="chevron-right" size={20} color="#999" />
+//                 </TouchableOpacity>
+//             ))}
+            
+//             <View style={[styles.bmiDisplayCard, { borderColor: bmi.color }]}>
+//                 <View style={styles.bmiDisplayHeader}>
+//                     <MaterialCommunityIcons name="heart-pulse" size={24} color={bmi.color} />
+//                     <Text style={[styles.bmiDisplayTitle, { color: bmi.color }]}>Your BMI</Text>
+//                 </View>
+//                 <Text style={[styles.bmiDisplayValue, { color: bmi.color }]} accessible={true} accessibilityLabel={`BMI ${bmi.value}, ${bmi.status}`}>
+//                     {bmi.value} - {bmi.status}
+//                 </Text>
+//                 <Text style={styles.bmiDisplayNote}>
+//                     {bmi.status === 'Normal' ? 'Great! You have a healthy weight' : 'Consider consulting a health professional'}
+//                 </Text>
+//             </View>
+//         </View>
+//     );
+
+//     // New tab for skating preferences
+//     const renderSkatingTab = () => (
+//         <View style={styles.tabContent}>
+//             <View style={styles.infoCard}>
+//                 <View style={styles.infoRow}>
+//                     <MaterialCommunityIcons 
+//                         name={skatingPreferences.skateType === 'inline' ? 'rollerblade' : 'roller-skate'} 
+//                         size={24} 
+//                         color="#4B6CB7" 
+//                     />
+//                     <Text style={styles.infoText}>
+//                         {skatingPreferences.skateType === 'inline' ? 'Inline Skates' : 'Quad Skates'}
+//                     </Text>
+//                 </View>
+//             </View>
+            
+//             <View style={styles.infoCard}>
+//                 <View style={styles.infoRow}>
+//                     <MaterialCommunityIcons name="circle-slice-8" size={24} color="#4B6CB7" />
+//                     <Text style={styles.infoText}>
+//                         Wheel Diameter: {skatingPreferences.wheelDiameter}
+//                     </Text>
+//                 </View>
+//             </View>
+            
+//             <TouchableOpacity
+//                 style={styles.optionCard}
+//                 onPress={() => navigation.navigate('SkatePref', {
+//                     currentPreferences: skatingPreferences,
+//                     onUpdatePreferences: handleSkatingPreferencesUpdate
+//                 })}
+//                 accessible={true}
+//                 accessibilityLabel="Update skating preferences"
+//             >
+//                 <View style={styles.optionContent}>
+//                     <MaterialCommunityIcons name="cog" size={24} color="#4B6CB7" />
+//                     <Text style={styles.optionText}>Update Skating Preferences</Text>
+//                 </View>
+//                 <Feather name="chevron-right" size={20} color="#999" />
+//             </TouchableOpacity>
+//         </View>
+//     );
+
+//     return (
+//         <View style={styles.container}>
+//             <LinearGradient
+//                 colors={['#4B6CB7', '#182848']}
+//                 style={styles.header}
+//                 start={{ x: 0, y: 0 }}
+//                 end={{ x: 1, y: 0 }}
+//             >
+//                 <TouchableOpacity onPress={() => navigation.navigate('HomeMain')} accessible={true} accessibilityLabel="Go back to home">
+//                     <Feather name="arrow-left" size={24} color="#fff" />
+//                 </TouchableOpacity>
+//                 <Text style={styles.headerTitle}>Profile</Text>
+//                 <TouchableOpacity accessible={true} accessibilityLabel="Log out" onPress={handleLogout}>
+//                     <Feather name="log-out" size={24} color="#F44336" />
+//                 </TouchableOpacity>
+//             </LinearGradient>
+//             <ScrollView
+//                 style={styles.scrollContainer}
+//                 contentContainerStyle={styles.scrollContent}
+//                 showsVerticalScrollIndicator={false}
+//             >
+//                 <View style={styles.profileContainer}>
+//                     <View style={styles.avatarContainer}>
+//                         <ImageBackground
+//                             source={imageBG2}
+//                             style={styles.avatar}
+//                             imageStyle={styles.avatarImage}
+//                         >
+//                             <View style={styles.avatarOverlay} />
+//                             <Text style={styles.avatarText}>
+//                                 {userData.name.split(' ').map(n => n[0]).join('')}
+//                             </Text>
+//                         </ImageBackground>
+//                     </View>
+//                     <Text style={styles.userName}>{userData.name}</Text>
+//                     <Text style={styles.userBio}>{userData.bio}</Text>
+//                 </View>
+//                 <View style={{ height: 12 }} />
+//                 {/* <View style={styles.statsContainer}>
+//                     <View style={styles.statCard}>
+//                         <Text style={styles.statNumber}>{userData.stats.workouts}</Text>
+//                         <Text style={styles.statLabel}>Workouts</Text>
+//                     </View>
+//                     <View style={styles.statCard}>
+//                         <Text style={styles.statNumber}>{userData.stats.challenges}</Text>
+//                         <Text style={styles.statLabel}>Challenges</Text>
+//                     </View>
+//                     <View style={styles.statCard}>
+//                         <Text style={styles.statNumber}>{userData.stats.streak}</Text>
+//                         <Text style={styles.statLabel}>Day Streak</Text>
+//                     </View>
+//                 </View> */}
+                
+//                 {/* Updated tab bar with skating preferences tab */}
+//                 <View style={styles.tabBar}>
+//                     <TouchableOpacity
+//                         style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]}
+//                         onPress={() => setActiveTab('profile')}
+//                         accessible={true}
+//                         accessibilityLabel="Profile tab"
+//                     >
+//                         <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>
+//                             Profile
+//                         </Text>
+//                     </TouchableOpacity>
+//                     <TouchableOpacity
+//                         style={[styles.tabButton, activeTab === 'skating' && styles.activeTabButton]}
+//                         onPress={() => setActiveTab('skating')}
+//                         accessible={true}
+//                         accessibilityLabel="Skating preferences tab"
+//                     >
+//                         <Text style={[styles.tabText, activeTab === 'skating' && styles.activeTabText]}>
+//                             Skating
+//                         </Text>
+//                     </TouchableOpacity>
+//                 </View>
+                
+//                 {/* Render the active tab */}
+//                 {activeTab === 'profile' ? renderProfileTab() : renderSkatingTab()}
+//             </ScrollView>
+            
+
+//             <Modal
+//                 visible={showHealthModal}
+//                 animationType="slide"
+//                 transparent={true}
+//                 onRequestClose={() => setShowHealthModal(false)}
+//             >
+//                 <View style={styles.modalOverlay}>
+//                     <View style={styles.healthModal}>
+//                         <Text style={styles.modalTitle}>Update Health Data</Text>
+//                         <Text style={styles.modalSubtitle}>Leave blank fields to keep current values</Text>
+//                         {['age', 'height', 'weight'].map(field => (
+//                             <View key={field} style={styles.inputContainer}>
+//                                 <Text style={styles.inputLabel}>{field.charAt(0).toUpperCase() + field.slice(1)} ({field === 'age' ? 'years' : field === 'height' ? 'cm' : 'kg'})</Text>
+//                                 <TextInput
+//                                     style={styles.input}
+//                                     placeholder={`Current: ${healthData[field]}`}
+//                                     placeholderTextColor="#999"
+//                                     keyboardType="numeric"
+//                                     value={tempHealthData[field]}
+//                                     onChangeText={(text) => setTempHealthData({ ...tempHealthData, [field]: text })}
+//                                     maxLength={3}
+//                                     accessible={true}
+//                                     accessibilityLabel={`Enter ${field}`}
+//                                 />
+//                             </View>
+//                         ))}
+//                         <View style={styles.modalButtonContainer}>
+//                             <TouchableOpacity
+//                                 style={[styles.modalButton, styles.cancelButton]}
+//                                 onPress={() => setShowHealthModal(false)}
+//                                 accessible={true}
+//                                 accessibilityLabel="Cancel health update"
+//                             >
+//                                 <Text style={styles.cancelButtonText}>Cancel</Text>
+//                             </TouchableOpacity>
+//                             <TouchableOpacity
+//                                 style={[styles.modalButton, styles.updateButton]}
+//                                 onPress={handleHealthUpdate}
+//                                 accessible={true}
+//                                 accessibilityLabel="Update health data"
+//                             >
+//                                 <Text style={styles.updateButtonText}>Update</Text>
+//                             </TouchableOpacity>
+//                         </View>
+//                     </View>
+//                 </View>
+//             </Modal>
+//         </View>
+//     );
+// };
+
+
+
 const styles = StyleSheet.create({
+    loadingContainer: {
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#4B6CB7',
+        fontSize: 16,
+    },
     container: { flex: 1, backgroundColor: '#F5F7FB', paddingBottom: 80 },
     header: {
         paddingTop: Platform.OS === 'ios' ? 50 : 30,

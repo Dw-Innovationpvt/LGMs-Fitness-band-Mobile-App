@@ -13,6 +13,7 @@ import ForgotPassword from '../screens/ForgotPassword';
 import OtpScreen from '../screens/OtpScreen';
 import EnterOTPPassword from '../screens/EnterOTPPassword';
 import GoalSettingScreen from '../screens/GoalSettingScreen';
+import SkatePref from '../screens/SkatePref';
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,7 @@ const AuthStack = () => (
     <Stack.Screen name="Main" component={MainTabNavigator} />
     <Stack.Screen name="Profile" component={ProfileScreen} />
     <Stack.Screen name="Goal" component={GoalSettingScreen} />
+
   </Stack.Navigator>
 );
 
