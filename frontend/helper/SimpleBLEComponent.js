@@ -138,7 +138,7 @@ const SimpleBLEComponent = () => {
           )}
 
           <FlatList
-            data={foundDevices}
+            data={foundDevices} // should include all devices
             keyExtractor={(item) => item.id}
             renderItem={renderDevice}
             style={styles.deviceList}

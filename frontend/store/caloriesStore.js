@@ -13,16 +13,17 @@ export const useCaloriesStore = create((set) => ({
   mealTargetMet: false,
   mealFlag: false,
 
-
+  //                      router.put('/set-meal-calorie-target', auth, async (req, res) => {
   // Add to your caloriesStore.js
 setMealTarget: async (mealTarget) => {
   try {
     const res = await api.put("/meals/set-meal-calorie-target", { mealCalorieTarget: mealTarget });
-    set({ mealTarget: res.data.mealTarget });
-
+    // set({ mealTarget: res.data.mealTarget });
+    
     // Sync with targetStore
-    await useTargetStore.getState().setGoalTarget('meal', res.data.mealTarget, new Date());
-
+    // await useTargetStore.getState().setGoalTarget('meal', res.data.mealTarget, new Date());
+    
+    set({ mealTarget: res.data.mealTarget });
     return { success: true, mealTarget: res.data.mealTarget };
   } catch (err) {
     console.error("Error setting meal target:", err);
@@ -113,6 +114,7 @@ setMealTarget: async (mealTarget) => {
   fetchMealTargetStatus: async () => {
     try {
       const res = await api.get("/meals/get/today-calorie-target");
+      // const res = await api.get("/meals/get/burned-today");
       set({
         mealTarget: res.data.mealCalorieTarget || 0,
         mealTargetMet: res.data.status || false,
@@ -124,14 +126,16 @@ setMealTarget: async (mealTarget) => {
   },
 
   // Set burn target
+
+  //                         router.put('/set-burn-target', auth, async (req, res) => {
   setBurnTarget: async (burnTarget) => {
     try {
-      const res = await api.put("/meals/set-burn-calorie-target", { burnCalorieTarget: burnTarget });
+      const res = await api.put("/meals/set-burn-target", { burnTarget });
       set({ burnTarget: res.data.burnTarget });
 
       // Sync with targetStore
-      await useTargetStore.getState().setGoalTarget('burn', res.data.burnTarget, new Date());
-      console.log("Burn target set and synced with targetStore");
+      // await useTargetStore.getState().setGoalTarget('burn', res.data.burnTarget, new Date());
+      // console.log("Burn target set and synced with targetStore");
       return { success: true, burnTarget: res.data.burnTarget };
     } catch (err) {
       console.error("Error setting burn target:", err);

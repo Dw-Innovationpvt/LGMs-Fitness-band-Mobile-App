@@ -61,7 +61,7 @@ const useTargetStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error('Failed to set goal target:', error);
-      throw error;
+      // throw error;
     }
   },
 
@@ -86,7 +86,7 @@ const useTargetStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error('Failed to update goal progress:', error);
-      throw error;
+      // throw error;
     }
   },
 
@@ -110,7 +110,7 @@ const useTargetStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error('Failed to reset goal progress:', error);
-      throw error;
+      // throw error;
     }
   },
 
@@ -122,7 +122,7 @@ const useTargetStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error('Failed to check goal target:', error);
-      throw error;
+      // throw error;
     }
   },
 

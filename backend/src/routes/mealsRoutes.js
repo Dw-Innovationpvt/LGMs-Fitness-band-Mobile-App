@@ -227,6 +227,7 @@ router.get('/get', auth, async (req, res) => {
 // related to exercise or workout for buring calories
 router.put('/set-burn-target', auth, async (req, res) => {
   try {
+    console.log('set burn target api called');
     const userId = req.user._id;
     const { burnTarget } = req.body;
     if (!burnTarget || burnTarget <= 0) {
@@ -278,7 +279,7 @@ router.get('/get/burned-today', auth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
+//                    /meals/set-meal-calorie-target
 router.put('/set-meal-calorie-target', auth, async (req, res) => {
   try {
     const userId = req.user._id;
