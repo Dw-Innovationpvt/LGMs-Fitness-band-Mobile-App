@@ -342,13 +342,19 @@ export const useBLEStore = create((set, get) => ({
             error: null 
           });
           
-          // Send step counting mode command after successful connection
+          // Send turn on command after successful connection
           try {
             const { sendCommand } = get();
-            await sendCommand('MODE_STEP_COUNTING');
-            console.log('✅ Step counting mode activated after connection');
+            await sendCommand('TURN_ON');
+            console.log('✅ Turn on command sent after connection');
+            
+            // Wait a moment then send step counting mode
+            setTimeout(async () => {
+              await sendCommand('SET_MODE STEP_COUNTING');
+              console.log('✅ Step counting mode activated after connection');
+            }, 500);
           } catch (cmdError) {
-            console.warn('⚠ Could not send step counting mode command:', cmdError);
+            console.warn('⚠ Could not send commands after connection:', cmdError);
           }
           
           // Set up monitoring if characteristic supports notifications
@@ -434,13 +440,19 @@ export const useBLEStore = create((set, get) => ({
       console.log('Target service and characteristic found');
       set({ characteristic: char });
 
-      // Send step counting mode command after successful connection
+      // Send turn on command after successful connection
       try {
         const { sendCommand } = get();
-        await sendCommand('MODE_STEP_COUNTING');
-        console.log('✅ Step counting mode activated after connection');
+        await sendCommand('TURN_ON');
+        console.log('✅ Turn on command sent after connection');
+        
+        // Wait a moment then send step counting mode
+        setTimeout(async () => {
+          await sendCommand('SET_MODE STEP_COUNTING');
+          console.log('✅ Step counting mode activated after connection');
+        }, 500);
       } catch (cmdError) {
-        console.warn('⚠ Could not send step counting mode command:', cmdError);
+        console.warn('⚠ Could not send commands after connection:', cmdError);
       }
 
       // Set up characteristic monitoring
@@ -604,7 +616,7 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Speed Skating Mode
   activateSpeedSkating: async () => {
-    const success = await get().sendCommand('MODE_SPEED');
+    const success = await get().sendCommand('SET_MODE SKATING_SPEED');
     if (success) {
       set({ skatingMode: 'speed' });
     }
@@ -613,25 +625,16 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Distance Skating Mode
   activateDistanceSkating: async () => {
-    const success = await get().sendCommand('MODE_DISTANCE');
+    const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
     if (success) {
       set({ skatingMode: 'distance' });
     }
     return success;
   },
 
-  // Activate Freestyle Skating Mode
-  activateFreestyleSkating: async () => {
-    const success = await get().sendCommand('MODE_FREESTYLE');
-    if (success) {
-      set({ skatingMode: 'freestyle' });
-    }
-    return success;
-  },
-
   // Activate Step Counting Mode
   activateStepCounting: async () => {
-    const success = await get().sendCommand('MODE_STEP_COUNTING');
+    const success = await get().sendCommand('SET_MODE STEP_COUNTING');
     if (success) {
       set({ skatingMode: 'step_counting' });
     }
