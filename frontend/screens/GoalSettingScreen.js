@@ -86,76 +86,16 @@ const GoalSettingScreen = ({ navigation }) => {
     }
   }, [waterError]);
 
-  const startEditing = (goalType) => {
-    setEditingGoal(goalType);
-    setTempValue(goals[goalType].toString());
-    
-    // Focus the input after a small delay to ensure it's rendered
-    setTimeout(() => {
-      if (inputRefs[goalType].current) {
-        inputRefs[goalType].current.focus();
-      }
-    }, 100);
-  };
-
-const handleSaveGoal = async () => {
-  if (!editingGoal) return;
-  
-  const value = parseInt(tempValue);
-  
-  if (isNaN(value) || value <= 0) {
-    Alert.alert('Error', 'Please enter a valid number');
-    return;
-  }
-
-  setSaving(true);
-
-  try {
-    let result;
-
-    switch (editingGoal) {
-      case 'water':
-        result = await updateTarget(value);
-        break;
-      case 'burn':
-        result = await setBurnTarget(value);
-        break;
-      case 'eat':
-        result = await setMealTarget(value);
-        break;
-      case 'steps':
-        result = await setStepGoal(value);
-        break;
-      default:
-        result = { success: false, error: 'Unknown goal type' };
-    }
-
-    if (result.success) {
-      setGoals(prev => ({ ...prev, [editingGoal]: value }));
-
-      Alert.alert('Success', `${getGoalTitle(editingGoal)} updated successfully!`);
-
-      // Delay before resetting editingGoal to allow UI to settle
-      setTimeout(() => {
-        setEditingGoal(null);
-      }, 300);
-
-    } else {
-      Alert.alert('Error', result.error || 'Failed to update goal');
-    }
-  } catch (error) {
-    Alert.alert('Error', 'Failed to update goal');
-  } finally {
-    setSaving(false);
-  }
-};
-
-
- const handleCancelEdit = () => {
-  setEditingGoal(null);
-  Keyboard.dismiss();
-};
-
+  // Update local goals when store values change
+  useEffect(() => {
+    setGoals(prev => ({
+      ...prev,
+      water: target || prev.water,
+      burn: burnTarget || prev.burn,
+      eat: mealTarget || prev.eat,
+      steps: stepGoal || prev.steps
+    }));
+  }, [target, burnTarget, mealTarget, stepGoal]);
 
   const getGoalUnit = (goalType) => {
     switch (goalType) {
@@ -187,128 +127,130 @@ const handleSaveGoal = async () => {
     }
   };
 
-const GoalCard = ({ goalType, goalValue, updateGoal }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempValue, setTempValue] = useState(goalValue.toString());
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef(null);
+  const GoalCard = ({ goalType, goalValue, updateGoal }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempValue, setTempValue] = useState(goalValue.toString());
+    const [saving, setSaving] = useState(false);
+    const inputRef = useRef(null);
 
-  const startEditing = () => {
-    setIsEditing(true);
-    setTempValue(goalValue.toString());
+    const startEditing = () => {
+      setIsEditing(true);
+      setTempValue(goalValue.toString());
 
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-  };
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    };
 
-  const handleSaveGoal = async () => {
-    const value = parseInt(tempValue);
+    const handleSaveGoal = async () => {
+      const value = parseInt(tempValue);
 
-    if (isNaN(value) || value <= 0) {
-      Alert.alert('Error', 'Please enter a valid number');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const result = await updateGoal(value);
-
-      if (result.success) {
-        Alert.alert('Success', `${getGoalTitle(goalType)} updated successfully!`);
-
-        setIsEditing(false); // Only reset local editing state
-      } else {
-        Alert.alert('Error', result.error || 'Failed to update goal');
+      if (isNaN(value) || value <= 0) {
+        Alert.alert('Error', 'Please enter a valid number');
+        return;
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update goal');
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    Keyboard.dismiss();
-  };
+      setSaving(true);
 
-  return (
-    <View style={[styles.card, styles.cardElevated]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleContainer}>
-          <Text style={styles.cardTitle}>{getGoalTitle(goalType)}</Text>
-        </View>
-        {isEditing && (
-          <View style={styles.editActions}>
-            <TouchableOpacity
-              onPress={handleSaveGoal}
-              style={styles.saveIconButton}
-              disabled={saving}
-            >
-              <MaterialIcons
-                name="check"
-                size={20}
-                color={saving ? '#CCC' : '#4CAF50'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleCancelEdit}
-              style={styles.cancelIconButton}
-              disabled={saving}
-            >
-              <MaterialIcons
-                name="close"
-                size={20}
-                color={saving ? '#CCC' : '#F44336'}
-              />
-            </TouchableOpacity>
+      try {
+        const result = await updateGoal(value);
+
+        if (result.success) {
+          Alert.alert('Success', `${getGoalTitle(goalType)} updated successfully!`);
+          
+          // Update the local state immediately
+          setGoals(prev => ({ ...prev, [goalType]: value }));
+          
+          setIsEditing(false);
+        } else {
+          Alert.alert('Error', result.error || 'Failed to update goal');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update goal');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    const handleCancelEdit = () => {
+      setIsEditing(false);
+      Keyboard.dismiss();
+    };
+
+    return (
+      <View style={[styles.card, styles.cardElevated]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleContainer}>
+            <Text style={styles.cardTitle}>{getGoalTitle(goalType)}</Text>
           </View>
+          {isEditing && (
+            <View style={styles.editActions}>
+              <TouchableOpacity
+                onPress={handleSaveGoal}
+                style={styles.saveIconButton}
+                disabled={saving}
+              >
+                <MaterialIcons
+                  name="check"
+                  size={20}
+                  color={saving ? '#CCC' : '#4CAF50'}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCancelEdit}
+                style={styles.cancelIconButton}
+                disabled={saving}
+              >
+                <MaterialIcons
+                  name="close"
+                  size={20}
+                  color={saving ? '#CCC' : '#F44336'}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          onPress={() => !isEditing && startEditing()}
+          style={styles.inputRow}
+          activeOpacity={0.7}
+        >
+          {isEditing ? (
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder={`e.g., ${goalType === 'steps' ? '10000' : goalType === 'water' ? '2000' : '500'}`}
+              keyboardType="numeric"
+              value={tempValue}
+              onChangeText={setTempValue}
+              editable={!saving}
+              returnKeyType="done"
+            />
+          ) : (
+            <View style={styles.valueContainer}>
+              <Text style={styles.goalValueText}>
+                {goalValue}
+              </Text>
+              <MaterialIcons
+                name="keyboard-arrow-right"
+                size={20}
+                color="#5A6A8C"
+                style={styles.rightIcon}
+              />
+            </View>
+          )}
+          <Text style={styles.unitText}>{getGoalUnit(goalType)}</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.hintText}>{getGoalHint(goalType)}</Text>
+
+        {saving && isEditing && (
+          <Text style={styles.loadingText}>Saving...</Text>
         )}
       </View>
-
-      <TouchableOpacity
-        onPress={() => !isEditing && startEditing()}
-        style={styles.inputRow}
-        activeOpacity={0.7}
-      >
-        {isEditing ? (
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder={`e.g., ${goalType === 'steps' ? '10000' : goalType === 'water' ? '2000' : '500'}`}
-            keyboardType="numeric"
-            value={tempValue}
-            onChangeText={setTempValue}
-            editable={!saving}
-            returnKeyType="done"
-          />
-        ) : (
-          <View style={styles.valueContainer}>
-            <Text style={styles.goalValueText}>
-              {goalValue}
-            </Text>
-            <MaterialIcons
-              name="keyboard-arrow-right"
-              size={20}
-              color="#5A6A8C"
-              style={styles.rightIcon}
-            />
-          </View>
-        )}
-        <Text style={styles.unitText}>{getGoalUnit(goalType)}</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.hintText}>{getGoalHint(goalType)}</Text>
-
-      {saving && isEditing && (
-        <Text style={styles.loadingText}>Saving...</Text>
-      )}
-    </View>
-  );
-};
-
+    );
+  };
 
   return (
     <View style={styles.safeArea}>
@@ -330,37 +272,405 @@ const GoalCard = ({ goalType, goalValue, updateGoal }) => {
         </View>
       </LinearGradient>
 
-    <ScrollView 
-  style={styles.scrollView} 
-  contentContainerStyle={styles.scrollContent}
-  keyboardShouldPersistTaps="handled"
->
-  <GoalCard
-    goalType="water"
-    goalValue={goals.water}
-    updateGoal={updateTarget}
-  />
-  <GoalCard
-    goalType="burn"
-    goalValue={goals.burn}
-    updateGoal={setBurnTarget}
-  />
-  <GoalCard
-    goalType="eat"
-    goalValue={goals.eat}
-    updateGoal={setMealTarget}
-  />
-  <GoalCard
-    goalType="steps"
-    goalValue={goals.steps}
-    updateGoal={setStepGoal}
-  />
-  <View style={{ height: 170 }} />
-</ScrollView>
-
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <GoalCard
+          goalType="water"
+          goalValue={goals.water}
+          updateGoal={updateTarget}
+        />
+        <GoalCard
+          goalType="burn"
+          goalValue={goals.burn}
+          updateGoal={setBurnTarget}
+        />
+        <GoalCard
+          goalType="eat"
+          goalValue={goals.eat}
+          updateGoal={setMealTarget}
+        />
+        <GoalCard
+          goalType="steps"
+          goalValue={goals.steps}
+          updateGoal={setStepGoal}
+        />
+        <View style={{ height: 170 }} />
+      </ScrollView>
     </View>
   );
 };
+
+
+
+
+
+
+// import React, { useState, useEffect, useRef } from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   ScrollView,
+//   TextInput,
+//   TouchableOpacity,
+//   Platform,
+//   Dimensions,
+//   Alert,
+//   Keyboard,
+// } from 'react-native';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import { MaterialIcons } from '@expo/vector-icons';
+// import useWaterStore from '../store/waterStore';
+// import { useCaloriesStore } from '../store/caloriesStore';
+// import { Feather } from '@expo/vector-icons';
+
+// const { width, height } = Dimensions.get('window');
+
+// const GoalSettingScreen = ({ navigation }) => {
+//   const {
+//     burnTarget, 
+//     setBurnTarget,
+//     stepGoal, 
+//     fetchStepGoal, 
+//     setStepGoal,
+//     mealTarget,
+//     setMealTarget,
+//     fetchBurnTarget,
+//     fetchMealTargetStatus,
+//   } = useCaloriesStore();
+
+//   const {
+//     target,
+//     error: waterError,
+//     fetchTarget,
+//     updateTarget,
+//   } = useWaterStore();
+
+//   const [goals, setGoals] = useState({
+//     water: 2000,
+//     burn: 500,
+//     eat: 2000,
+//     steps: 10000
+//   });
+  
+//   const [editingGoal, setEditingGoal] = useState(null);
+//   const [tempValue, setTempValue] = useState('');
+//   const [saving, setSaving] = useState(false);
+  
+//   const inputRefs = {
+//     water: useRef(null),
+//     burn: useRef(null),
+//     eat: useRef(null),
+//     steps: useRef(null)
+//   };
+
+//   useEffect(() => {
+//     const loadPreviousGoals = async () => {
+//       try {
+//         await fetchTarget();
+//         await fetchBurnTarget();
+//         await fetchStepGoal();
+//         await fetchMealTargetStatus();
+        
+//         setGoals({
+//           water: target || 2000,
+//           burn: burnTarget || 500,
+//           eat: mealTarget || 2000,
+//           steps: stepGoal || 10000
+//         });
+//       } catch (error) {
+//         console.log('Error loading previous goals:', error);
+//         Alert.alert('Error', 'Failed to load previous goals');
+//       }
+//     };
+    
+//     loadPreviousGoals();
+//   }, []);
+
+//   useEffect(() => {
+//     if (waterError) {
+//       Alert.alert('Water Goal Error', waterError);
+//     }
+//   }, [waterError]);
+
+//   const startEditing = (goalType) => {
+//     setEditingGoal(goalType);
+//     setTempValue(goals[goalType].toString());
+    
+//     // Focus the input after a small delay to ensure it's rendered
+//     setTimeout(() => {
+//       if (inputRefs[goalType].current) {
+//         inputRefs[goalType].current.focus();
+//       }
+//     }, 100);
+//   };
+
+// const handleSaveGoal = async () => {
+//   if (!editingGoal) return;
+  
+//   const value = parseInt(tempValue);
+  
+//   if (isNaN(value) || value <= 0) {
+//     Alert.alert('Error', 'Please enter a valid number');
+//     return;
+//   }
+
+//   setSaving(true);
+
+//   try {
+//     let result;
+
+//     switch (editingGoal) {
+//       case 'water':
+//         result = await updateTarget(value);
+//         break;
+//       case 'burn':
+//         result = await setBurnTarget(value);
+//         break;
+//       case 'eat':
+//         result = await setMealTarget(value);
+//         break;
+//       case 'steps':
+//         result = await setStepGoal(value);
+//         break;
+//       default:
+//         result = { success: false, error: 'Unknown goal type' };
+//     }
+
+//     if (result.success) {
+//       setGoals(prev => ({ ...prev, [editingGoal]: value }));
+
+//       Alert.alert('Success', `${getGoalTitle(editingGoal)} updated successfully!`);
+
+//       // Delay before resetting editingGoal to allow UI to settle
+//       setTimeout(() => {
+//         setEditingGoal(null);
+//       }, 300);
+
+//     } else {
+//       Alert.alert('Error', result.error || 'Failed to update goal');
+//     }
+//   } catch (error) {
+//     Alert.alert('Error', 'Failed to update goal');
+//   } finally {
+//     setSaving(false);
+//   }
+// };
+
+
+//  const handleCancelEdit = () => {
+//   setEditingGoal(null);
+//   Keyboard.dismiss();
+// };
+
+
+//   const getGoalUnit = (goalType) => {
+//     switch (goalType) {
+//       case 'water': return 'ml';
+//       case 'burn': return 'cal';
+//       case 'eat': return 'cal';
+//       case 'steps': return 'steps';
+//       default: return '';
+//     }
+//   };
+
+//   const getGoalHint = (goalType) => {
+//     switch (goalType) {
+//       case 'water': return 'Recommended: 2000-3000 ml per day';
+//       case 'burn': return 'Based on your activity level';
+//       case 'eat': return 'Daily calorie intake target';
+//       case 'steps': return 'Recommended: 8000-10000 steps per day';
+//       default: return '';
+//     }
+//   };
+
+//   const getGoalTitle = (goalType) => {
+//     switch (goalType) {
+//       case 'water': return 'Water Intake';
+//       case 'burn': return 'Calories to Burn';
+//       case 'eat': return 'Calories to Eat';
+//       case 'steps': return 'Step Count';
+//       default: return '';
+//     }
+//   };
+
+// const GoalCard = ({ goalType, goalValue, updateGoal }) => {
+//   const [isEditing, setIsEditing] = useState(false);
+//   const [tempValue, setTempValue] = useState(goalValue.toString());
+//   const [saving, setSaving] = useState(false);
+//   const inputRef = useRef(null);
+
+//   const startEditing = () => {
+//     setIsEditing(true);
+//     setTempValue(goalValue.toString());
+
+//     setTimeout(() => {
+//       inputRef.current?.focus();
+//     }, 100);
+//   };
+
+//   const handleSaveGoal = async () => {
+//     const value = parseInt(tempValue);
+
+//     if (isNaN(value) || value <= 0) {
+//       Alert.alert('Error', 'Please enter a valid number');
+//       return;
+//     }
+
+//     setSaving(true);
+
+//     try {
+//       const result = await updateGoal(value);
+
+//       if (result.success) {
+//         Alert.alert('Success', `${getGoalTitle(goalType)} updated successfully!`);
+
+//         setIsEditing(false); // Only reset local editing state
+//       } else {
+//         Alert.alert('Error', result.error || 'Failed to update goal');
+//       }
+//     } catch (error) {
+//       Alert.alert('Error', 'Failed to update goal');
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleCancelEdit = () => {
+//     setIsEditing(false);
+//     Keyboard.dismiss();
+//   };
+
+//   return (
+//     <View style={[styles.card, styles.cardElevated]}>
+//       <View style={styles.cardHeader}>
+//         <View style={styles.cardTitleContainer}>
+//           <Text style={styles.cardTitle}>{getGoalTitle(goalType)}</Text>
+//         </View>
+//         {isEditing && (
+//           <View style={styles.editActions}>
+//             <TouchableOpacity
+//               onPress={handleSaveGoal}
+//               style={styles.saveIconButton}
+//               disabled={saving}
+//             >
+//               <MaterialIcons
+//                 name="check"
+//                 size={20}
+//                 color={saving ? '#CCC' : '#4CAF50'}
+//               />
+//             </TouchableOpacity>
+//             <TouchableOpacity
+//               onPress={handleCancelEdit}
+//               style={styles.cancelIconButton}
+//               disabled={saving}
+//             >
+//               <MaterialIcons
+//                 name="close"
+//                 size={20}
+//                 color={saving ? '#CCC' : '#F44336'}
+//               />
+//             </TouchableOpacity>
+//           </View>
+//         )}
+//       </View>
+
+//       <TouchableOpacity
+//         onPress={() => !isEditing && startEditing()}
+//         style={styles.inputRow}
+//         activeOpacity={0.7}
+//       >
+//         {isEditing ? (
+//           <TextInput
+//             ref={inputRef}
+//             style={styles.input}
+//             placeholder={`e.g., ${goalType === 'steps' ? '10000' : goalType === 'water' ? '2000' : '500'}`}
+//             keyboardType="numeric"
+//             value={tempValue}
+//             onChangeText={setTempValue}
+//             editable={!saving}
+//             returnKeyType="done"
+//           />
+//         ) : (
+//           <View style={styles.valueContainer}>
+//             <Text style={styles.goalValueText}>
+//               {goalValue}
+//             </Text>
+//             <MaterialIcons
+//               name="keyboard-arrow-right"
+//               size={20}
+//               color="#5A6A8C"
+//               style={styles.rightIcon}
+//             />
+//           </View>
+//         )}
+//         <Text style={styles.unitText}>{getGoalUnit(goalType)}</Text>
+//       </TouchableOpacity>
+
+//       <Text style={styles.hintText}>{getGoalHint(goalType)}</Text>
+
+//       {saving && isEditing && (
+//         <Text style={styles.loadingText}>Saving...</Text>
+//       )}
+//     </View>
+//   );
+// };
+
+
+//   return (
+//     <View style={styles.safeArea}>
+//       <LinearGradient
+//         colors={['#1A2980', '#26D0CE']}
+//         style={styles.headerGradient}
+//       >
+//         <View style={styles.headerSection}>
+//           <TouchableOpacity 
+//             style={styles.profileIcon}
+//             onPress={() => navigation.goBack()}
+//           >
+//             <Feather name="arrow-left" size={24} color="#fff" />
+//           </TouchableOpacity>
+//           <View style={styles.titleContainer}>
+//             <Text style={styles.headerTitle}>Set Your Goals</Text>
+//           </View>
+//           <View style={styles.profileIconPlaceholder} />
+//         </View>
+//       </LinearGradient>
+
+//     <ScrollView 
+//   style={styles.scrollView} 
+//   contentContainerStyle={styles.scrollContent}
+//   keyboardShouldPersistTaps="handled"
+// >
+//   <GoalCard
+//     goalType="water"
+//     goalValue={goals.water}
+//     updateGoal={updateTarget}
+//   />
+//   <GoalCard
+//     goalType="burn"
+//     goalValue={goals.burn}
+//     updateGoal={setBurnTarget}
+//   />
+//   <GoalCard
+//     goalType="eat"
+//     goalValue={goals.eat}
+//     updateGoal={setMealTarget}
+//   />
+//   <GoalCard
+//     goalType="steps"
+//     goalValue={goals.steps}
+//     updateGoal={setStepGoal}
+//   />
+//   <View style={{ height: 170 }} />
+// </ScrollView>
+
+//     </View>
+//   );
+// };
 
 const styles = StyleSheet.create({
   safeArea: {
