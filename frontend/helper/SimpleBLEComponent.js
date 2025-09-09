@@ -28,9 +28,9 @@ const SimpleBLEComponent = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (isConnected) {
-        disconnect();
-      }
+      // if (isConnected) {
+      //   disconnect();
+      // }
     };
   }, []);
 
