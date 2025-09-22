@@ -44,10 +44,8 @@ function formatBLEData(data) {
   console.log('Original BLE data received:', JSON.stringify(data));
   
   // Keep the original data as is - don't try to normalize field names
-  // This ensures we don't lose any data that might have unexpected field names
   const formattedData = { ...data };
   
-  // Log the data we're returning
   console.log('Returning BLE data:', JSON.stringify(formattedData));
   return formattedData;
 }
@@ -57,9 +55,6 @@ const requestBLEPermissions = async () => {
   if (Platform.OS === 'android') {
     try {
       console.log('Requesting BLE permissions for Android ' + Platform.Version);
-      
-      // For Android 10 (API 29) and below, only location permission is needed for BLE
-      // For Android 12+ (API 31+), explicit Bluetooth permissions are also required
       
       // Always request location permissions (required for BLE scanning on all Android versions)
       const locationPermissions = [
@@ -343,22 +338,7 @@ export const useBLEStore = create((set, get) => ({
       console.log('Using characteristic:', targetCharacteristic.uuid);
       set({ characteristic: targetCharacteristic });
 
-      // Send turn on command after successful connection
-      try {
-        const { sendCommand } = get();
-        await sendCommand('TURN_ON');
-        console.log('✅ Turn on command sent after connection');
-        
-        // Wait a moment then send step counting mode
-        setTimeout(async () => {
-          await sendCommand('SET_MODE STEP_COUNTING');
-          console.log('✅ Step counting mode activated after connection');
-        }, 500);
-      } catch (cmdError) {
-        console.warn('⚠ Could not send commands after connection:', cmdError);
-      }
-
-      // Set up characteristic monitoring
+      // Set up characteristic monitoring FIRST before sending commands
       if (targetCharacteristic.isNotifiable) {
         console.log('Setting up characteristic monitoring...');
         deviceConnection.monitorCharacteristicForService(
@@ -378,7 +358,7 @@ export const useBLEStore = create((set, get) => ({
             
             try {
               const json = Buffer.from(base64Value, 'base64').toString('utf-8');
-              console.log('Received data:', json);
+              console.log('📨 Received data:', json);
               
               if (!json || json.trim() === '') {
                 console.warn('⚠ Empty JSON string after decoding');
@@ -387,7 +367,7 @@ export const useBLEStore = create((set, get) => ({
 
               try {
                 const parsed = JSON.parse(json);
-                console.log('Successfully parsed JSON data');
+                console.log('✅ Successfully parsed JSON data:', parsed);
                 const formattedData = formatBLEData(parsed);
                 set({ data: formattedData });
               } catch (err) {
@@ -399,7 +379,7 @@ export const useBLEStore = create((set, get) => ({
                   if (fixedJson !== json) {
                     console.log('Attempting to parse fixed JSON:', fixedJson);
                     const parsed = JSON.parse(fixedJson);
-                    console.log('Successfully parsed after fixing JSON');
+                    console.log('✅ Successfully parsed after fixing JSON');
                     const formattedData = formatBLEData(parsed);
                     set({ data: formattedData });
                     return;
@@ -414,7 +394,7 @@ export const useBLEStore = create((set, get) => ({
                   if (jsonMatch && jsonMatch[0]) {
                     console.log('Extracted potential JSON:', jsonMatch[0]);
                     const parsed = JSON.parse(jsonMatch[0]);
-                    console.log('Successfully parsed extracted JSON');
+                    console.log('✅ Successfully parsed extracted JSON');
                     const formattedData = formatBLEData(parsed);
                     set({ data: formattedData });
                     return;
@@ -424,6 +404,7 @@ export const useBLEStore = create((set, get) => ({
                 }
                 
                 // Store raw data if all parsing attempts fail
+                console.log('📝 Storing as raw data:', json);
                 set({ data: { rawData: json } });
               }
             } catch (decodeErr) {
@@ -431,7 +412,28 @@ export const useBLEStore = create((set, get) => ({
             }
           }
         );
+      } else {
+        console.log('Characteristic does not support notifications');
       }
+
+      // Wait a moment for monitoring setup, then send commands
+      setTimeout(async () => {
+        try {
+          const { sendCommand } = get();
+          console.log('Sending command: TURN_ON');
+          await sendCommand('TURN_ON');
+          console.log('✅ Turn on command sent after connection');
+          
+          // Wait a moment then send step counting mode
+          setTimeout(async () => {
+            console.log('Sending command: SET_MODE STEP_COUNTING');
+            await sendCommand('SET_MODE STEP_COUNTING');
+            console.log('✅ Step counting mode activated after connection');
+          }, 1000);
+        } catch (cmdError) {
+          console.warn('⚠ Could not send commands after connection:', cmdError);
+        }
+      }, 1000);
 
       console.log('✅ Device connected and configured successfully');
       Alert.alert('Connected', `Connected to ${device.name || device.id}`);
@@ -477,26 +479,29 @@ export const useBLEStore = create((set, get) => ({
     }
 
     try {
-      // Ensure the command is properly formatted
+      // Ensure the command is properly formatted and terminated
       const formattedCmd = cmd.trim();
-      console.log('Sending command:', formattedCmd);
+      console.log('📤 Sending command:', formattedCmd);
       
-      // Send as plain text (not base64 encoded)
-      const encodedCmd = formattedCmd;
+      // Convert string to base64 for BLE transmission
+      const base64Cmd = Buffer.from(formattedCmd, 'utf-8').toString('base64');
+      console.log('📤 Base64 encoded command:', base64Cmd);
       
       // Use the correct method based on characteristic capabilities
       if (characteristic.isWritableWithResponse) {
         await connectedDevice.writeCharacteristicWithResponseForService(
           characteristic.serviceUUID,
           characteristic.uuid,
-          encodedCmd
+          base64Cmd
         );
+        console.log('✅ Command sent with response');
       } else if (characteristic.isWritableWithoutResponse) {
         await connectedDevice.writeCharacteristicWithoutResponseForService(
           characteristic.serviceUUID,
           characteristic.uuid,
-          encodedCmd
+          base64Cmd
         );
+        console.log('✅ Command sent without response');
       } else {
         console.error('❌ Characteristic is not writable');
         return false;
