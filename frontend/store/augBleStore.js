@@ -350,7 +350,8 @@ export const useBLEStore = create((set, get) => ({
             
             // Wait a moment then send step counting mode
             setTimeout(async () => {
-              await sendCommand('SET_MODE STEP_COUNTING');
+              // await sendCommand('SET_MODE STEP_COUNTING');
+              await sendCommand('STEP_COUNTING');
               console.log('✅ Step counting mode activated after connection');
             }, 500);
           } catch (cmdError) {
@@ -448,7 +449,8 @@ export const useBLEStore = create((set, get) => ({
         
         // Wait a moment then send step counting mode
         setTimeout(async () => {
-          await sendCommand('SET_MODE STEP_COUNTING');
+          // await sendCommand('SET_MODE STEP_COUNTING');
+          await sendCommand('STEP_COUNTING');
           console.log('✅ Step counting mode activated after connection');
         }, 500);
       } catch (cmdError) {
@@ -616,7 +618,8 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Speed Skating Mode
   activateSpeedSkating: async () => {
-    const success = await get().sendCommand('SET_MODE SKATING_SPEED');
+    // const success = await get().sendCommand('SET_MODE SKATING_SPEED');
+    const success = await get().sendCommand('SKATING_SPEED');
     if (success) {
       set({ skatingMode: 'speed' });
     }
@@ -625,7 +628,8 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Distance Skating Mode
   activateDistanceSkating: async () => {
-    const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
+    // const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
+    const success = await get().sendCommand('SKATING_DISTANCE');
     if (success) {
       set({ skatingMode: 'distance' });
     }
@@ -634,7 +638,8 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Step Counting Mode
   activateStepCounting: async () => {
-    const success = await get().sendCommand('SET_MODE STEP_COUNTING');
+    // const success = await get().sendCommand('SET_MODE STEP_COUNTING');
+    const success = await get().sendCommand('STEP_COUNTING');
     if (success) {
       set({ skatingMode: 'step_counting' });
     }
