@@ -207,20 +207,13 @@ export const useBLEStore = create((set, get) => ({
             return;
           }
           
-          // Log all discovered devices for debugging
-          if (device && device.name) {
-            console.log(`Found device: ${device.name} (${device.id})`);
-          } else if (device) {
-            console.log(`Found unnamed device: ${device.id}`);
-          }
-
-          // Accept any device with a name OR devices that might be your fitness band
-          if (device && (device.name || device.localName)) {
+          // Look specifically for the ESP32C3_SkatingBand device
+          const deviceName = device.name || device.localName || '';
+          if (deviceName.includes('ESP32C3_SkatingBand')) {
+            console.log(`Found target device: ${deviceName} (${device.id})`);
             set((state) => {
               const exists = state.foundDevices.some(d => d.id === device.id);
               if (!exists) {
-                const displayName = device.name || device.localName || 'Unknown Device';
-                console.log(`Adding device to list: ${displayName}`);
                 return { foundDevices: [...state.foundDevices, device] };
               }
               return state;
@@ -292,154 +285,49 @@ export const useBLEStore = create((set, get) => ({
       const services = await deviceConnection.services();
       console.log('Available services:', services.map(s => s.uuid));
       
-      // Check if our specific service exists
-      const targetService = services.find(s => 
-        s.uuid.toLowerCase().includes(SERVICE_UUID.toLowerCase().replace(/-/g, '')) ||
-        SERVICE_UUID.toLowerCase().includes(s.uuid.toLowerCase().replace(/-/g, ''))
-      );
+      // Look for our specific service
+      let targetService = null;
+      for (const service of services) {
+        // Check if the service UUID matches or contains our target
+        if (service.uuid.toLowerCase().includes(SERVICE_UUID.toLowerCase().replace(/-/g, '')) ||
+            SERVICE_UUID.toLowerCase().includes(service.uuid.toLowerCase().replace(/-/g, ''))) {
+          targetService = service;
+          break;
+        }
+      }
       
       if (!targetService) {
-        // If specific service not found, try to find any service with characteristics
-        console.warn(`Target service ${SERVICE_UUID} not found. Available services:`, 
-          services.map(s => s.uuid));
-        
-        // For testing, try to find a service with writable characteristics
-        let foundService = null;
-        let foundChar = null;
-        
-        for (const service of services) {
-          try {
-            const characteristics = await deviceConnection.characteristicsForService(service.uuid);
-            console.log(`Service ${service.uuid} characteristics:`, characteristics.map(c => ({
-              uuid: c.uuid,
-              isNotifiable: c.isNotifiable,
-              isWritableWithResponse: c.isWritableWithResponse,
-              isWritableWithoutResponse: c.isWritableWithoutResponse
-            })));
-            
-            // Look for a characteristic that can be used for communication
-            const suitableChar = characteristics.find(c => 
-              c.isNotifiable || c.isWritableWithResponse || c.isWritableWithoutResponse
-            );
-            
-            if (suitableChar) {
-              foundService = service;
-              foundChar = suitableChar;
-              console.log(`Found suitable service: ${service.uuid}, characteristic: ${suitableChar.uuid}`);
-              break;
-            }
-          } catch (charError) {
-            console.warn(`Error getting characteristics for service ${service.uuid}:`, charError);
-          }
-        }
-        
-        if (foundService && foundChar) {
-          console.log(`Using service: ${foundService.uuid}, characteristic: ${foundChar.uuid}`);
-          
-          set({ 
-            characteristic: foundChar,
-            isConnected: true,
-            error: null 
-          });
-          
-          // Send turn on command after successful connection
-          try {
-            const { sendCommand } = get();
-            await sendCommand('TURN_ON');
-            console.log('✅ Turn on command sent after connection');
-            
-            // Wait a moment then send step counting mode
-            setTimeout(async () => {
-              // await sendCommand('SET_MODE STEP_COUNTING');
-              await sendCommand('STEP_COUNTING');
-              console.log('✅ Step counting mode activated after connection');
-            }, 500);
-          } catch (cmdError) {
-            console.warn('⚠ Could not send commands after connection:', cmdError);
-          }
-          
-          // Set up monitoring if characteristic supports notifications
-          if (foundChar.isNotifiable) {
-            console.log('Setting up characteristic monitoring...');
-            deviceConnection.monitorCharacteristicForService(
-              foundService.uuid,
-              foundChar.uuid,
-              (error, characteristic) => {
-                if (error) {
-                  console.error('❌ Monitor error:', error);
-                  return;
-                }
-
-                const base64Value = characteristic?.value;
-                if (!base64Value) {
-                  console.warn('⚠ Empty characteristic value');
-                  return;
-                }
-                
-                try {
-                  const json = Buffer.from(base64Value, 'base64').toString('utf-8');
-                  console.log('Received data:', json);
-                  
-                  if (!json || json.trim() === '') {
-                    console.warn('⚠ Empty JSON string after decoding');
-                    return;
-                  }
-
-                  try {
-                    const parsed = JSON.parse(json);
-                    console.log('Successfully parsed JSON data');
-                    const formattedData = formatBLEData(parsed);
-                    set({ data: formattedData });
-                  } catch (err) {
-                    console.warn('⚠ JSON parse error, trying to fix:', err);
-                    
-                    // Try to fix incomplete JSON
-                    try {
-                      const fixedJson = fixIncompleteJson(json);
-                      if (fixedJson !== json) {
-                        console.log('Attempting to parse fixed JSON:', fixedJson);
-                        const parsed = JSON.parse(fixedJson);
-                        console.log('Successfully parsed after fixing JSON');
-                        const formattedData = formatBLEData(parsed);
-                        set({ data: formattedData });
-                        return;
-                      }
-                    } catch (fixErr) {
-                      console.warn('Could not fix JSON:', fixErr);
-                    }
-                    
-                    // Store raw data if JSON parsing fails
-                    set({ data: { rawData: json } });
-                  }
-                } catch (decodeErr) {
-                  console.error('❌ Base64 decoding error:', decodeErr);
-                }
-              }
-            );
-          } else {
-            console.log('Characteristic does not support notifications');
-          }
-          
-          Alert.alert('Connected', `Connected to ${device.name || device.id}`);
-          return; // Exit successfully
-        }
-        
-        throw new Error(`No suitable service/characteristic found on device. Available services: ${services.map(s => s.uuid).join(', ')}`);
+        console.error('Target service not found. Available services:', services.map(s => s.uuid));
+        throw new Error(`Service ${SERVICE_UUID} not found on device`);
       }
       
-      // If we found our target service, proceed as before
+      // Find characteristics for our service
       const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
-      const char = characteristics.find(c => 
-        c.uuid.toLowerCase().includes(CHARACTERISTIC_UUID.toLowerCase().replace(/-/g, '')) ||
-        CHARACTERISTIC_UUID.toLowerCase().includes(c.uuid.toLowerCase().replace(/-/g, ''))
-      ) || characteristics[0]; // Fallback to first characteristic
+      console.log('Available characteristics:', characteristics.map(c => ({
+        uuid: c.uuid,
+        isNotifiable: c.isNotifiable,
+        isWritableWithResponse: c.isWritableWithResponse,
+        isWritableWithoutResponse: c.isWritableWithoutResponse
+      })));
       
-      if (!char) {
-        throw new Error(`No suitable characteristic found in service ${targetService.uuid}`);
+      // Look for our specific characteristic
+      let targetCharacteristic = null;
+      for (const char of characteristics) {
+        // Check if the characteristic UUID matches or contains our target
+        if (char.uuid.toLowerCase().includes(CHARACTERISTIC_UUID.toLowerCase().replace(/-/g, '')) ||
+            CHARACTERISTIC_UUID.toLowerCase().includes(char.uuid.toLowerCase().replace(/-/g, ''))) {
+          targetCharacteristic = char;
+          break;
+        }
       }
       
-      console.log('Target service and characteristic found');
-      set({ characteristic: char });
+      if (!targetCharacteristic) {
+        console.warn('Target characteristic not found, using first available characteristic');
+        targetCharacteristic = characteristics[0];
+      }
+      
+      console.log('Using characteristic:', targetCharacteristic.uuid);
+      set({ characteristic: targetCharacteristic });
 
       // Send turn on command after successful connection
       try {
@@ -449,8 +337,7 @@ export const useBLEStore = create((set, get) => ({
         
         // Wait a moment then send step counting mode
         setTimeout(async () => {
-          // await sendCommand('SET_MODE STEP_COUNTING');
-          await sendCommand('STEP_COUNTING');
+          await sendCommand('SET_MODE STEP_COUNTING');
           console.log('✅ Step counting mode activated after connection');
         }, 500);
       } catch (cmdError) {
@@ -458,11 +345,11 @@ export const useBLEStore = create((set, get) => ({
       }
 
       // Set up characteristic monitoring
-      if (char.isNotifiable) {
+      if (targetCharacteristic.isNotifiable) {
         console.log('Setting up characteristic monitoring...');
         deviceConnection.monitorCharacteristicForService(
           targetService.uuid,
-          char.uuid,
+          targetCharacteristic.uuid,
           (error, characteristic) => {
             if (error) {
               console.error('❌ Monitor error:', error);
@@ -580,21 +467,21 @@ export const useBLEStore = create((set, get) => ({
       const formattedCmd = cmd.trim();
       console.log('Sending command:', formattedCmd);
       
-      // Encode as base64
-      const encoded = Buffer.from(formattedCmd).toString('base64');
+      // Send as plain text (not base64 encoded)
+      const encodedCmd = formattedCmd;
       
       // Use the correct method based on characteristic capabilities
       if (characteristic.isWritableWithResponse) {
         await connectedDevice.writeCharacteristicWithResponseForService(
           characteristic.serviceUUID,
           characteristic.uuid,
-          encoded
+          encodedCmd
         );
       } else if (characteristic.isWritableWithoutResponse) {
         await connectedDevice.writeCharacteristicWithoutResponseForService(
           characteristic.serviceUUID,
           characteristic.uuid,
-          encoded
+          encodedCmd
         );
       } else {
         console.error('❌ Characteristic is not writable');
@@ -618,8 +505,7 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Speed Skating Mode
   activateSpeedSkating: async () => {
-    // const success = await get().sendCommand('SET_MODE SKATING_SPEED');
-    const success = await get().sendCommand('SKATING_SPEED');
+    const success = await get().sendCommand('SET_MODE SKATING_SPEED');
     if (success) {
       set({ skatingMode: 'speed' });
     }
@@ -628,8 +514,7 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Distance Skating Mode
   activateDistanceSkating: async () => {
-    // const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
-    const success = await get().sendCommand('SKATING_DISTANCE');
+    const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
     if (success) {
       set({ skatingMode: 'distance' });
     }
@@ -638,8 +523,7 @@ export const useBLEStore = create((set, get) => ({
 
   // Activate Step Counting Mode
   activateStepCounting: async () => {
-    // const success = await get().sendCommand('SET_MODE STEP_COUNTING');
-    const success = await get().sendCommand('STEP_COUNTING');
+    const success = await get().sendCommand('SET_MODE STEP_COUNTING');
     if (success) {
       set({ skatingMode: 'step_counting' });
     }
