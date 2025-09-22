@@ -6,6 +6,12 @@ import { PermissionsAndroid, Platform, Alert } from 'react-native';
 const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
 const CHARACTERISTIC_UUID = 'abcdefab-1234-5678-1234-abcdefabcdef';
 
+// Helper function to normalize UUIDs by removing dashes and converting to lowercase
+function normalizeUUID(uuid) {
+  if (!uuid) return '';
+  return uuid.toLowerCase().replace(/-/g, '');
+}
+
 // Helper function to fix incomplete JSON
 function fixIncompleteJson(jsonString) {
   if (!jsonString || typeof jsonString !== 'string') return '';
@@ -286,12 +292,16 @@ export const useBLEStore = create((set, get) => ({
       console.log('Available services:', services.map(s => s.uuid));
       
       // Look for our specific service
+      const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
       let targetService = null;
+      
       for (const service of services) {
-        // Check if the service UUID matches or contains our target
-        if (service.uuid.toLowerCase().includes(SERVICE_UUID.toLowerCase().replace(/-/g, '')) ||
-            SERVICE_UUID.toLowerCase().includes(service.uuid.toLowerCase().replace(/-/g, ''))) {
+        const normalizedServiceUUID = normalizeUUID(service.uuid);
+        console.log(`Comparing service: ${normalizedServiceUUID} with target: ${normalizedTargetServiceUUID}`);
+        
+        if (normalizedServiceUUID === normalizedTargetServiceUUID) {
           targetService = service;
+          console.log('✅ Found target service:', service.uuid);
           break;
         }
       }
@@ -311,12 +321,16 @@ export const useBLEStore = create((set, get) => ({
       })));
       
       // Look for our specific characteristic
+      const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
       let targetCharacteristic = null;
+      
       for (const char of characteristics) {
-        // Check if the characteristic UUID matches or contains our target
-        if (char.uuid.toLowerCase().includes(CHARACTERISTIC_UUID.toLowerCase().replace(/-/g, '')) ||
-            CHARACTERISTIC_UUID.toLowerCase().includes(char.uuid.toLowerCase().replace(/-/g, ''))) {
+        const normalizedCharUUID = normalizeUUID(char.uuid);
+        console.log(`Comparing characteristic: ${normalizedCharUUID} with target: ${normalizedTargetCharUUID}`);
+        
+        if (normalizedCharUUID === normalizedTargetCharUUID) {
           targetCharacteristic = char;
+          console.log('✅ Found target characteristic:', char.uuid);
           break;
         }
       }
