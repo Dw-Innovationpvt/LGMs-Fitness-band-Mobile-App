@@ -1,18 +1,419 @@
+// import React, { useEffect } from 'react';
+// import { 
+//   View, 
+//   Text, 
+//   TouchableOpacity, 
+//   FlatList, 
+//   StyleSheet,
+//   ActivityIndicator 
+// } from 'react-native';
+// import { Feather } from '@expo/vector-icons';
+
+// import { useBLEStore } from '../store/augBleStore';
+// // import 
+
+// const SimpleBLEComponent = () => {
+//   // Get state and actions from the store
+//   const {
+//     foundDevices,
+//     isScanning,
+//     isConnected,
+//     connectedDevice,
+//     error,
+//     data,
+//     scanForDevices,
+//     connectToDevice,
+//     disconnect
+//   } = useBLEStore();
+
+//   // Cleanup on unmount
+//   useEffect(() => {
+//     return () => {
+//       // if (isConnected) {
+//       //   disconnect();
+//       // }
+//     };
+//   }, []);
+
+//   // Render device item
+//   const renderDevice = ({ item }) => (
+//     <TouchableOpacity
+//       style={styles.deviceItem}
+//       onPress={() => connectToDevice(item)}
+//       disabled={isConnected || isScanning}
+//     >
+//       <View style={styles.deviceInfo}>
+//         <Text style={styles.deviceName}>
+//           {item.name || item.localName || 'Unknown Device'}
+//         </Text>
+//         <Text style={styles.deviceId}>{item.id}</Text>
+//         <Text style={styles.deviceRssi}>
+//           Signal: {item.rssi ? `${item.rssi} dBm` : 'Unknown'}
+//         </Text>
+//       </View>
+//       <Text style={styles.tapText}>Tap to connect</Text>
+//     </TouchableOpacity>
+//   );
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Header */}
+
+//       <Text style={styles.title}>{'Pair Device'}</Text>
+
+//       {/* Connection Status */}
+//       <View style={[
+//         styles.statusCard,
+//         isConnected ? styles.connectedCard : styles.disconnectedCard
+//       ]}>
+//         <Text style={styles.statusTitle}>Connection Status</Text>
+//         <Text style={styles.statusText}>
+//           {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+//         </Text>
+//         {isConnected && connectedDevice && (
+//           <Text style={styles.connectedDeviceText}>
+//             📱 {connectedDevice.name || connectedDevice.id}
+//           </Text>
+//         )}
+//         {error && (
+//           <Text style={styles.errorText}>❌ {error}</Text>
+//         )}
+//       </View>
+
+//       {/* Data Display */}
+//       {data && (
+//         <View style={styles.dataCard}>
+//           <Text style={styles.dataTitle}>Received Data</Text>
+//           <Text style={styles.dataText}>
+//             {JSON.stringify(data, null, 2)}
+//           </Text>
+//         </View>
+//       )}
+
+//       {/* Control Buttons */}
+//       <View style={styles.buttonContainer}>
+//         {!isConnected ? (
+//           <TouchableOpacity
+//             style={[
+//               styles.button,
+//               styles.scanButton,
+//               isScanning && styles.disabledButton
+//             ]}
+//             onPress={scanForDevices}
+//             disabled={isScanning}
+//           >
+//             {isScanning ? (
+//               <View style={styles.scanningContainer}>
+//                 <ActivityIndicator color="white" size="small" />
+//                 <Text style={styles.buttonText}>Scanning...</Text>
+//               </View>
+//             ) : (
+//               <Text style={styles.buttonText}>🔍 Scan for Devices</Text>
+//             )}
+//           </TouchableOpacity>
+//         ) : (
+//           <TouchableOpacity
+//             style={[styles.button, styles.disconnectButton]}
+//             onPress={disconnect}
+//           >
+//             <Text style={styles.buttonText}>🔌 Disconnect</Text>
+//           </TouchableOpacity>
+//         )}
+//       </View>
+
+//       {/* Device List */}
+//       {!isConnected && (
+//         <View style={styles.deviceListContainer}>
+//           <Text style={styles.deviceListTitle}>
+//             Found Devices ({foundDevices.length})
+//           </Text>
+          
+//           {foundDevices.length === 0 && !isScanning && !error && (
+//             <View style={styles.emptyState}>
+//               <Text style={styles.emptyText}>
+//                 🔍 No devices found yet
+//               </Text>
+//               <Text style={styles.emptySubText}>
+//                 Tap "Scan for Devices" to start searching
+//               </Text>
+//             </View>
+//           )}
+
+//           <FlatList
+//             data={foundDevices} // should include all devices
+//             keyExtractor={(item) => item.id}
+//             renderItem={renderDevice}
+//             style={styles.deviceList}
+//             showsVerticalScrollIndicator={false}
+//           />
+//         </View>
+//       )}
+
+//       {/* Connection Info */}
+//       {isConnected && (
+//         <View style={styles.connectionInfo}>
+//           <Text style={styles.infoTitle}>Connection Details</Text>
+//           <Text style={styles.infoText}>
+//             • Device connected successfully
+//           </Text>
+//           <Text style={styles.infoText}>
+//             • Listening for data...
+//           </Text>
+//           <Text style={styles.infoText}>
+//             • Ready to send commands
+//           </Text>
+//         </View>
+//       )}
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     padding: 20,
+//     backgroundColor: '#f8f9fa',
+//   },
+// title: {
+//     fontSize: 24,
+//     fontWeight: '700',
+//     marginTop: 10,
+//     marginBottom: 20,
+//     color: '#2c3e50',
+//     textAlign: 'center',
+// },
+//   statusCard: {
+//     padding: 20,
+//     borderRadius: 12,
+//     marginBottom: 15,
+//     elevation: 3,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//   },
+//   connectedCard: {
+//     backgroundColor: '#d4edda',
+//     borderColor: '#28a745',
+//     borderWidth: 1,
+//   },
+//   disconnectedCard: {
+//     backgroundColor: '#f8d7da',
+//     borderColor: '#dc3545',
+//     borderWidth: 1,
+//   },
+//   statusTitle: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     marginBottom: 8,
+//     color: '#2c3e50',
+//   },
+//   statusText: {
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//     marginBottom: 5,
+//   },
+//   connectedDeviceText: {
+//     fontSize: 14,
+//     color: '#666',
+//     marginTop: 5,
+//   },
+//   errorText: {
+//     fontSize: 14,
+//     color: '#dc3545',
+//     marginTop: 5,
+//     fontStyle: 'italic',
+//   },
+//   dataCard: {
+//     backgroundColor: '#e3f2fd',
+//     padding: 15,
+//     borderRadius: 8,
+//     marginBottom: 15,
+//     borderColor: '#2196f3',
+//     borderWidth: 1,
+//   },
+//   dataTitle: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     marginBottom: 8,
+//     color: '#1976d2',
+//   },
+//   dataText: {
+//     fontSize: 12,
+//     fontFamily: 'monospace',
+//     color: '#333',
+//     backgroundColor: 'white',
+//     padding: 10,
+//     borderRadius: 4,
+//   },
+//   buttonContainer: {
+//     marginBottom: 20,
+//   },
+//   button: {
+//     padding: 15,
+//     borderRadius: 8,
+//     elevation: 2,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//   },
+//   scanButton: {
+//     backgroundColor: '#007AFF',
+//   },
+//   disconnectButton: {
+//     backgroundColor: '#FF3B30',
+//   },
+//   disabledButton: {
+//     opacity: 0.7,
+//   },
+//   scanningContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+//   buttonText: {
+//     color: '#fff',
+//     textAlign: 'center',
+//     fontWeight: '600',
+//     fontSize: 16,
+//     marginLeft: 5,
+//   },
+//   deviceListContainer: {
+//     flex: 1,
+//     backgroundColor: 'pink',
+//     padding: 15,
+//     borderRadius: 8,
+//   },
+//   deviceListTitle: {
+//     fontSize: 18,
+//     fontWeight: '600',
+//     marginBottom: 10,
+//     color: '#2c3e50',
+//   },
+//   emptyState: {
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     padding: 40,
+//   },
+//   emptyText: {
+//     fontSize: 16,
+//     color: '#666',
+//     marginBottom: 5,
+//   },
+//   emptySubText: {
+//     fontSize: 14,
+//     color: '#999',
+//     textAlign: 'center',
+//   },
+//   deviceList: {
+//     flex: 1,
+//   },
+//   deviceItem: {
+//     backgroundColor: '#fff',
+//     padding: 15,
+//     borderRadius: 8,
+//     marginBottom: 8,
+//     elevation: 2,
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 2,
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//   },
+//   deviceInfo: {
+//     flex: 1,
+//   },
+//   deviceName: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     color: '#2c3e50',
+//     marginBottom: 4,
+//   },
+//   deviceId: {
+//     fontSize: 12,
+//     color: '#666',
+//     marginBottom: 2,
+//   },
+//   deviceRssi: {
+//     fontSize: 12,
+//     color: '#999',
+//   },
+//   tapText: {
+//     fontSize: 12,
+//     color: '#007AFF',
+//     fontStyle: 'italic',
+//   },
+//   connectionInfo: {
+//     backgroundColor: '#fff',
+//     padding: 20,
+//     borderRadius: 8,
+//     elevation: 2,
+//   },
+//   infoTitle: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     marginBottom: 10,
+//     color: '#2c3e50',
+//   },
+//   infoText: {
+//     fontSize: 14,
+//     color: '#666',
+//     marginBottom: 5,
+//     lineHeight: 20,
+//   },
+// });
+
+// export default SimpleBLEComponent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  FlatList, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
   StyleSheet,
-  ActivityIndicator 
+  Platform,
+  Dimensions,
 } from 'react-native';
-// import { useBLEStore } from './useBLEStore'; // Import your store
+import { Feather } from '@expo/vector-icons';
+
 import { useBLEStore } from '../store/augBleStore';
-// import 
+
+const { width, height } = Dimensions.get('window');
 
 const SimpleBLEComponent = () => {
-  // Get state and actions from the store
   const {
     foundDevices,
     isScanning,
@@ -22,338 +423,911 @@ const SimpleBLEComponent = () => {
     data,
     scanForDevices,
     connectToDevice,
-    disconnect
+    disconnect,
   } = useBLEStore();
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // if (isConnected) {
-      //   disconnect();
-      // }
+      // cleanup if needed
     };
   }, []);
 
-  // Render device item
   const renderDevice = ({ item }) => (
     <TouchableOpacity
       style={styles.deviceItem}
       onPress={() => connectToDevice(item)}
       disabled={isConnected || isScanning}
     >
-      <View style={styles.deviceInfo}>
+      <View style={styles.deviceInfoContainer}>
         <Text style={styles.deviceName}>
           {item.name || item.localName || 'Unknown Device'}
         </Text>
         <Text style={styles.deviceId}>{item.id}</Text>
-        <Text style={styles.deviceRssi}>
-          Signal: {item.rssi ? `${item.rssi} dBm` : 'Unknown'}
-        </Text>
+        <Text>{item.rssi ? `${item.rssi} dBm` : 'Unknown RSSI'}</Text>
       </View>
-      <Text style={styles.tapText}>Tap to connect</Text>
+      <Feather name="bluetooth" size={20} color="#4B6CB7" />
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <Text style={styles.title}>BLE Device Manager</Text>
+    <View style={styles.safeArea}>
+      <View style={styles.headerGradient}>
+        <Text style={styles.headerText}>Pair Device</Text>
+      </View>
 
-      {/* Connection Status */}
-      <View style={[
-        styles.statusCard,
-        isConnected ? styles.connectedCard : styles.disconnectedCard
-      ]}>
-        <Text style={styles.statusTitle}>Connection Status</Text>
-        <Text style={styles.statusText}>
+      {/* Status */}
+      <View style={[styles.card, styles.cardElevated]}>
+        <Text style={styles.cardTitle}>Connection Status</Text>
+        <Text>
           {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
         </Text>
         {isConnected && connectedDevice && (
-          <Text style={styles.connectedDeviceText}>
-            📱 {connectedDevice.name || connectedDevice.id}
-          </Text>
+          <Text>📱 {connectedDevice.name || connectedDevice.id}</Text>
         )}
-        {error && (
-          <Text style={styles.errorText}>❌ {error}</Text>
-        )}
+        {error && <Text style={{ color: 'red' }}>❌ {error}</Text>}
       </View>
 
-      {/* Data Display */}
+      {/* Data */}
       {data && (
-        <View style={styles.dataCard}>
-          <Text style={styles.dataTitle}>Received Data</Text>
-          <Text style={styles.dataText}>
-            {JSON.stringify(data, null, 2)}
-          </Text>
+        <View style={[styles.card, styles.cardElevated]}>
+          <Text style={styles.cardTitle}>Received Data</Text>
+          <Text>{JSON.stringify(data, null, 2)}</Text>
         </View>
       )}
 
-      {/* Control Buttons */}
-      <View style={styles.buttonContainer}>
+      {/* Controls */}
+      <View style={styles.modalFooter}>
         {!isConnected ? (
           <TouchableOpacity
-            style={[
-              styles.button,
-              styles.scanButton,
-              isScanning && styles.disabledButton
-            ]}
+            style={[styles.modalButton, styles.primaryButton]}
             onPress={scanForDevices}
             disabled={isScanning}
           >
             {isScanning ? (
-              <View style={styles.scanningContainer}>
-                <ActivityIndicator color="white" size="small" />
-                <Text style={styles.buttonText}>Scanning...</Text>
-              </View>
+              <>
+                <ActivityIndicator color="white" />
+                <Text style={{ color: 'white', marginLeft: 8 }}>Scanning...</Text>
+              </>
             ) : (
-              <Text style={styles.buttonText}>🔍 Scan for Devices</Text>
+              <Text style={{ color: 'white' }}>🔍 Scan for Devices</Text>
             )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.button, styles.disconnectButton]}
+            style={[styles.modalButton, { backgroundColor: '#FF3B30' }]}
             onPress={disconnect}
           >
-            <Text style={styles.buttonText}>🔌 Disconnect</Text>
+            <Text style={{ color: 'white' }}>🔌 Disconnect</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Device List */}
+      {/* Devices */}
       {!isConnected && (
-        <View style={styles.deviceListContainer}>
-          <Text style={styles.deviceListTitle}>
+        <View style={styles.devicesContainer}>
+          <Text style={styles.devicesFoundText}>
             Found Devices ({foundDevices.length})
           </Text>
-          
+
           {foundDevices.length === 0 && !isScanning && !error && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                🔍 No devices found yet
-              </Text>
-              <Text style={styles.emptySubText}>
+            <View style={styles.noDevicesContainer}>
+              <Text style={styles.noDevicesTitle}>🔍 No devices found yet</Text>
+              <Text style={styles.noDevicesSubtitle}>
                 Tap "Scan for Devices" to start searching
               </Text>
             </View>
           )}
 
           <FlatList
-            data={foundDevices} // should include all devices
+            data={foundDevices}
             keyExtractor={(item) => item.id}
             renderItem={renderDevice}
-            style={styles.deviceList}
-            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.deviceListContent}
           />
-        </View>
-      )}
-
-      {/* Connection Info */}
-      {isConnected && (
-        <View style={styles.connectionInfo}>
-          <Text style={styles.infoTitle}>Connection Details</Text>
-          <Text style={styles.infoText}>
-            • Device connected successfully
-          </Text>
-          <Text style={styles.infoText}>
-            • Listening for data...
-          </Text>
-          <Text style={styles.infoText}>
-            • Ready to send commands
-          </Text>
         </View>
       )}
     </View>
   );
 };
 
+// bring in your big style system here
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    // marginTop: Platform.OS === 'ios' ? 0 : 0,
+    // marginTop: 10,
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
+    marginBottom: Platform.OS === 'ios' ? 40 : 40,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 0,
+    backgroundColor: '#F5F7FB',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#2c3e50',
+  headerGradient: {
+    marginTop: Platform.OS === 'ios' ? -60 : -10,
+    paddingHorizontal: '6%',
+    paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.06,
+    paddingBottom: height * 0.02,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0,
+    shadowRadius: Platform.OS === 'ios' ? 20 : 0,
+    elevation: Platform.OS === 'android' ? 10 : 0,
   },
-  statusCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    elevation: 3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  connectedCard: {
-    backgroundColor: '#d4edda',
-    borderColor: '#28a745',
-    borderWidth: 1,
-  },
-  disconnectedCard: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#dc3545',
-    borderWidth: 1,
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#2c3e50',
-  },
-  statusText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  connectedDeviceText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#dc3545',
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  dataCard: {
-    backgroundColor: '#e3f2fd',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    borderColor: '#2196f3',
-    borderWidth: 1,
-  },
-  dataTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#1976d2',
-  },
-  dataText: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    color: '#333',
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 4,
-  },
-  buttonContainer: {
-    marginBottom: 20,
-  },
-  button: {
-    padding: 15,
-    borderRadius: 8,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  scanButton: {
-    backgroundColor: '#007AFF',
-  },
-  disconnectButton: {
-    backgroundColor: '#FF3B30',
-  },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  scanningContainer: {
+  headerSection: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '8%',
   },
-  buttonText: {
+  greetingText: {
+    fontSize: width * 0.045,
+    marginRight: '2%',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  headerText: {
+    fontSize: width * 0.055,
     color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 16,
-    marginLeft: 5,
+    marginTop: '1%',
   },
-  deviceListContainer: {
-    flex: 1,
-  },
-  deviceListTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#2c3e50',
-  },
-  emptyState: {
-    alignItems: 'center',
+  profileIcon: {
+    width: width * 0.1,
+    height: width * 0.1,
+    borderRadius: width * 0.05,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
-    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 5,
+  topActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: '-2%',
   },
-  emptySubText: {
-    fontSize: 14,
-    color: '#999',
+  actionCard: {
+    alignItems: 'center',
+    width: '30%',
+    paddingHorizontal: '2%',
+  },
+  actionIconContainer: {
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  actionIconShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  actionLabel: {
+    color: '#fff',
+    fontSize: width * 0.033,
     textAlign: 'center',
   },
-  deviceList: {
+  scrollView: {
     flex: 1,
   },
-  deviceItem: {
+  scrollContent: {
+    padding: '4%',
+    paddingBottom: '8%',
+  },
+  card: {
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 8,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderRadius: 16,
+    padding: '4%',
+    marginBottom: '4%',
+    overflow: 'hidden',
+  },
+  cardElevated: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: '4%',
   },
-  deviceInfo: {
+  cardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: width * 0.045,
+    color: '#2E3A59',
+    marginLeft: '2%',
+    fontWeight: '500',
+  },
+  timeText: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+  },
+  mealInputContainer: {
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    fontSize: width * 0.04,
+    color: '#333',
+    paddingVertical: 12,
+  },
+  foodDetailsContainer: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  foodDetailsText: {
+    fontSize: 16,
+    color: '#2E3A59',
+    fontWeight: '500',
+  },
+  calorieCalculation: {
+    fontSize: 14,
+    color: '#4B6CB7',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  mealButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  mealButton: {
+    borderRadius: 12,
+    padding: 14,
+    width: '48%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F5F7FB',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  saveButton: {
+    backgroundColor: '#4B6CB7',
+  },
+  mealButtonText: {
+    fontSize: width * 0.04,
+    fontWeight: '600',
+    color: '#2E3A59',
+  },
+  activityGradient: {
+    padding: '4%',
+    borderRadius: 16,
+  },
+  activityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  activityMetricCard: {
+    width: '48%',
+    borderRadius: 12,
+    padding: '4%',
+    marginBottom: '4%',
+    alignItems: 'center',
+  },
+  metricIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '4%',
+  },
+  metricValue: {
+    fontSize: width * 0.05,
+    color: '#2E3A59',
+    fontWeight: 'bold',
+  },
+  metricLabel: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+    marginBottom: '2%',
+  },
+  metricTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricTrendText: {
+    fontSize: width * 0.035,
+    marginLeft: 4,
+  },
+  progressCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(74,108,183,0.2)',
+  },
+  progressCircleText: {
+    fontSize: width * 0.035,
+    color: '#4B6CB7',
+    fontWeight: 'bold',
+  },
+  activityProgressContainer: {
+    marginTop: '4%',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    width: '100%',
+  },
+  activityProgressText: {
+    fontSize: width * 0.04,
+    color: '#2E3A59',
+    marginBottom: '2%',
+  },
+  fullProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: '2%',
+  },
+  activityProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  activityProgressPercent: {
+    fontSize: width * 0.035,
+    color: '#5A6A8C',
+  },
+  waterCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  waterInfo: {
+    flex: 1,
+  },
+  intakeRow: {
+    marginBottom: '4%',
+  },
+  intakeText: {
+    color: '#5A6A8C',
+    fontSize: width * 0.04,
+  },
+  intakeBold: {
+    fontSize: width * 0.05,
+    color: '#2E3A59',
+    fontWeight: 'bold',
+  },
+  recentSessionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+  recentSessionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(123, 31, 162, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  recentSessionDetails: {
+    flex: 1,
+  },
+  recentSessionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2E3A59',
+  },
+  recentSessionStats: {
+    fontSize: 14,
+    color: '#5A6A8C',
+    marginTop: 4,
+  },
+  recentSessionTime: {
+    fontSize: 12,
+    color: '#9AA5B9',
+    alignSelf: 'flex-start',
+  },
+  stepProgressContainer: {
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+    padding: '4%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+  stepProgressText: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  stepCount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2E3A59',
+  },
+  stepGoal: {
+    fontSize: 16,
+    color: '#5A6A8C',
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressPercentage: {
+    fontSize: 12,
+    color: '#4B6CB7',
+    fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: '#4B6CB7',
+    borderRadius: 24,
+    paddingVertical: '2.5%',
+    paddingHorizontal: '5%',
+    alignSelf: 'flex-start',
+    shadowColor: '#1A2980',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: width * 0.035,
+    fontWeight: '500',
+  },
+  waterBottleContainer: {
+    marginLeft: '4%',
+    alignItems: 'center',
+  },
+  waterBottle: {
+    width: width * 0.15,
+    height: width * 0.25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F5F7FB',
+    justifyContent: 'flex-end',
+  },
+  waterFill: {
+    backgroundColor: '#4B6CB7',
+    width: '100%',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2E3A59',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  skatingTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  skatingTypeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2E3A59',
+    flex: 1,
+    marginLeft: 12,
+  },
+  cancelButton: {
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  cancelText: {
+    color: '#2E3A59',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  pairingModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  pairingModalContent: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 20,
+    top: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    padding: 4,
+  },
+  modalBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    flex: 1,
+  },
+  scanningContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFF',
+  },
+  scanningAnimation: {
+    width: 150,
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  bluetoothIcon: {
+    position: 'absolute',
+  },
+  scanningTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2E3A59',
+    marginBottom: 24,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  requirementsContainer: {
+    width: '100%',
+    marginTop: 16,
+    paddingHorizontal: 40,
+  },
+  requirementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 12,
+  },
+  requirementText: {
+    fontSize: 14,
+    color: '#2E3A59',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  devicesContainer: {
+    paddingVertical: 16,
+    backgroundColor: '#F8FAFF',
+  },
+  devicesFoundText: {
+    fontSize: 12,
+    color: '#5A6A8C',
+    marginBottom: 12,
+    paddingHorizontal: 24,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  deviceList: {
+    maxHeight: 300,
+  },
+  deviceListContent: {
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#4B6CB7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  deviceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  deviceInfoContainer: {
     flex: 1,
   },
   deviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#2E3A59',
     marginBottom: 4,
   },
   deviceId: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    color: '#9AA5B9',
+    fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier New',
   },
-  deviceRssi: {
-    fontSize: 12,
-    color: '#999',
+  noDevicesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 40,
   },
-  tapText: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontStyle: 'italic',
+  noDevicesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2E3A59',
+    marginBottom: 8,
   },
-  connectionInfo: {
+  noDevicesSubtitle: {
+    fontSize: 14,
+    color: '#5A6A8C',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: 'white',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  primaryButton: {
+    backgroundColor: '#4B6CB7',
+    marginLeft: 8,
+    shadowColor: '#4B6CB7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  secondaryButton: {
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  secondaryButtonText: {
+    color: '#4B6CB7',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  deviceItemConnecting: {
+    backgroundColor: '#F0F4FF',
+  },
+  deviceNameConnecting: {
+    color: '#5A6A8C',
+  },
+  mealModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  mealModalContainer: {
+    width: '90%',
     backgroundColor: '#fff',
+    borderRadius: 20,
     padding: 20,
-    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  mealModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2E3A59',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  mealModalSubtitle: {
+    fontSize: 14,
+    color: '#9AA5B9',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  mealOptionsContainer: {
+    marginBottom: 16,
+  },
+  mealOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
-  infoTitle: {
+  breakfastOption: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  lunchOption: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  snackOption: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#9C27B0',
+  },
+  dinnerOption: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  mealOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mealIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  breakfastIconBg: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+  },
+  lunchIconBg: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  snackIconBg: {
+    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+  },
+  dinnerIconBg: {
+    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+  },
+  mealOptionText: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
-    color: '#2c3e50',
+    color: '#2E3A59',
   },
-  infoText: {
+  mealModalCancelButton: {
+    backgroundColor: '#F5F7FB',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  mealModalCancelText: {
+    color: '#5A6A8C',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: '30%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 1000,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    marginTop: 4,
+  },
+  suggestionsList: {
+    padding: 8,
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  suggestionCalories: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 5,
-    lineHeight: 20,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginLeft: 8,
   },
 });
 

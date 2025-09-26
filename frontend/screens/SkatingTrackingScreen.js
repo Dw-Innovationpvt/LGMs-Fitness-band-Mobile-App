@@ -396,6 +396,7 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
         </View>
 
         {/* Controls Section */}
+        {/* {true && ( */}
         {isConnected && (
           <View style={styles.card}>
             <View>
@@ -472,7 +473,8 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
         )}
 
         {/* Stats Section */}
-        {isConnected && (
+        {/* {true && ( */}
+         {isConnected && ( 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Session Metrics</Text>
             <View style={styles.statsGrid}>
@@ -488,7 +490,7 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
                 <Text style={styles.statLabel}>Calories</Text>
               </View>
 
-              {renderSecondaryMetrics()}
+              {/* {renderSecondaryMetrics()} */}
             </View>
           </View>
         )}
