@@ -4,6 +4,7 @@ import { API_URL } from "../constants/api";
 import axios from 'axios';
 import api from './api'; // Import the axios instance
 
+
 export const useAuthStore = create((set) => ({
   user: null,
   token: null,

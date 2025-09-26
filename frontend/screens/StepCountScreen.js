@@ -16,9 +16,12 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
 // import { useBLEStore } from './components/bleStore';
-
 import { useBLEStore } from '../store/augBleStore';
 import { useCaloriesStore } from '../store/caloriesStore';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SKATING_MODE_KEY } from '../constants/storageKeys';
+
 
 const { width } = Dimensions.get('window');
 
@@ -62,9 +65,26 @@ const StepCountScreen = ({ navigation }) => {
   const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
   const calories = Math.round(distanceInKm * metValue * 70 / 1.6); // Assuming 70kg person
 
+  const print = async () => { 
+    try {
+      const value = await AsyncStorage.getItem(SKATING_MODE_KEY);
+      console.log(value, 'printtttttttttttttttttttttttt', '     ', value);
+      if(value !== null) {
+        // value previously stored
+      }
+    } catch(e) {
+      // error reading value
+      console.error("Failed to fetch mode from AsyncStorage:", e);
+    }
+    // return value;
+  }
   // Set mode when component mounts
   useEffect(() => {
-    sendCommand('SET_MODE STEP_COUNTING');
+    print();
+    // console.log(print(),'print function call in step count screen');
+    // console.log(SKATING_MODE_KEY,'skating mode key in step count screen');
+    // console.log('Setting mode to STEP_COUNTING');
+    // sendCommand('SET_MODE STEP_COUNTING');
     // return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
 

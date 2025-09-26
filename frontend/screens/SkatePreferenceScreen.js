@@ -25,7 +25,7 @@ const SkatePreferenceScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     // Reset wheel diameter when skate type changes
-    console.log('Inside skate preference screen, 28 for set check setup true')
+    console.log('Inside skatePreferenceScreen, 28 for set check setup true')
     console.log(route.params)
     setWheelDiameter('');
     setCustomDiameter('');

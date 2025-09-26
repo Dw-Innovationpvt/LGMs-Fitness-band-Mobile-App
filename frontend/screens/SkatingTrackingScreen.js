@@ -15,12 +15,16 @@ import {
   Platform,
   PermissionsAndroid
 } from 'react-native';
+
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 // import { useBLEStore } from '../store/bleStore';
 // import { useBLEStore } from './components/bleStore';
 import { useBLEStore } from '../store/augBleStore';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SKATING_MODE_KEY } from '../constants/storageKeys';
 
 const { width } = Dimensions.get('window');
 
@@ -57,7 +61,15 @@ const speed = bleData?.speed || 0;
 const strides = bleData?.strideCount || 0;      // Changed from strides to strideCount
 const laps = bleData?.laps || 0;
 const calories = Math.floor(distance * 75);     // Same calorie calculation
-
+  
+  const helperSetup = async () => {
+    try {
+      await AsyncStorage.setItem(SKATING_MODE_KEY, skatingType);
+      console.log('Saved skatingType in helperSetup:', skatingType);
+    } catch (error) {
+      console.error("Failed to save mode in helperSetup:", error);
+    }
+  } 
   // Skating type configurations
   const skatingConfig = {
     speed: {
@@ -96,6 +108,30 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
   //   call = 1;
   //   }
   //   }
+  // useEffect(() => {
+  //   console.log('inside skatingTrrackingScreen -ype useEffect');
+
+  //   return () => {
+  //     // console.log('cleanup skatingType useEffect');
+  //     console.log('current skatingType:', skatingType);
+  //     AsyncStorage.setItem(SKATING_MODE_KEY, skatingType)
+  //       .catch(error => console.error("Failed to save mode on unmount:", error));
+  //     console.log('Saved skatingType on unmount:', skatingType);
+  //     // console.log(const storedMode = await AsyncStorage.getItem(SKATING_MODE_KEY);)
+  //     // const storedMode = await AsyncStorage.getItem(SKATING_MODE_KEY);
+  //   }
+  // },[]);
+
+  useEffect( () => {
+    // const SKATING_MODE_KEY = '@skatingApp:mode';
+      //  await AsyncStorage.setItem(SKATING_MODE_KEY, skatingType);
+       console.log('Saved skatingType on mount:', skatingType);
+       console.log('local sotrage saved skatingType on mount:', skatingType);
+       console.log('local sotrage saved skatis working 12121:', skatingType);
+       helperSetup();
+      //  const storedMode = await AsyncStorage.getItem(SKATING_MODE_KEY);
+      //  console.log(storedMode, 'storedMode 123');
+  }, [skatingType]);
 
   useEffect(() => {
     // if (route.params.skatingType === 'speed') {

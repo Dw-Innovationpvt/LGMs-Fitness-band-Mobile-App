@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from "@react-navigation/native"; // <-- make sure this is here
+import { useCallback } from "react";
+
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator,
   FlatList, Dimensions, Modal, SafeAreaView, TextInput, Linking
@@ -15,6 +18,8 @@ import { useCaloriesStore } from '../store/caloriesStore';
 import foodDatabase from '../constants/foodDatabase';
 // import { DrawerActions } from '@react-navigation/native';
 import { format } from 'date-fns'; // Added for date formattingrr
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SKATING_MODE_KEY } from '../constants/storageKeys';
 
 const { width, height } = Dimensions.get('window');
 
@@ -67,6 +72,22 @@ const HomeScreen = ({ navigation }) => {
     connectedDevice
   } = useBLEStore();
 
+
+
+  //   const loadMode = async () => {
+  //   try {
+  //     const storedMode = await AsyncStorage.getItem(SKATING_MODE_KEY);
+  //     if (storedMode !== null) {
+  //       // setCurrentMode(storedMode);
+  //       setPreviousStoredMode(storedMode);
+  //       console.log(storedMode, 'storedMode 456 from async'); 
+  //     }
+  //   } catch (e) {
+  //     console.error('Failed to load mode from AsyncStorage', e);
+  //   }
+  // };
+
+
   // Initialize skating data
   const [skatingData, setSkatingData] = useState({
     speed: 0,
@@ -85,7 +106,7 @@ const HomeScreen = ({ navigation }) => {
     speed: data.speed || 0,
     mode: data.mode
   } : {
-    steps: data.stepCount || 0,
+    steps: 0,
     distance: 0,
     strideCount: 0,
     speed: 0,
@@ -106,6 +127,10 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [data, isConnected]);
 
+// useEffect(() => {
+//     loadMode();
+//   }, [previousStoredMode]);
+
   useEffect(() => {
     fetchStepGoal();
     fetchBurnTarget();
@@ -123,6 +148,7 @@ const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredFoods, setFilteredFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
+    const [previousStoredMode, updatePreviousStoreMode] = useState(null);
 
   const [dailyData, setDailyData] = useState({
     meals: [
@@ -143,6 +169,10 @@ const HomeScreen = ({ navigation }) => {
     ],
   });
 
+
+    // const previousStoredMode = async () => await AsyncStorage.getItem(SKATING_MODE_KEY);
+    // console.log(previousStoredMode, 'previousStoredMode from async')/
+
   useEffect(() => {
     const dateString = format(new Date(), 'yyyy-MM-dd'); // Fetch for current date
     fetchTodayTotal(dateString); // realted to water store
@@ -157,7 +187,7 @@ const HomeScreen = ({ navigation }) => {
     //     sendCommand('SET_MODE SKATING_SPEED');
     //   }
     // };
-    
+
   }, [isConnected]);
 
   useEffect(() => {
@@ -181,6 +211,27 @@ const HomeScreen = ({ navigation }) => {
     fetchCaloriesEaten();
     fetchMealTargetStatus();
   }, [mealInputVisible, totalCaloriesEaten]);
+
+const print = async () => {
+  try {
+    const value = await AsyncStorage.getItem(SKATING_MODE_KEY);
+    console.log(value, "printtttttttttttttttttttttttt");
+
+    if (value !== null) {
+      // Do something with value
+    }
+    updatePreviousStoreMode(value);
+  } catch (e) {
+    console.error("Failed to fetch mode from AsyncStorage:", e);
+  }
+};
+
+useFocusEffect(
+  useCallback(() => {
+    print();
+  }, [])
+); 
+
 
   const handleScanDevices = async () => {
     setPairingModalVisible(true);
@@ -521,10 +572,19 @@ const totalProgress = calculateTotalProgress(dailyGoals);
 
         <View style={styles.recentSessionContainer}>
           <View style={styles.recentSessionIcon}>
-            <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
+            {previousStoredMode === 'speed' ? (
+              <MaterialCommunityIcons name="speedometer" size={24} color="#7B1FA2" />
+            ) : (
+              <MaterialCommunityIcons name="map-marker-distance" size={24} color="#2196F3" />
+              )}
           </View>
           <View style={styles.recentSessionDetails}>
-            <Text style={styles.recentSessionTitle}>Speed Skating</Text>
+                        {previousStoredMode === 'speed' ? (
+                          <Text style={styles.recentSessionTitle}>Speed Skating</Text>
+            ) : (
+            <Text style={styles.recentSessionTitle}>Distance Skating</Text>
+              )}
+
             {isConnected ? (
               <Text style={styles.recentSessionStats}>
                 {skatingData.speed ?? 0}km/h • {skatingData.strideCount ?? 0} strides
@@ -533,7 +593,7 @@ const totalProgress = calculateTotalProgress(dailyGoals);
               <Text style={styles.recentSessionStats}>Connect device to track skating</Text>
             )}
           </View>
-          <Text style={styles.recentSessionTime}>Today, 07:30 AM</Text>
+          <Text style={styles.recentSessionTime}>{"  "}</Text>
         </View>
       </View>
 
