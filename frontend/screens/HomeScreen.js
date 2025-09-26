@@ -75,6 +75,8 @@ const HomeScreen = ({ navigation }) => {
     mode: 'N/A'
   });
 
+  // const step_x = 
+
   // steps related data
   const stepData = data && data.mode === 'S' ? {
     steps: data.stepCount || 0,
@@ -83,7 +85,7 @@ const HomeScreen = ({ navigation }) => {
     speed: data.speed || 0,
     mode: data.mode
   } : {
-    steps: 0,
+    steps: data.stepCount || 0,
     distance: 0,
     strideCount: 0,
     speed: 0,
@@ -146,14 +148,16 @@ const HomeScreen = ({ navigation }) => {
     fetchTodayTotal(dateString); // realted to water store
     fetchTarget();
     
-    if (isConnected) {
-      sendCommand('SET_MODE STEP_COUNTING');
-    }
-    return () => {
-      if (isConnected) {
-        sendCommand('SET_MODE SKATING_SPEED');
-      }
-    };
+    // if (isConnected) {
+
+    //   sendCommand('SET_MODE STEP_COUNTING');
+    // }
+    // return () => {
+    //   if (isConnected) {
+    //     sendCommand('SET_MODE SKATING_SPEED');
+    //   }
+    // };
+    
   }, [isConnected]);
 
   useEffect(() => {

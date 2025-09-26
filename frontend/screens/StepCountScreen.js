@@ -65,7 +65,7 @@ const StepCountScreen = ({ navigation }) => {
   // Set mode when component mounts
   useEffect(() => {
     sendCommand('SET_MODE STEP_COUNTING');
-    return () => sendCommand('SET_MODE SKATING_SPEED');
+    // return () => sendCommand('SET_MODE SKATING_SPEED');
   }, []);
 
   // Chart data
