@@ -386,7 +386,8 @@ const calories = Math.floor(distance * 75);     // Same calorie calculation
           <Feather name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{config.title}</Text>
-        <TouchableOpacity onPress={handleDisconnect}>
+        {/* <TouchableOpacity onPress={handleDisconnect}> */}
+        <TouchableOpacity onPress={() => {}}>
           <MaterialCommunityIcons 
             name={isConnected ? "bluetooth-connected" : "bluetooth-off"} 
             size={24} 

@@ -572,4 +572,4 @@ export const useBLEStore = create((set, get) => ({
       console.log('Disconnected successfully');
     }
   }
-}));3
+}));
