@@ -151,8 +151,8 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
-      <Tab.Screen name="SpeedSk" component={SpeedSk} />
-      <Tab.Screen name="DistanceSk" component={DistanceSkatingScreen} />
+      {/* <Tab.Screen name="SpeedSk" component={SpeedSk} /> */}
+      {/* <Tab.Screen name="DistanceSk" component={DistanceSkatingScreen} /> */}
 
       <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
       <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} />
