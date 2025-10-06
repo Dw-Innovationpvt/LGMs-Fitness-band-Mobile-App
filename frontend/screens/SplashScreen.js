@@ -37,7 +37,9 @@ const SplashScreen = ({ navigation }) => {
 
     return (
         <ImageBackground
-            source={imageURL}
+            // source={imageURL}
+            source={require('../assets/88.png')}
+            // source={require('../assets/splash-lgm.png')}
             style={styles.background}
             resizeMode="cover"
         >

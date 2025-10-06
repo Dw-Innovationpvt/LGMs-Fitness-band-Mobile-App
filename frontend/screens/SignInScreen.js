@@ -8,6 +8,7 @@ import {
     ImageBackground,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
     ScrollView,
     useWindowDimensions,
     Alert
@@ -27,6 +28,7 @@ const SignInScreen = ({ navigation, route }) => {
      const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [onSignInPressLoading, setOnSignInPressLoading] = useState(false);
 
       // const { isLoading, login, isCheckingAuth, nothingtoworry } = useAuthStore();
       const { nothingtoworry, login, isLoading, checkSetup } = useAuthStore();
@@ -49,7 +51,8 @@ const SignInScreen = ({ navigation, route }) => {
 
   // Get setIsSignedIn from route params
 const onSignInPress = async () => {
-    navigation.replace('Loading');
+    
+    setOnSignInPressLoading(true);
     
     const result = await login(email, password);
 
@@ -58,6 +61,9 @@ const onSignInPress = async () => {
         navigation.replace('SignIn'); // back to signin on failure
         return;
     }
+    else {
+
+
     
     // if (result.user.hasCompletedSetup) {
     // const s = await checkSetup();
@@ -75,6 +81,8 @@ const onSignInPress = async () => {
         navigation.replace('Main');
     } else {
         navigation.replace('BMI');
+    }
+    
     }
 };
 
@@ -150,8 +158,8 @@ const onSignInPress = async () => {
 
     return (
         <ImageBackground
-            // source={require('../assets/88.png')}
-            source={imageURL}
+            source={require('../assets/88.png')}
+            // source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >
@@ -195,7 +203,13 @@ const onSignInPress = async () => {
                         </TouchableOpacity>
 
                         <TouchableOpacity style={[styles.button, { backgroundColor: colors.buttonBg }]} onPress={onSignInPress}>
-                            <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign In</Text>
+                            {
+                                (isLoading || onSignInPressLoading) ? (
+                                    <ActivityIndicator size="small" color={colors.buttonText} />
+                                ) : <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign In</Text>
+                            }
+
+
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>

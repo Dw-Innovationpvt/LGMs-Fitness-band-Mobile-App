@@ -561,8 +561,8 @@ const ChallengesScreen = ({ navigation }) => {
         ) : (
           <View style={styles.emptyState}>
             <Image
-              // source={require('../assets/88.png')}
-              source={imageURL}
+              source={require('../assets/88.png')}
+              // source={imageURL}
               style={styles.emptyImage}
             />
             <Text style={styles.emptyText}>

@@ -18,6 +18,7 @@ import goalRoutes from './routes/goalRoutes.js';
 import targetsRoutes from './routes/targetsRoutes.js';
 import skatePrefRoutes from './routes/skatePrefRoutes.js';
 
+import stepCountRoutes from './routes/stepCountRoutes.js';
 // import { createGoalForToday } from "./controllers/goalController.js";
 // import { createGoalForToday } from "./controllers/goalController.js";
 
@@ -52,6 +53,8 @@ app.use('/api/exercises', exerciseRoutes);
 app.use('/api/meals', mealsRoutes);
 // steps count
 app.use('/api/steps', stepsRoutes);
+
+app.use('/api/stepcount', stepCountRoutes);
 
 // for bmi setup making true... bmiSCreen frontedn
 app.use('/api/bmi', bmiRoutes);

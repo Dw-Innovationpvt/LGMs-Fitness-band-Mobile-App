@@ -17,6 +17,11 @@ import WeeklyGoalsScreen from '../screens/WeeklyGoalsScreen';
 
 
 import SpeedSk from '../temp/SpeedSk';
+import DistanceSkatingScreen from '../temp/DistanceSk';
+
+import DistanceSkatingScreenSk from '../temp/DistanceSkatingScreenSk';
+import SpeedSkatingScreenSk from '../temp/SpeedSkatingScreenSK';
+
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
 
@@ -147,6 +152,11 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Daily Activities" component={DailyActivitiesScreen} />
       <Tab.Screen name="SpeedSk" component={SpeedSk} />
+      <Tab.Screen name="DistanceSk" component={DistanceSkatingScreen} />
+
+      <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
+      <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} />
+
       {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
       {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}

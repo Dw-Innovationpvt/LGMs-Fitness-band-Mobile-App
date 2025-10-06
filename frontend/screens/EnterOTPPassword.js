@@ -103,8 +103,8 @@ const EnterOTPPassword = ({ navigation }) => {
 
     return (
         <ImageBackground
-            // source={require('../assets/88.png')}
-            source={imageURL}
+            source={require('../assets/88.png')}
+            // source={imageURL}
             style={styles.background}
             resizeMode="cover"
         >
