@@ -37,16 +37,44 @@ function fixIncompleteJson(jsonString) {
   return fixedJson;
 }
 
-// Format BLE data to a consistent structure
+// Map mode abbreviations to display names
+const modeMap = {
+  'S': 'Step Counting',
+  'SS': 'Speed Skating', 
+  'SD': 'Distance Skating'
+};
+
+// Format BLE data to a consistent structure with new speed metrics
 function formatBLEData(data) {
   if (!data) return null;
   
   console.log('Original BLE data received:', JSON.stringify(data));
   
-  // Keep the original data as is - don't try to normalize field names
-  const formattedData = { ...data };
+  // Create formatted data with proper typing
+  const formattedData = {
+    // Mode information
+    mode: data.mode || 'S',
+    modeDisplay: modeMap[data.mode] || 'Step Counting',
+    
+    // Step counting data
+    stepCount: parseInt(data.stepCount) || 0,
+    walkingDistance: parseFloat(data.walkingDistance) || 0,
+    
+    // Skating data
+    strideCount: parseInt(data.strideCount) || 0,
+    skatingDistance: parseFloat(data.skatingDistance) || 0,
+    laps: parseInt(data.laps) || 0,
+    
+    // New speed metrics from hardware
+    speed: parseFloat(data.speed) || 0,        // Current speed in km/h
+    maxSpeed: parseFloat(data.maxSpeed) || 0,  // Maximum speed in km/h
+    minSpeed: parseFloat(data.minSpeed) || 0,  // Minimum speed in km/h
+    
+    // Raw data for debugging
+    rawData: data
+  };
   
-  console.log('Returning BLE data:', JSON.stringify(formattedData));
+  console.log('Formatted BLE data:', JSON.stringify(formattedData));
   return formattedData;
 }
 
@@ -147,7 +175,16 @@ export const useBLEStore = create((set, get) => ({
   isScanning: false,
   error: null,
 
-  skatingMode: null,
+  // Updated mode tracking based on new hardware codes
+  currentMode: 'S', // 'S', 'SS', 'SD'
+  sessionData: {
+    startTime: null,
+    totalSteps: 0,
+    totalSkatingDistance: 0,
+    totalWalkingDistance: 0,
+    maxSpeed: 0,
+    sessionDuration: 0
+  },
 
   // Scan for BLE devices
   scanForDevices: async () => {
@@ -267,7 +304,15 @@ export const useBLEStore = create((set, get) => ({
       set({ 
         connectedDevice: deviceConnection, 
         isConnected: true,
-        error: null 
+        error: null,
+        sessionData: {
+          startTime: new Date(),
+          totalSteps: 0,
+          totalSkatingDistance: 0,
+          totalWalkingDistance: 0,
+          maxSpeed: 0,
+          sessionDuration: 0
+        }
       });
       
       // Discover services and characteristics
@@ -369,7 +414,21 @@ export const useBLEStore = create((set, get) => ({
                 const parsed = JSON.parse(json);
                 console.log('✅ Successfully parsed JSON data:', parsed);
                 const formattedData = formatBLEData(parsed);
-                set({ data: formattedData });
+                
+                // Update session data with new metrics
+                set((state) => ({
+                  data: formattedData,
+                  currentMode: formattedData.mode,
+                  bandActive: true,
+                  sessionData: {
+                    ...state.sessionData,
+                    totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
+                    totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
+                    totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
+                    maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
+                    sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000)
+                  }
+                }));
               } catch (err) {
                 console.warn('⚠ JSON parse error, trying to fix:', err);
                 
@@ -381,7 +440,11 @@ export const useBLEStore = create((set, get) => ({
                     const parsed = JSON.parse(fixedJson);
                     console.log('✅ Successfully parsed after fixing JSON');
                     const formattedData = formatBLEData(parsed);
-                    set({ data: formattedData });
+                    set({ 
+                      data: formattedData,
+                      currentMode: formattedData.mode,
+                      bandActive: true 
+                    });
                     return;
                   }
                 } catch (fixErr) {
@@ -396,7 +459,11 @@ export const useBLEStore = create((set, get) => ({
                     const parsed = JSON.parse(jsonMatch[0]);
                     console.log('✅ Successfully parsed extracted JSON');
                     const formattedData = formatBLEData(parsed);
-                    set({ data: formattedData });
+                    set({ 
+                      data: formattedData,
+                      currentMode: formattedData.mode,
+                      bandActive: true 
+                    });
                     return;
                   }
                 } catch (extractErr) {
@@ -424,7 +491,7 @@ export const useBLEStore = create((set, get) => ({
           await sendCommand('TURN_ON');
           console.log('✅ Turn on command sent after connection');
           
-          // Wait a moment then send step counting mode
+          // Wait a moment then send step counting mode (default)
           setTimeout(async () => {
             console.log('Sending command: SET_MODE STEP_COUNTING');
             await sendCommand('SET_MODE STEP_COUNTING');
@@ -449,7 +516,8 @@ export const useBLEStore = create((set, get) => ({
           connectedDevice: null, 
           characteristic: null,
           bandActive: false,
-          data: null
+          data: null,
+          currentMode: 'S'
         });
       });
 
@@ -518,35 +586,92 @@ export const useBLEStore = create((set, get) => ({
   toggleBand: async () => {
     const { bandActive, sendCommand } = get();
     const success = await sendCommand(bandActive ? 'TURN_OFF' : 'TURN_ON');
-    if (success) set({ bandActive: !bandActive });
-    return success;
-  },
-
-  // Activate Speed Skating Mode
-  activateSpeedSkating: async () => {
-    const success = await get().sendCommand('SET_MODE SKATING_SPEED');
     if (success) {
-      set({ skatingMode: 'speed' });
+      set({ 
+        bandActive: !bandActive,
+        sessionData: !bandActive ? {
+          startTime: new Date(),
+          totalSteps: 0,
+          totalSkatingDistance: 0,
+          totalWalkingDistance: 0,
+          maxSpeed: 0,
+          sessionDuration: 0
+        } : get().sessionData
+      });
     }
     return success;
   },
 
-  // Activate Distance Skating Mode
-  activateDistanceSkating: async () => {
-    const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
-    if (success) {
-      set({ skatingMode: 'distance' });
-    }
-    return success;
-  },
-
-  // Activate Step Counting Mode
-  activateStepCounting: async () => {
+  // Updated mode switching based on new hardware codes
+  setStepCountingMode: async () => {
     const success = await get().sendCommand('SET_MODE STEP_COUNTING');
     if (success) {
-      set({ skatingMode: 'step_counting' });
+      set({ currentMode: 'S' });
+      console.log('✅ Step counting mode activated');
     }
     return success;
+  },
+
+  setSpeedSkatingMode: async () => {
+    const success = await get().sendCommand('SET_MODE SKATING_SPEED');
+    if (success) {
+      set({ currentMode: 'SS' });
+      console.log('✅ Speed skating mode activated');
+    }
+    return success;
+  },
+
+  setDistanceSkatingMode: async () => {
+    const success = await get().sendCommand('SET_MODE SKATING_DISTANCE');
+    if (success) {
+      set({ currentMode: 'SD' });
+      console.log('✅ Distance skating mode activated');
+    }
+    return success;
+  },
+
+  // Configuration commands
+  setSkateConfig: async (wheelDiameterMM, trackLengthM) => {
+    const cmd = `SET_CONFIG SKATE ${wheelDiameterMM} ${trackLengthM}`;
+    return await get().sendCommand(cmd);
+  },
+
+  // Session management
+  startNewSession: () => {
+    set({
+      sessionData: {
+        startTime: new Date(),
+        totalSteps: 0,
+        totalSkatingDistance: 0,
+        totalWalkingDistance: 0,
+        maxSpeed: 0,
+        sessionDuration: 0
+      },
+      data: null
+    });
+  },
+
+  // Get formatted session summary for backend submission
+  getSessionSummary: () => {
+    const { sessionData, data, currentMode } = get();
+    
+    return {
+      mode: currentMode,
+      startTime: sessionData.startTime,
+      endTime: new Date(),
+      duration: sessionData.sessionDuration,
+      stepCount: data?.stepCount || 0,
+      walkingDistance: data?.walkingDistance || 0,
+      strideCount: data?.strideCount || 0,
+      skatingDistance: data?.skatingDistance || 0,
+      speedData: {
+        currentSpeed: data?.speed || 0,
+        maxSpeed: data?.maxSpeed || 0,
+        minSpeed: data?.minSpeed || 0,
+        averageSpeed: data?.speed || 0 // Using current speed as average for simplicity
+      },
+      laps: data?.laps || 0
+    };
   },
 
   disconnect: async () => {
@@ -567,9 +692,38 @@ export const useBLEStore = create((set, get) => ({
         characteristic: null,
         data: null,
         error: null,
-        skatingMode: null
+        currentMode: 'S',
+        sessionData: {
+          startTime: null,
+          totalSteps: 0,
+          totalSkatingDistance: 0,
+          totalWalkingDistance: 0,
+          maxSpeed: 0,
+          sessionDuration: 0
+        }
       });
       console.log('Disconnected successfully');
     }
+  },
+
+  // Helper to get current mode display name
+  getCurrentModeDisplay: () => {
+    const { currentMode } = get();
+    return modeMap[currentMode] || 'Step Counting';
+  },
+
+  // Reset all data
+  resetData: () => {
+    set({
+      data: null,
+      sessionData: {
+        startTime: new Date(),
+        totalSteps: 0,
+        totalSkatingDistance: 0,
+        totalWalkingDistance: 0,
+        maxSpeed: 0,
+        sessionDuration: 0
+      }
+    });
   }
 }));

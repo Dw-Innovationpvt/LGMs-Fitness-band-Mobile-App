@@ -11,9 +11,8 @@ import { SKATING_MODE_KEY } from '../constants/storageKeys';
 
 const { width, height } = Dimensions.get('window');
 
-// Utility functions (you might want to move these to your utils file)
+// Utility functions
 const darkenColor = (color, percent) => {
-  // Simple color darkening utility
   const num = parseInt(color.replace("#", ""), 16);
   const amt = Math.round(2.55 * percent);
   const R = (num >> 16) - amt;
@@ -32,54 +31,116 @@ const formatTime = (seconds) => {
 };
 
 const DistanceSkatingScreenSk = ({ navigation }) => {
-  const { isConnected, data: bleData, sendCommand } = useBLEStore();
+  const { 
+    isConnected, 
+    data: bleData, 
+    sendCommand, 
+    setDistanceSkatingMode,
+    currentMode,
+    bandActive,
+    sessionData,
+    getCurrentModeDisplay,
+    startNewSession
+  } = useBLEStore();
+  
   const [isTracking, setIsTracking] = useState(false);
   const [duration, setDuration] = useState(0);
   const [animation] = useState(new Animated.Value(0));
   const timerRef = useRef(null);
 
+  // Updated data extraction from new BLE structure
   const distance = bleData?.skatingDistance || 0; // in meters
-  const speed = bleData?.speed || 0;
+  const speed = bleData?.speed || 0; // in km/h (from hardware)
+  const maxSpeed = bleData?.maxSpeed || 0; // new metric
+  const minSpeed = bleData?.minSpeed || 0; // new metric
+  const strideCount = bleData?.strideCount || 0;
+  const laps = bleData?.laps || 0;
+  
+  // Calculate derived metrics
   const calories = Math.floor(distance * 0.075);
+  const speedMs = speed / 3.6; // Convert km/h to m/s for display
+  const avgPace = speed > 0 ? (1000 / (speedMs * 60)).toFixed(2) : '--';
 
   useEffect(() => {
     AsyncStorage.setItem(SKATING_MODE_KEY, 'distance');
   }, []);
 
   useEffect(() => {
-    if (isConnected && !isTracking) startTracking();
-    return () => timerRef.current && clearInterval(timerRef.current);
-  }, [isConnected]);
+    // Auto-start tracking when connected and in distance skating mode
+    if (isConnected && currentMode === 'SD' && !isTracking) {
+      startTracking();
+    }
+    
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isConnected, currentMode]);
 
   useEffect(() => {
+    // Update duration timer when tracking
     if (isTracking) {
       timerRef.current = setInterval(() => setDuration(prev => prev + 1), 1000);
-    } else if (timerRef.current) clearInterval(timerRef.current);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [isTracking]);
 
   const startTracking = async () => {
     try {
+      // Use the new store methods
       await sendCommand('TURN_ON');
-      await sendCommand('SET_MODE SKATING_DISTANCE');
+      await setDistanceSkatingMode(); // This sends 'SET_MODE SKATING_DISTANCE'
+      
       setIsTracking(true);
+      startNewSession(); // Reset session data
       animatePulse();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      console.log('✅ Distance skating session started');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error.message || 'Failed to start tracking');
     }
   };
 
   const stopTracking = async () => {
-    await sendCommand('SET_MODE STEP_COUNTING');
-    setIsTracking(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      // Switch back to step counting mode when stopping
+      await sendCommand('SET_MODE STEP_COUNTING');
+      setIsTracking(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      console.log('✅ Distance skating session stopped');
+      
+      // Show session summary
+      Alert.alert(
+        'Session Complete',
+        `Distance: ${(distance / 1000).toFixed(2)} km\nDuration: ${formatTime(duration)}\nMax Speed: ${maxSpeed.toFixed(1)} km/h`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to stop tracking');
+    }
   };
 
   const animatePulse = () => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(animation, { toValue: 1, duration: 1000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(animation, { toValue: 0, duration: 1000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(animation, { 
+          toValue: 1, 
+          duration: 1000, 
+          easing: Easing.out(Easing.ease), 
+          useNativeDriver: true 
+        }),
+        Animated.timing(animation, { 
+          toValue: 0, 
+          duration: 1000, 
+          easing: Easing.out(Easing.ease), 
+          useNativeDriver: true 
+        }),
       ])
     ).start();
   };
@@ -92,6 +153,10 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
       })
     }]
   };
+
+  // Determine if we should show start or stop button
+  const shouldShowStartButton = !isTracking && currentMode !== 'SD';
+  const shouldShowStopButton = isTracking && currentMode === 'SD';
 
   return (
     <View style={styles.container}>
@@ -157,24 +222,32 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           )}
         </Animated.View>
 
-        {/* Control Button */}
-        {!isTracking ? (
+        {/* Control Buttons */}
+        {shouldShowStartButton && (
           <TouchableOpacity 
             style={styles.button} 
             onPress={startTracking}
             activeOpacity={0.8}
+            disabled={!isConnected}
           >
             <LinearGradient 
               colors={['#00B0FF', darkenColor('#00B0FF', 20)]} 
-              style={styles.gradientButton}
+              style={[
+                styles.gradientButton,
+                !isConnected && styles.disabledButton
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Feather name="play" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Start Session</Text>
+              <Text style={styles.buttonText}>
+                {isConnected ? 'Start Session' : 'Connect Device First'}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
-        ) : (
+        )}
+
+        {shouldShowStopButton && (
           <TouchableOpacity 
             style={styles.button} 
             onPress={stopTracking}
@@ -192,10 +265,24 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
-        {/* Stats Grid */}
+        {/* Speed Metrics Card */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Session Metrics</Text>
+          <Text style={styles.sectionTitle}>Speed Analytics</Text>
           <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="speedometer" size={24} color="#4CD964" />
+              <Text style={styles.statValue}>{speed.toFixed(1)}</Text>
+              <Text style={styles.statLabel}>Current Speed</Text>
+              <Text style={styles.statSubLabel}>km/h</Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="trending-up" size={24} color="#FF3B30" />
+              <Text style={styles.statValue}>{maxSpeed.toFixed(1)}</Text>
+              <Text style={styles.statLabel}>Max Speed</Text>
+              <Text style={styles.statSubLabel}>km/h</Text>
+            </View>
+            
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="clock-outline" size={24} color="#00B0FF" />
               <Text style={styles.statValue}>{formatTime(duration)}</Text>
@@ -207,26 +294,44 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
               <Text style={styles.statValue}>{calories}</Text>
               <Text style={styles.statLabel}>Calories</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Additional Metrics Card */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Skating Metrics</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="walk" size={24} color="#AF52DE" />
+              <Text style={styles.statValue}>{strideCount}</Text>
+              <Text style={styles.statLabel}>Strides</Text>
+            </View>
             
             <View style={styles.statCard}>
-              <MaterialCommunityIcons name="speedometer" size={24} color="#4CD964" />
-              <Text style={styles.statValue}>
-                {speed > 0 ? (1000 / (speed * 60)).toFixed(2) : '--'}
-              </Text>
+              <MaterialCommunityIcons name="flag-checkered" size={24} color="#34C759" />
+              <Text style={styles.statValue}>{laps}</Text>
+              <Text style={styles.statLabel}>Laps</Text>
+            </View>
+            
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="gauge" size={24} color="#FF9500" />
+              <Text style={styles.statValue}>{avgPace}</Text>
               <Text style={styles.statLabel}>Avg Pace</Text>
               <Text style={styles.statSubLabel}>min/km</Text>
             </View>
             
             <View style={styles.statCard}>
-              <MaterialCommunityIcons name="chart-line" size={24} color="#AF52DE" />
-              <Text style={styles.statValue}>{speed.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Speed</Text>
-              <Text style={styles.statSubLabel}>m/s</Text>
+              <MaterialCommunityIcons name="timer-sand" size={24} color="#007AFF" />
+              <Text style={styles.statValue}>
+                {speed > 0 ? (60 / speed).toFixed(1) : '--'}
+              </Text>
+              <Text style={styles.statLabel}>Pace</Text>
+              <Text style={styles.statSubLabel}>min/km</Text>
             </View>
           </View>
         </View>
 
-        {/* Additional Info Card */}
+        {/* Session Info Card */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Session Information</Text>
           <View style={styles.infoRow}>
@@ -235,25 +340,50 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
               <View 
                 style={[
                   styles.statusDot,
-                  { backgroundColor: isTracking ? '#4CD964' : '#FF3B30' }
+                  { 
+                    backgroundColor: isTracking && currentMode === 'SD' ? '#4CD964' : 
+                                   isConnected ? '#FF9500' : '#FF3B30' 
+                  }
                 ]} 
               />
               <Text style={styles.infoValue}>
-                {isTracking ? 'Active' : 'Inactive'}
+                {isTracking && currentMode === 'SD' ? 'Active' : 
+                 isConnected ? 'Ready' : 'Disconnected'}
               </Text>
             </View>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Device:</Text>
+            <Text style={styles.infoLabel}>Current Mode:</Text>
+            <Text style={styles.infoValue}>{getCurrentModeDisplay()}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Band Status:</Text>
             <Text style={styles.infoValue}>
-              {isConnected ? 'Connected' : 'Searching...'}
+              {bandActive ? 'Active' : 'Inactive'}
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Mode:</Text>
-            <Text style={styles.infoValue}>Distance Skating</Text>
+            <Text style={styles.infoLabel}>Session Time:</Text>
+            <Text style={styles.infoValue}>{formatTime(sessionData.sessionDuration)}</Text>
           </View>
         </View>
+
+        {/* Connection Help Card */}
+        {!isConnected && (
+          <View style={[styles.card, styles.helpCard]}>
+            <MaterialCommunityIcons name="bluetooth-connect" size={32} color="#007AFF" />
+            <Text style={styles.helpTitle}>Device Not Connected</Text>
+            <Text style={styles.helpText}>
+              Please connect to your skating band from the Devices screen to start tracking your distance skating session.
+            </Text>
+            <TouchableOpacity 
+              style={styles.helpButton}
+              onPress={() => navigation.navigate('Devices')}
+            >
+              <Text style={styles.helpButtonText}>Go to Devices</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -394,6 +524,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 18,
@@ -469,6 +602,35 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginRight: 6,
+  },
+  helpCard: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  helpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#182848',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  helpButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  helpButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
