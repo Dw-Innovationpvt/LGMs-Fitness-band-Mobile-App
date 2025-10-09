@@ -30,6 +30,31 @@ const formatTime = (seconds) => {
   return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+// Format distance in meters with proper formatting
+const formatDistance = (meters) => {
+  if (meters < 1000) {
+    return `${Math.round(meters)}`; // Show whole meters for less than 1km
+  } else {
+    return `${(meters / 1000).toFixed(2)}`; // Show km with 2 decimals for longer distances
+  }
+};
+
+// Get appropriate distance unit
+const getDistanceUnit = (meters) => {
+  return meters < 1000 ? 'm' : 'km';
+};
+
+// Format pace in min/km or min/100m based on distance
+const formatPace = (speedKmh) => {
+  if (speedKmh <= 0) return '--';
+  
+  const paceMinPerKm = 60 / speedKmh;
+  const minutes = Math.floor(paceMinPerKm);
+  const seconds = Math.round((paceMinPerKm - minutes) * 60);
+  
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 const DistanceSkatingScreenSk = ({ navigation }) => {
   const { 
     isConnected, 
@@ -56,10 +81,13 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
   const strideCount = bleData?.strideCount || 0;
   const laps = bleData?.laps || 0;
   
-  // Calculate derived metrics
-  const calories = Math.floor(distance * 0.075);
-  const speedMs = speed / 3.6; // Convert km/h to m/s for display
-  const avgPace = speed > 0 ? (1000 / (speedMs * 60)).toFixed(2) : '--';
+  // Calculate derived metrics IN METERS
+  const calories = Math.floor(distance * 0.075); // Based on meters
+  const speedMs = speed / 3.6; // Convert km/h to m/s for reference
+  const currentPace = speed > 0 ? formatPace(speed) : '--';
+  
+  // Calculate average stride length in meters
+  const avgStrideLength = strideCount > 0 ? (distance / strideCount).toFixed(2) : '0.00';
 
   useEffect(() => {
     AsyncStorage.setItem(SKATING_MODE_KEY, 'distance');
@@ -115,10 +143,13 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
       
       console.log('✅ Distance skating session stopped');
       
-      // Show session summary
+      // Show session summary IN METERS
       Alert.alert(
         'Session Complete',
-        `Distance: ${(distance / 1000).toFixed(2)} km\nDuration: ${formatTime(duration)}\nMax Speed: ${maxSpeed.toFixed(1)} km/h`,
+        `Distance: ${formatDistance(distance)} ${getDistanceUnit(distance)}\n` +
+        `Duration: ${formatTime(duration)}\n` +
+        `Max Speed: ${maxSpeed.toFixed(1)} km/h\n` +
+        `Total Strides: ${strideCount}`,
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -193,16 +224,36 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Primary Metric Card */}
+        {/* Primary Metric Card - NOW IN METERS */}
         <Animated.View style={[styles.card, styles.primaryMetricCard, pulseStyle]}>
           <View style={styles.metricContainer}>
             <Text style={[styles.primaryMetricValue, { color: '#00B0FF' }]}>
-              {(distance / 1000).toFixed(2)}
+              {formatDistance(distance)}
             </Text>
-            <Text style={styles.primaryMetricUnit}>km</Text>
+            <Text style={styles.primaryMetricUnit}>
+              {getDistanceUnit(distance)}
+            </Text>
           </View>
           <Text style={styles.primaryMetricLabel}>Distance Covered</Text>
           
+          {/* Distance Progress */}
+          <View style={styles.distanceProgress}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill,
+                  { 
+                    width: `${Math.min((distance % 1000) / 10, 100)}%`,
+                    backgroundColor: '#00B0FF'
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {distance < 1000 ? `${Math.round(distance)}/1000 m` : `${Math.floor(distance / 1000)} km ${Math.round(distance % 1000)} m`}
+            </Text>
+          </View>
+
           {/* Live Tracking Indicator */}
           {isTracking && (
             <View style={styles.liveIndicator}>
@@ -297,7 +348,7 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Additional Metrics Card */}
+        {/* Skating Metrics Card - UPDATED FOR METERS */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Skating Metrics</Text>
           <View style={styles.statsGrid}>
@@ -308,25 +359,47 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
             </View>
             
             <View style={styles.statCard}>
-              <MaterialCommunityIcons name="flag-checkered" size={24} color="#34C759" />
-              <Text style={styles.statValue}>{laps}</Text>
-              <Text style={styles.statLabel}>Laps</Text>
+              <MaterialCommunityIcons name="ruler" size={24} color="#34C759" />
+              <Text style={styles.statValue}>{avgStrideLength}</Text>
+              <Text style={styles.statLabel}>Avg Stride</Text>
+              <Text style={styles.statSubLabel}>meters</Text>
             </View>
             
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="gauge" size={24} color="#FF9500" />
-              <Text style={styles.statValue}>{avgPace}</Text>
-              <Text style={styles.statLabel}>Avg Pace</Text>
+              <Text style={styles.statValue}>{currentPace}</Text>
+              <Text style={styles.statLabel}>Current Pace</Text>
               <Text style={styles.statSubLabel}>min/km</Text>
             </View>
             
             <View style={styles.statCard}>
-              <MaterialCommunityIcons name="timer-sand" size={24} color="#007AFF" />
-              <Text style={styles.statValue}>
-                {speed > 0 ? (60 / speed).toFixed(1) : '--'}
+              <MaterialCommunityIcons name="flag-checkered" size={24} color="#007AFF" />
+              <Text style={styles.statValue}>{laps}</Text>
+              <Text style={styles.statLabel}>Laps</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Distance Progress Card */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Distance Progress</Text>
+          <View style={styles.distanceBreakdown}>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Today</Text>
+              <Text style={styles.breakdownValue}>{formatDistance(distance)}</Text>
+              <Text style={styles.breakdownUnit}>{getDistanceUnit(distance)}</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Session</Text>
+              <Text style={styles.breakdownValue}>{formatDistance(distance)}</Text>
+              <Text style={styles.breakdownUnit}>{getDistanceUnit(distance)}</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={styles.breakdownLabel}>Avg Speed</Text>
+              <Text style={styles.breakdownValue}>
+                {duration > 0 ? (distance / duration).toFixed(1) : '0.0'}
               </Text>
-              <Text style={styles.statLabel}>Pace</Text>
-              <Text style={styles.statSubLabel}>min/km</Text>
+              <Text style={styles.breakdownUnit}>m/s</Text>
             </View>
           </View>
         </View>
@@ -365,6 +438,12 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Session Time:</Text>
             <Text style={styles.infoValue}>{formatTime(sessionData.sessionDuration)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Total Distance:</Text>
+            <Text style={styles.infoValue}>
+              {formatDistance(distance)} {getDistanceUnit(distance)}
+            </Text>
           </View>
         </View>
 
@@ -487,6 +566,28 @@ const styles = StyleSheet.create({
     color: '#888',
     fontWeight: '500',
   },
+  distanceProgress: {
+    marginTop: 20,
+    alignItems: 'center',
+    width: '100%',
+  },
+  progressBar: {
+    width: '80%',
+    height: 8,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -570,6 +671,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 2,
+  },
+  distanceBreakdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  breakdownItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  breakdownLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  breakdownValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#182848',
+    marginBottom: 4,
+  },
+  breakdownUnit: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
   },
   infoRow: {
     flexDirection: 'row',
