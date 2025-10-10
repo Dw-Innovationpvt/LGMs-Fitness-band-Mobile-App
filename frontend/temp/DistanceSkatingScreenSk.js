@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, Animated, Easing, Alert, ScrollView, Dimensions, StyleSheet
+  View, Text, TouchableOpacity, Animated, Easing, Alert, ScrollView, Dimensions, StyleSheet,
+  Modal, FlatList
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useBLEStore } from '../store/augBleStore';
+import { useSessionStore, useDistanceSkatingSessions, useLast7DaysData } from '../store/useSessionStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SKATING_MODE_KEY } from '../constants/storageKeys';
 
@@ -55,6 +57,28 @@ const formatPace = (speedKmh) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+// Generate last 7 dates from today
+const getLast7Days = () => {
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateString = date.toISOString().split('T')[0];
+    
+    let displayName;
+    if (i === 0) displayName = 'Today';
+    else if (i === 1) displayName = 'Yesterday';
+    else displayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    
+    dates.push({
+      date: dateString,
+      displayName,
+      isToday: i === 0
+    });
+  }
+  return dates;
+};
+
 const DistanceSkatingScreenSk = ({ navigation }) => {
   const { 
     isConnected, 
@@ -68,9 +92,17 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
     startNewSession
   } = useBLEStore();
   
+  const { createSession, fetchSessionsByDate } = useSessionStore();
+  const { distanceSessions, fetchDistanceSessions } = useDistanceSkatingSessions();
+  const { getLast7DaysWithData, loading: sessionsLoading } = useLast7DaysData('SD');
+  
   const [isTracking, setIsTracking] = useState(false);
   const [duration, setDuration] = useState(0);
   const [animation] = useState(new Animated.Value(0));
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedDateData, setSelectedDateData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [last7Days, setLast7Days] = useState([]);
   const timerRef = useRef(null);
 
   // Updated data extraction from new BLE structure
@@ -91,6 +123,8 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
 
   useEffect(() => {
     AsyncStorage.setItem(SKATING_MODE_KEY, 'distance');
+    setLast7Days(getLast7Days());
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -117,6 +151,14 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
     };
   }, [isTracking]);
 
+  const loadInitialData = async () => {
+    try {
+      await fetchDistanceSessions();
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    }
+  };
+
   const startTracking = async () => {
     try {
       // Use the new store methods
@@ -136,6 +178,9 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
 
   const stopTracking = async () => {
     try {
+      // Save session data before stopping
+      await saveCurrentSession();
+      
       // Switch back to step counting mode when stopping
       await sendCommand('SET_MODE STEP_COUNTING');
       setIsTracking(false);
@@ -143,17 +188,69 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
       
       console.log('✅ Distance skating session stopped');
       
-      // Show session summary IN METERS
-      Alert.alert(
-        'Session Complete',
-        `Distance: ${formatDistance(distance)} ${getDistanceUnit(distance)}\n` +
-        `Duration: ${formatTime(duration)}\n` +
-        `Max Speed: ${maxSpeed.toFixed(1)} km/h\n` +
-        `Total Strides: ${strideCount}`,
-        [{ text: 'OK' }]
-      );
+      // Refresh sessions data
+      await fetchDistanceSessions();
+      
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to stop tracking');
+    }
+  };
+
+  const saveCurrentSession = async () => {
+    try {
+      if (distance > 0 && duration > 0) {
+        const sessionData = {
+          deviceId: 'ESP32C3_SkatingBand_001',
+          mode: 'SD',
+          startTime: new Date(Date.now() - (duration * 1000)).toISOString(),
+          endTime: new Date().toISOString(),
+          stepCount: 0,
+          walkingDistance: 0,
+          strideCount: strideCount,
+          skatingDistance: distance,
+          speedData: {
+            currentSpeed: speed,
+            maxSpeed: maxSpeed,
+            minSpeed: minSpeed,
+            averageSpeed: speed // Using current speed as average for simplicity
+          },
+          laps: laps,
+          config: {
+            wheelDiameter: 0.09,
+            trackLength: 100.0
+          }
+        };
+
+        await createSession(sessionData);
+        console.log('✅ Session saved successfully');
+        
+        Alert.alert(
+          'Session Saved!',
+          `Distance: ${formatDistance(distance)} ${getDistanceUnit(distance)}\n` +
+          `Duration: ${formatTime(duration)}\n` +
+          `Max Speed: ${maxSpeed.toFixed(1)} km/h\n` +
+          `Total Strides: ${strideCount}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error saving session:', error);
+      Alert.alert('Error', 'Failed to save session data');
+    }
+  };
+
+  const viewPreviousData = () => {
+    setShowHistoryModal(true);
+  };
+
+  const selectDate = async (date) => {
+    try {
+      setSelectedDate(date);
+      const sessions = await fetchSessionsByDate(date, 'SD');
+      setSelectedDateData(sessions);
+    } catch (error) {
+      console.error('Error fetching date data:', error);
+      Alert.alert('Error', 'Failed to load data for selected date');
     }
   };
 
@@ -188,6 +285,25 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
   // Determine if we should show start or stop button
   const shouldShowStartButton = !isTracking && currentMode !== 'SD';
   const shouldShowStopButton = isTracking && currentMode === 'SD';
+
+  // Calculate total metrics for selected date
+  const calculateDateMetrics = (sessions) => {
+    return sessions.reduce((acc, session) => ({
+      totalDistance: acc.totalDistance + (session.skatingDistance || 0),
+      totalDuration: acc.totalDuration + (session.duration || 0),
+      maxSpeed: Math.max(acc.maxSpeed, session.speedData?.maxSpeed || 0),
+      totalStrides: acc.totalStrides + (session.strideCount || 0),
+      sessionCount: acc.sessionCount + 1
+    }), {
+      totalDistance: 0,
+      totalDuration: 0,
+      maxSpeed: 0,
+      totalStrides: 0,
+      sessionCount: 0
+    });
+  };
+
+  const selectedDateMetrics = calculateDateMetrics(selectedDateData);
 
   return (
     <View style={styles.container}>
@@ -311,14 +427,31 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
               end={{ x: 1, y: 1 }}
             >
               <Feather name="square" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Stop Session</Text>
+              <Text style={styles.buttonText}>Stop & Save Session</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}
 
-        {/* Speed Metrics Card */}
+        {/* View Previous Data Button */}
+        <TouchableOpacity 
+          style={styles.historyButton}
+          onPress={viewPreviousData}
+          activeOpacity={0.8}
+        >
+          <LinearGradient 
+            colors={['#667eea', '#764ba2']} 
+            style={styles.gradientButton}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Feather name="calendar" size={24} color="#fff" />
+            <Text style={styles.buttonText}>View Previous Data</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Current Session Stats */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Speed Analytics</Text>
+          <Text style={styles.sectionTitle}>Current Session</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="speedometer" size={24} color="#4CD964" />
@@ -348,9 +481,9 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Skating Metrics Card - UPDATED FOR METERS */}
+        {/* Additional current session metrics */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Skating Metrics</Text>
+          <Text style={styles.sectionTitle}>Session Details</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="walk" size={24} color="#AF52DE" />
@@ -380,31 +513,7 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Distance Progress Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Distance Progress</Text>
-          <View style={styles.distanceBreakdown}>
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownLabel}>Today</Text>
-              <Text style={styles.breakdownValue}>{formatDistance(distance)}</Text>
-              <Text style={styles.breakdownUnit}>{getDistanceUnit(distance)}</Text>
-            </View>
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownLabel}>Session</Text>
-              <Text style={styles.breakdownValue}>{formatDistance(distance)}</Text>
-              <Text style={styles.breakdownUnit}>{getDistanceUnit(distance)}</Text>
-            </View>
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownLabel}>Avg Speed</Text>
-              <Text style={styles.breakdownValue}>
-                {duration > 0 ? (distance / duration).toFixed(1) : '0.0'}
-              </Text>
-              <Text style={styles.breakdownUnit}>m/s</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Session Info Card */}
+        {/* Session Info */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Session Information</Text>
           <View style={styles.infoRow}>
@@ -439,12 +548,6 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
             <Text style={styles.infoLabel}>Session Time:</Text>
             <Text style={styles.infoValue}>{formatTime(sessionData.sessionDuration)}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Total Distance:</Text>
-            <Text style={styles.infoValue}>
-              {formatDistance(distance)} {getDistanceUnit(distance)}
-            </Text>
-          </View>
         </View>
 
         {/* Connection Help Card */}
@@ -464,6 +567,152 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+
+      {/* History Modal */}
+      <Modal
+        visible={showHistoryModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHistoryModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Previous Distance Skating Sessions</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowHistoryModal(false)}
+            >
+              <Feather name="x" size={24} color="#182848" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.dateSelector}>
+            <Text style={styles.dateSelectorTitle}>Select Date:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {last7Days.map((day, index) => (
+                <TouchableOpacity
+                  key={day.date}
+                  style={[
+                    styles.dateButton,
+                    selectedDate === day.date && styles.dateButtonSelected
+                  ]}
+                  onPress={() => selectDate(day.date)}
+                >
+                  <Text style={[
+                    styles.dateButtonText,
+                    selectedDate === day.date && styles.dateButtonTextSelected
+                  ]}>
+                    {day.displayName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+                      </ScrollView>
+          </View>
+
+          {selectedDate && (
+            <View style={styles.selectedDateSection}>
+              <Text style={styles.selectedDateTitle}>
+                Sessions for {selectedDate}
+              </Text>
+              
+              {selectedDateData.length === 0 ? (
+                <View style={styles.noDataContainer}>
+                  <MaterialCommunityIcons name="skateboarding" size={48} color="#CCCCCC" />
+                  <Text style={styles.noDataText}>No distance skating sessions</Text>
+                  <Text style={styles.noDataSubText}>on this date</Text>
+                </View>
+              ) : (
+                <ScrollView style={styles.sessionsList}>
+                  {/* Date Summary */}
+                  <View style={styles.dateSummaryCard}>
+                    <Text style={styles.dateSummaryTitle}>Date Summary</Text>
+                    <View style={styles.dateSummaryGrid}>
+                      <View style={styles.dateSummaryItem}>
+                        <Text style={styles.dateSummaryValue}>{selectedDateMetrics.sessionCount}</Text>
+                        <Text style={styles.dateSummaryLabel}>Sessions</Text>
+                      </View>
+                      <View style={styles.dateSummaryItem}>
+                        <Text style={styles.dateSummaryValue}>
+                          {formatDistance(selectedDateMetrics.totalDistance)}
+                        </Text>
+                        <Text style={styles.dateSummaryLabel}>Distance</Text>
+                        <Text style={styles.dateSummaryUnit}>
+                          {getDistanceUnit(selectedDateMetrics.totalDistance)}
+                        </Text>
+                      </View>
+                      <View style={styles.dateSummaryItem}>
+                        <Text style={styles.dateSummaryValue}>
+                          {formatTime(selectedDateMetrics.totalDuration)}
+                        </Text>
+                        <Text style={styles.dateSummaryLabel}>Duration</Text>
+                      </View>
+                      <View style={styles.dateSummaryItem}>
+                        <Text style={styles.dateSummaryValue}>
+                          {selectedDateMetrics.maxSpeed.toFixed(1)}
+                        </Text>
+                        <Text style={styles.dateSummaryLabel}>Max Speed</Text>
+                        <Text style={styles.dateSummaryUnit}>km/h</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Individual Sessions */}
+                  <Text style={styles.sessionsListTitle}>Individual Sessions</Text>
+                  {selectedDateData.map((session, index) => (
+                    <View key={session._id || index} style={styles.sessionCard}>
+                      <View style={styles.sessionHeader}>
+                        <Text style={styles.sessionTime}>
+                          {new Date(session.startTime).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </Text>
+                        <Text style={styles.sessionDuration}>
+                          {formatTime(session.duration)}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.sessionMetrics}>
+                        <View style={styles.sessionMetric}>
+                          <Text style={styles.sessionMetricValue}>
+                            {formatDistance(session.skatingDistance)}
+                          </Text>
+                          <Text style={styles.sessionMetricLabel}>
+                            Distance ({getDistanceUnit(session.skatingDistance)})
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.sessionMetric}>
+                          <Text style={styles.sessionMetricValue}>
+                            {session.speedData?.maxSpeed?.toFixed(1) || '0.0'}
+                          </Text>
+                          <Text style={styles.sessionMetricLabel}>Max Speed (km/h)</Text>
+                        </View>
+                        
+                        <View style={styles.sessionMetric}>
+                          <Text style={styles.sessionMetricValue}>
+                            {session.strideCount || 0}
+                          </Text>
+                          <Text style={styles.sessionMetricLabel}>Strides</Text>
+                        </View>
+                      </View>
+                      
+                      {session.laps > 0 && (
+                        <View style={styles.sessionLaps}>
+                          <MaterialCommunityIcons name="flag-checkered" size={16} color="#007AFF" />
+                          <Text style={styles.sessionLapsText}>
+                            {session.laps} lap{session.laps !== 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -619,6 +868,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  historyButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
   gradientButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -671,31 +930,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 2,
-  },
-  distanceBreakdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  breakdownItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  breakdownLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  breakdownValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#182848',
-    marginBottom: 4,
-  },
-  breakdownUnit: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '500',
   },
   infoRow: {
     flexDirection: 'row',
@@ -757,6 +991,204 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+    paddingTop: 60,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+    backgroundColor: '#fff',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#182848',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  dateSelector: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  dateSelectorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#182848',
+    marginBottom: 15,
+  },
+  dateButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFF',
+    borderRadius: 12,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  dateButtonSelected: {
+    backgroundColor: '#00B0FF',
+    borderColor: '#00B0FF',
+  },
+  dateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  dateButtonTextSelected: {
+    color: '#fff',
+  },
+  selectedDateSection: {
+    flex: 1,
+    padding: 20,
+  },
+  selectedDateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#182848',
+    marginBottom: 20,
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noDataText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+  },
+  noDataSubText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  sessionsList: {
+    flex: 1,
+  },
+  dateSummaryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  dateSummaryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#182848',
+    marginBottom: 15,
+  },
+  dateSummaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dateSummaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateSummaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#00B0FF',
+    marginBottom: 4,
+  },
+  dateSummaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  dateSummaryUnit: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  sessionsListTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#182848',
+    marginBottom: 15,
+  },
+  sessionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sessionTime: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#182848',
+  },
+  sessionDuration: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  sessionMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sessionMetric: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  sessionMetricValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#182848',
+    marginBottom: 4,
+  },
+  sessionMetricLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  sessionLaps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  sessionLapsText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
+    marginLeft: 6,
   },
 });
 

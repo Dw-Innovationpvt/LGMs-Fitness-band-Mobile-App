@@ -21,6 +21,8 @@ import skatePrefRoutes from './routes/skatePrefRoutes.js';
 import stepCountRoutes from './routes/stepCountRoutes.js';
 // import { createGoalForToday } from "./controllers/goalController.js";
 // import { createGoalForToday } from "./controllers/goalController.js";
+import sessionRoutes from "./routes/sessionRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js"
 
 import { connectDB } from "./lib/db.js";
 import cors from 'cors';
@@ -34,21 +36,24 @@ app.use(express.urlencoded({ extended: true })); // For form data
 app.use(cors());
 
 app.use('/api/auth', authRoutes);
+
+// app.use('/api', require('./Routes/sessionRoutes'));
+// app.use('/api', require('./Routes/analyticsRoutes'));
+app.use("/api",auth, sessionRoutes);
+app.use("/api",auth, analyticsRoutes)
+
 // app.use('')
 // app.use('/api/tracking',auth , trackingRoutes);
 // app.use('/api/tracking', trackingRoutes);
 
 app.use('/api/track', trackingRoutes);
-
 // /api/challenges
 app.use('/api/challenges', challengesRoutes);
 // console.log("PORT", PORT);
 // api for water
 app.use('/api/water', waterRoutes);
-
 // for exercise
 app.use('/api/exercises', exerciseRoutes);
-
 // for meals
 app.use('/api/meals', mealsRoutes);
 // steps count

@@ -166,6 +166,35 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+
+    preferences: {
+    defaultMode: {
+      type: String,
+      enum: ['S', 'SS', 'SD'],
+      default: 'S'
+    },
+    wheelDiameter: {
+      type: Number,
+      default: 0.09
+    },
+    trackLength: {
+      type: Number,
+      default: 100.0
+    },
+    measurementUnit: {
+      type: String,
+      enum: ['metric', 'imperial'],
+      default: 'metric'
+    }
+  },
+  stats: {
+    totalSteps: { type: Number, default: 0 },
+    totalSkatingDistance: { type: Number, default: 0 }, // meters
+    totalWalkingDistance: { type: Number, default: 0 }, // meters
+    maxSpeed: { type: Number, default: 0 }, // km/h
+    totalSessions: { type: Number, default: 0 }
+  }
+
   },
   { timestamps: true }
 );
