@@ -125,26 +125,26 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
     }
   }, [currentSpeed, isTracking]);
 
-  const startTracking = async () => {
-    try {
-      // Use the new store methods
-      await sendCommand('TURN_ON');
-      await setSpeedSkatingMode(); // This sends 'SET_MODE SKATING_SPEED'
+  // const startTracking = async () => {
+  //   try {
+  //     // Use the new store methods
+  //     await sendCommand('TURN_ON');
+  //     await setSpeedSkatingMode(); // This sends 'SET_MODE SKATING_SPEED'
       
-      setIsTracking(true);
-      startNewSession(); // Reset session data
-      setSessionMaxSpeed(0);
-      setSessionMinSpeed(0);
-      setSpeedReadings([]);
-      setDuration(0);
-      animatePulse();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  //     setIsTracking(true);
+  //     startNewSession(); // Reset session data
+  //     setSessionMaxSpeed(0);
+  //     setSessionMinSpeed(0);
+  //     setSpeedReadings([]);
+  //     setDuration(0);
+  //     animatePulse();
+  //     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      console.log('✅ Speed skating session started');
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to start tracking');
-    }
-  };
+  //     console.log('✅ Speed skating session started');
+  //   } catch (error) {
+  //     Alert.alert('Error', error.message || 'Failed to start tracking');
+  //   }
+  // };
 
 //   const stopTracking = async () => {
 //     try {
@@ -261,50 +261,132 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
 // };
 
 
-const stopTracking = async () => {
-    try {
-      await sendCommand('SET_MODE STEP_COUNTING');
-      setIsTracking(false);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      console.log('✅ Distance skating session stopped');
+// const stopTracking = async () => {
+//     try {
+//       await sendCommand('SET_MODE STEP_COUNTING');
+//       setIsTracking(false);
+//       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+//       console.log('✅ Distance skating session stopped');
 
-      // Prepare session data for backend
+//       // Prepare session data for backend
+//       const sessionData = {
+//         mode: 'SD', // Distance Skating
+//         duration, // seconds
+//         formattedDuration: formatTime(duration),
+//         maxSpeed: sessionMaxSpeed.toFixed(1),
+//         minSpeed: sessionMinSpeed.toFixed(1),
+//         avgSpeed: averageSpeed.toFixed(1),
+//         currentSpeed: currentSpeed.toFixed(1),
+//         distance: distanceKm,
+//         strides,
+//         calories,
+//         allSpeedReadings: speedReadings,
+//         timestamp: new Date().toISOString(),
+//       };
+
+//       console.log('📦 Sending Distance Skating session data:', sessionData);
+
+//       // Save session via Zustand store (POST to backend)
+//       const createdSession = await createSession(sessionData);
+//       console.log('✅ Session successfully saved to backend:', createdSession);
+
+//       Alert.alert(
+//         'Session Saved! 🏆',
+//         `Duration: ${formatTime(duration)}\n` +
+//         `Distance: ${distanceKm} km\n` +
+//         `Avg Speed: ${averageSpeed.toFixed(1)} km/h\n` +
+//         `Max Speed: ${sessionMaxSpeed.toFixed(1)} km/h\n` +
+//         `Strides: ${strides}\n` +
+//         `Calories: ${calories}`,
+//         [{ text: 'OK', style: 'default' }]
+//       );
+//     } catch (error) {
+//       console.error('❌ Failed to stop tracking or save session:', error);
+//       Alert.alert('Error', error.message || 'Failed to save session');
+//     }
+//   };
+
+
+const startTracking = async () => {
+  try {
+    // Use the new store methods
+    await sendCommand('TURN_ON');
+    await setSpeedSkatingMode(); // This should send 'SET_MODE SKATING_SPEED' or similar
+    
+    setIsTracking(true);
+    startNewSession(); // Reset session data
+    animatePulse();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    console.log('✅ Speed skating session started');
+  } catch (error) {
+    Alert.alert('Error', error.message || 'Failed to start tracking');
+  }
+};
+
+const stopTracking = async () => {
+  try {
+    // Save session data before stopping
+    await saveCurrentSession();
+    
+    // Switch back to step counting mode when stopping
+    await sendCommand('SET_MODE STEP_COUNTING');
+    setIsTracking(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    console.log('✅ Speed skating session stopped');
+    
+    // Refresh sessions data
+    await fetchSpeedSessions();
+    
+  } catch (error) {
+    Alert.alert('Error', error.message || 'Failed to stop tracking');
+  }
+};
+
+const saveCurrentSession = async () => {
+  try {
+    if (distance > 0 && duration > 0) {
       const sessionData = {
-        mode: 'SD', // Distance Skating
-        duration, // seconds
-        formattedDuration: formatTime(duration),
-        maxSpeed: sessionMaxSpeed.toFixed(1),
-        minSpeed: sessionMinSpeed.toFixed(1),
-        avgSpeed: averageSpeed.toFixed(1),
-        currentSpeed: currentSpeed.toFixed(1),
-        distance: distanceKm,
-        strides,
-        calories,
-        allSpeedReadings: speedReadings,
-        timestamp: new Date().toISOString(),
+        deviceId: 'ESP32C3_SkatingBand_001',
+        mode: 'SS', // Changed to SS for Speed Skating
+        startTime: new Date(Date.now() - (duration * 1000)).toISOString(),
+        endTime: new Date().toISOString(),
+        stepCount: 0,
+        walkingDistance: 0,
+        strideCount: strideCount,
+        skatingDistance: distance,
+        speedData: {
+          currentSpeed: speed,
+          maxSpeed: maxSpeed,
+          minSpeed: minSpeed,
+          averageSpeed: averageSpeed || speed // Use calculated average if available
+        },
+        laps: laps,
+        config: {
+          wheelDiameter: 0.09,
+          trackLength: 100.0
+        }
       };
 
-      console.log('📦 Sending Distance Skating session data:', sessionData);
-
-      // Save session via Zustand store (POST to backend)
-      const createdSession = await createSession(sessionData);
-      console.log('✅ Session successfully saved to backend:', createdSession);
-
+      await createSession(sessionData);
+      console.log('✅ Speed skating session saved successfully');
+      
       Alert.alert(
-        'Session Saved! 🏆',
+        'Session Saved! ⚡',
+        `Distance: ${formatDistance(distance)} ${getDistanceUnit(distance)}\n` +
         `Duration: ${formatTime(duration)}\n` +
-        `Distance: ${distanceKm} km\n` +
-        `Avg Speed: ${averageSpeed.toFixed(1)} km/h\n` +
-        `Max Speed: ${sessionMaxSpeed.toFixed(1)} km/h\n` +
-        `Strides: ${strides}\n` +
-        `Calories: ${calories}`,
-        [{ text: 'OK', style: 'default' }]
+        `Max Speed: ${maxSpeed.toFixed(1)} km/h\n` +
+        `Avg Speed: ${(averageSpeed || speed).toFixed(1)} km/h\n` +
+        `Total Strides: ${strideCount}`,
+        [{ text: 'OK' }]
       );
-    } catch (error) {
-      console.error('❌ Failed to stop tracking or save session:', error);
-      Alert.alert('Error', error.message || 'Failed to save session');
     }
-  };
+  } catch (error) {
+    console.error('Error saving speed skating session:', error);
+    Alert.alert('Error', 'Failed to save speed skating session data');
+  }
+};
 
 
   const animatePulse = () => {
