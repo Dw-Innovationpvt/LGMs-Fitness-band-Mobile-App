@@ -45,7 +45,7 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
     getCurrentModeDisplay,
     startNewSession
   } = useBLEStore();
-  const { createSession } = useSessionStore();
+  const { createSession, fetchSpeedSessions  } = useSessionStore();
 
   
   const [isTracking, setIsTracking] = useState(false);
