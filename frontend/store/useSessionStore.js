@@ -2,10 +2,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+// import api from './api'; // Import the axios instance
+import { API_URL } from '../constants/api';
 
 // Use your actual backend URL - adjust as needed
-const API_BASE_URL = 'http://192.168.1.6:3000/api'; // Change to your actual backend URL
+const API_BASE_URL = API_URL; // Change to your actual backend URL
 
 export const useSessionStore = create(
   persist(
