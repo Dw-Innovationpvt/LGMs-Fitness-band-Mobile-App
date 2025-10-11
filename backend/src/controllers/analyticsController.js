@@ -9,7 +9,8 @@ const getWeeklySummary = async (req, res) => {
     startDate.setDate(startDate.getDate() - 7);
     
     const sessions = await UserSession.find({
-      userId: req.userId,
+      // userId: req.userId,
+      userId: req.user._id,
       startTime: { $gte: startDate }
     });
 

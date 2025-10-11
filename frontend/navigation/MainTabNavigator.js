@@ -21,6 +21,7 @@ import DistanceSkatingScreen from '../temp/DistanceSk';
 
 import DistanceSkatingScreenSk from '../temp/DistanceSkatingScreenSk';
 import SpeedSkatingScreenSk from '../temp/SpeedSkatingScreenSK';
+import SessionHistoryScreen from '../temp/SessionHistoryScreen';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -156,7 +157,7 @@ const MainTabNavigator = () => {
 
       <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
       <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} />
-
+      <Tab.Screen name="History" component={SessionHistoryScreen} />
       {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
       {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}

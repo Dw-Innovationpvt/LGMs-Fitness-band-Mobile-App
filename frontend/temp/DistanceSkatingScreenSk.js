@@ -240,7 +240,8 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
   };
 
   const viewPreviousData = () => {
-    setShowHistoryModal(true);
+    // setShowHistoryModal(true);
+    navigation.navigate('History');
   };
 
   const selectDate = async (date) => {

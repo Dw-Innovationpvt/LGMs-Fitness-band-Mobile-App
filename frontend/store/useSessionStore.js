@@ -1,11 +1,11 @@
+// store/useSessionStore.js
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-// import BASE_URL from "../"
-import { API_URL } from '../constants/api';
-// const API_BASE_URL = 'http://localhost:3000/api';
-// const API_BASE_URL = 
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = API_URL;
+
+// Use your actual backend URL - adjust as needed
+const API_BASE_URL = 'http://192.168.1.6:3000/api'; // Change to your actual backend URL
 
 export const useSessionStore = create(
   persist(
@@ -15,62 +15,156 @@ export const useSessionStore = create(
       loading: false,
       error: null,
       stats: null,
+      last7DaysData: {},
       
       // Current date filters
       selectedDate: new Date().toISOString().split('T')[0],
       daysRange: 7,
       
       // Mode filters
-      selectedMode: 'all', // 'all', 'S', 'SS', 'SD'
-      
+      selectedMode: 'all',
+
       // Actions
       setSelectedDate: (date) => set({ selectedDate: date }),
       setDaysRange: (days) => set({ daysRange: days }),
       setSelectedMode: (mode) => set({ selectedMode: mode }),
 
-      // Create new session
-      createSession: async (sessionData) => {
+      // Get sessions from last N days - FIXED VERSION
+      fetchLastDaysSessions: async (days = 7, mode = null) => {
         try {
           set({ loading: true, error: null });
           
-          const token = get().getToken(); // You'll need to implement getToken
+          const token = await get().getToken();
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
           
-          const response = await fetch(`${API_BASE_URL}/sessions`, {
-            method: 'POST',
+          let url = `${API_BASE_URL}/sessions/last/${days}`;
+          
+          if (mode) {
+            url += `?mode=${mode}`;
+          }
+          
+          console.log('🔍 Fetching last days sessions from:', url);
+          
+          const response = await fetch(url, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(sessionData)
+            }
           });
 
+          console.log('📡 Response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error(`Failed to create session: ${response.statusText}`);
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+              const errorText = await response.text();
+              console.error('Server error response:', errorText);
+              
+              // Try to parse as JSON for structured error
+              try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.message || errorMessage;
+              } catch {
+                errorMessage = errorText || errorMessage;
+              }
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
           }
 
           const result = await response.json();
+          console.log('✅ Last days sessions fetched successfully, data keys:', Object.keys(result.data || {}));
           
           if (result.success) {
-            set((state) => ({
-              sessions: [result.data, ...state.sessions],
-              loading: false
-            }));
-            return result.data;
+            // Store the last 7 days data
+            set({ 
+              last7DaysData: result.data || {},
+              loading: false 
+            });
+            return result.data || {};
           } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Unknown error occurred');
           }
         } catch (error) {
+          console.error('❌ Error in fetchLastDaysSessions:', error);
+          set({ 
+            error: error.message, 
+            loading: false,
+            last7DaysData: {} // Reset on error
+          });
+          throw error;
+        }
+      },
+
+      // Get sessions by specific date - FIXED VERSION
+      fetchSessionsByDate: async (date, mode = null) => {
+        try {
+          set({ loading: true, error: null });
+          
+          const token = await get().getToken();
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
+          
+          let url = `${API_BASE_URL}/sessions/date/${date}`;
+          
+          if (mode) {
+            url += `?mode=${mode}`;
+          }
+          
+          console.log('🔍 Fetching sessions for date:', url);
+          
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          console.log('📡 Response status:', response.status);
+          
+          if (!response.ok) {
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+          }
+
+          const result = await response.json();
+          console.log('✅ Sessions fetched for date:', result.data?.length || 0, 'sessions');
+          
+          if (result.success) {
+            set({ loading: false });
+            return result.data || [];
+          } else {
+            throw new Error(result.message || 'Unknown error occurred');
+          }
+        } catch (error) {
+          console.error('❌ Error in fetchSessionsByDate:', error);
           set({ error: error.message, loading: false });
           throw error;
         }
       },
 
-      // Get all sessions with filters
+      // Get all sessions with filters - FIXED VERSION
       fetchSessions: async (filters = {}) => {
         try {
           set({ loading: true, error: null });
           
-          const token = get().getToken();
+          const token = await get().getToken();
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
+          
           const queryParams = new URLSearchParams();
           
           // Add filters to query params
@@ -81,137 +175,96 @@ export const useSessionStore = create(
           });
           
           const url = `${API_BASE_URL}/sessions?${queryParams.toString()}`;
+          console.log('🔍 Fetching sessions from:', url);
           
           const response = await fetch(url, {
+            method: 'GET',
             headers: {
+              'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             }
           });
 
+          console.log('📡 Response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error(`Failed to fetch sessions: ${response.statusText}`);
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
           }
 
           const result = await response.json();
+          console.log('✅ Sessions fetched successfully:', result.data?.length || 0, 'sessions');
           
           if (result.success) {
             set({ 
-              sessions: result.data,
+              sessions: result.data || [],
               loading: false 
             });
-            return result.data;
+            return result.data || [];
           } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Unknown error occurred');
           }
         } catch (error) {
+          console.error('❌ Error in fetchSessions:', error);
           set({ error: error.message, loading: false });
           throw error;
         }
       },
 
-      // Get sessions by specific date
-      fetchSessionsByDate: async (date, mode = null) => {
+      // Create new session
+      createSession: async (sessionData) => {
         try {
           set({ loading: true, error: null });
           
-          const token = get().getToken();
-          let url = `${API_BASE_URL}/sessions/date/${date}`;
-          
-          if (mode) {
-            url += `?mode=${mode}`;
+          const token = await get().getToken();
+          if (!token) {
+            throw new Error('No authentication token found');
           }
           
-          const response = await fetch(url, {
+          console.log('🔍 Creating session:', sessionData);
+          
+          const response = await fetch(`${API_BASE_URL}/sessions`, {
+            method: 'POST',
             headers: {
+              'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
-            }
+            },
+            body: JSON.stringify(sessionData)
           });
 
+          console.log('📡 Create session response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error(`Failed to fetch sessions for date: ${response.statusText}`);
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
           }
 
           const result = await response.json();
           
           if (result.success) {
-            set({ loading: false });
+            set((state) => ({
+              sessions: [result.data, ...state.sessions],
+              loading: false
+            }));
+            console.log('✅ Session created successfully:', result.data._id);
             return result.data;
           } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Failed to create session');
           }
         } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
-        }
-      },
-
-      // Get sessions from last N days
-      fetchLastDaysSessions: async (days, mode = null) => {
-        try {
-          set({ loading: true, error: null });
-          
-          const token = get().getToken();
-          let url = `${API_BASE_URL}/sessions/last/${days}`;
-          
-          if (mode) {
-            url += `?mode=${mode}`;
-          }
-          
-          const response = await fetch(url, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch last ${days} days sessions: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          if (result.success) {
-            set({ loading: false });
-            return result.data; // This returns grouped data by date
-          } else {
-            throw new Error(result.message);
-          }
-        } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
-        }
-      },
-
-      // Get today's sessions
-      fetchTodaySessions: async (mode = null) => {
-        try {
-          set({ loading: true, error: null });
-          
-          const token = get().getToken();
-          let url = `${API_BASE_URL}/sessions/today`;
-          
-          if (mode) {
-            url += `?mode=${mode}`;
-          }
-          
-          const response = await fetch(url, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch today's sessions: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          if (result.success) {
-            set({ loading: false });
-            return result.data;
-          } else {
-            throw new Error(result.message);
-          }
-        } catch (error) {
+          console.error('❌ Error in createSession:', error);
           set({ error: error.message, loading: false });
           throw error;
         }
@@ -222,24 +275,42 @@ export const useSessionStore = create(
         try {
           set({ loading: true, error: null });
           
-          const token = get().getToken();
+          const token = await get().getToken();
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
+          
           let url = `${API_BASE_URL}/sessions/stats/summary?days=${days}`;
           
           if (mode) {
             url += `&mode=${mode}`;
           }
           
+          console.log('🔍 Fetching session stats from:', url);
+          
           const response = await fetch(url, {
+            method: 'GET',
             headers: {
+              'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             }
           });
 
+          console.log('📡 Response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error(`Failed to fetch session stats: ${response.statusText}`);
+            let errorMessage = `Server error: ${response.status}`;
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
           }
 
           const result = await response.json();
+          console.log('✅ Session stats fetched successfully');
           
           if (result.success) {
             set({ 
@@ -248,108 +319,24 @@ export const useSessionStore = create(
             });
             return result.data;
           } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Unknown error occurred');
           }
         } catch (error) {
+          console.error('❌ Error in fetchSessionStats:', error);
           set({ error: error.message, loading: false });
           throw error;
         }
       },
 
-      // Get session by ID
-      fetchSessionById: async (sessionId) => {
+      // Helper function to get token from AsyncStorage
+      getToken: async () => {
         try {
-          set({ loading: true, error: null });
-          
-          const token = get().getToken();
-          const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch session: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          if (result.success) {
-            set({ loading: false });
-            return result.data;
-          } else {
-            throw new Error(result.message);
-          }
+          const token = await AsyncStorage.getItem('token');
+          console.log('🔑 Token retrieved from AsyncStorage:', token ? 'Yes' : 'No');
+          return token;
         } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
-        }
-      },
-
-      // Delete session
-      deleteSession: async (sessionId) => {
-        try {
-          set({ loading: true, error: null });
-          
-          const token = get().getToken();
-          const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to delete session: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          if (result.success) {
-            set((state) => ({
-              sessions: state.sessions.filter(session => session._id !== sessionId),
-              loading: false
-            }));
-            return result.message;
-          } else {
-            throw new Error(result.message);
-          }
-        } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
-        }
-      },
-
-      // Helper function to get token (you need to implement this based on your auth)
-      getToken: () => {
-        // This should return your JWT token from your auth store
-        // Example: return useAuthStore.getState().token;
-        return 'your_jwt_token_here';
-      },
-
-      // Get data for last 7 days with dates
-      getLast7DaysData: async (mode = null) => {
-        try {
-          const last7DaysData = await get().fetchLastDaysSessions(7, mode);
-          return last7DaysData;
-        } catch (error) {
-          console.error('Error fetching last 7 days data:', error);
-          return {};
-        }
-      },
-
-      // Get data for specific date ranges
-      getDateRangeData: async (startDate, endDate, mode = null) => {
-        try {
-          const sessions = await get().fetchSessions({
-            startDate,
-            endDate,
-            mode
-          });
-          return sessions;
-        } catch (error) {
-          console.error('Error fetching date range data:', error);
-          return [];
+          console.error('❌ Error retrieving token from AsyncStorage:', error);
+          return null;
         }
       },
 
@@ -361,6 +348,7 @@ export const useSessionStore = create(
         sessions: [], 
         stats: null, 
         error: null,
+        last7DaysData: {},
         selectedDate: new Date().toISOString().split('T')[0],
         daysRange: 7,
         selectedMode: 'all'
@@ -368,11 +356,13 @@ export const useSessionStore = create(
     }),
     {
       name: 'session-storage',
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ 
         sessions: state.sessions,
         selectedDate: state.selectedDate,
         daysRange: state.daysRange,
-        selectedMode: state.selectedMode
+        selectedMode: state.selectedMode,
+        last7DaysData: state.last7DaysData
       })
     }
   )
@@ -380,7 +370,7 @@ export const useSessionStore = create(
 
 // Custom hooks for specific use cases
 export const useSpeedSkatingSessions = () => {
-  const { sessions, fetchSessions, fetchLastDaysSessions } = useSessionStore();
+  const { sessions, fetchSessions, fetchLastDaysSessions, last7DaysData } = useSessionStore();
   
   const speedSessions = sessions.filter(session => session.mode === 'SS');
   
@@ -392,15 +382,22 @@ export const useSpeedSkatingSessions = () => {
     return fetchLastDaysSessions(days, 'SS');
   };
   
+  // Get speed sessions from last7DaysData
+  const getSpeedSessionsFromLast7Days = (date) => {
+    const dayData = last7DaysData[date] || [];
+    return dayData.filter(session => session.mode === 'SS');
+  };
+  
   return {
     speedSessions,
     fetchSpeedSessions,
-    fetchLastDaysSpeedSessions
+    fetchLastDaysSpeedSessions,
+    getSpeedSessionsFromLast7Days
   };
 };
 
 export const useDistanceSkatingSessions = () => {
-  const { sessions, fetchSessions, fetchLastDaysSessions } = useSessionStore();
+  const { sessions, fetchSessions, fetchLastDaysSessions, last7DaysData } = useSessionStore();
   
   const distanceSessions = sessions.filter(session => session.mode === 'SD');
   
@@ -412,15 +409,22 @@ export const useDistanceSkatingSessions = () => {
     return fetchLastDaysSessions(days, 'SD');
   };
   
+  // Get distance sessions from last7DaysData
+  const getDistanceSessionsFromLast7Days = (date) => {
+    const dayData = last7DaysData[date] || [];
+    return dayData.filter(session => session.mode === 'SD');
+  };
+  
   return {
     distanceSessions,
     fetchDistanceSessions,
-    fetchLastDaysDistanceSessions
+    fetchLastDaysDistanceSessions,
+    getDistanceSessionsFromLast7Days
   };
 };
 
 export const useStepCountingSessions = () => {
-  const { sessions, fetchSessions, fetchLastDaysSessions } = useSessionStore();
+  const { sessions, fetchSessions, fetchLastDaysSessions, last7DaysData } = useSessionStore();
   
   const stepSessions = sessions.filter(session => session.mode === 'S');
   
@@ -432,42 +436,62 @@ export const useStepCountingSessions = () => {
     return fetchLastDaysSessions(days, 'S');
   };
   
+  // Get step sessions from last7DaysData
+  const getStepSessionsFromLast7Days = (date) => {
+    const dayData = last7DaysData[date] || [];
+    return dayData.filter(session => session.mode === 'S');
+  };
+  
   return {
     stepSessions,
     fetchStepSessions,
-    fetchLastDaysStepSessions
+    fetchLastDaysStepSessions,
+    getStepSessionsFromLast7Days
   };
 };
 
 // Hook for getting last 7 days data with dates
 export const useLast7DaysData = (mode = null) => {
-  const { fetchLastDaysSessions, loading, error } = useSessionStore();
+  const { fetchLastDaysSessions, last7DaysData, loading, error } = useSessionStore();
   
   const getLast7DaysWithData = async () => {
-    const data = await fetchLastDaysSessions(7, mode);
-    
-    // Ensure we have all 7 days, even if no data
-    const last7Days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateKey = date.toISOString().split('T')[0];
+    try {
+      await fetchLastDaysSessions(7, mode);
       
-      last7Days.push({
-        date: dateKey,
-        displayDate: formatDisplayDate(date),
-        sessions: data[dateKey] || [],
-        totalDistance: calculateTotalDistance(data[dateKey] || [], mode),
-        totalSteps: calculateTotalSteps(data[dateKey] || [], mode),
-        maxSpeed: calculateMaxSpeed(data[dateKey] || [], mode)
-      });
+      // Ensure we have all 7 days, even if no data
+      const last7Days = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateKey = date.toISOString().split('T')[0];
+        
+        const daySessions = last7DaysData[dateKey] || [];
+        
+        // Filter by mode if specified
+        const filteredSessions = mode 
+          ? daySessions.filter(session => session.mode === mode)
+          : daySessions;
+        
+        last7Days.push({
+          date: dateKey,
+          displayDate: formatDisplayDate(date),
+          sessions: filteredSessions,
+          totalDistance: calculateTotalDistance(filteredSessions),
+          totalSteps: calculateTotalSteps(filteredSessions),
+          maxSpeed: calculateMaxSpeed(filteredSessions)
+        });
+      }
+      
+      return last7Days.reverse(); // Return from oldest to newest
+    } catch (error) {
+      console.error('Error in getLast7DaysWithData:', error);
+      return [];
     }
-    
-    return last7Days.reverse(); // Return from oldest to newest
   };
   
   return {
     getLast7DaysWithData,
+    last7DaysData,
     loading,
     error
   };
@@ -488,23 +512,20 @@ const formatDisplayDate = (date) => {
   }
 };
 
-const calculateTotalDistance = (sessions, mode) => {
+const calculateTotalDistance = (sessions) => {
   return sessions.reduce((total, session) => {
-    if (mode && session.mode !== mode) return total;
     return total + (session.skatingDistance || session.walkingDistance || 0);
   }, 0);
 };
 
-const calculateTotalSteps = (sessions, mode) => {
+const calculateTotalSteps = (sessions) => {
   return sessions.reduce((total, session) => {
-    if (mode && session.mode !== mode) return total;
     return total + (session.stepCount || 0);
   }, 0);
 };
 
-const calculateMaxSpeed = (sessions, mode) => {
+const calculateMaxSpeed = (sessions) => {
   return sessions.reduce((max, session) => {
-    if (mode && session.mode !== mode) return max;
     return Math.max(max, session.speedData?.maxSpeed || 0);
   }, 0);
 };
