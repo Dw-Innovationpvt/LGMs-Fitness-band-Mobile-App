@@ -211,54 +211,100 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
 //     }
 //   };
 
+// const stopTracking = async () => {
+//   try {
+//     // Stop BLE or other tracking mechanisms
+//     await sendCommand('SET_MODE STEP_COUNTING');
+//     setIsTracking(false);
+//     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+//     console.log('✅ Speed skating session stopped');
+
+//     // Prepare session data
+//     const sessionData = {
+//       mode: 'SS', // Speed Skating mode
+//       duration: duration, // in seconds
+//       formattedDuration: formatTime(duration),
+//       maxSpeed: sessionMaxSpeed.toFixed(1),
+//       minSpeed: sessionMinSpeed.toFixed(1),
+//       avgSpeed: averageSpeed.toFixed(1),
+//       currentSpeed: currentSpeed.toFixed(1),
+//       distance: (currentSpeed * duration / 3600).toFixed(2), // km
+//       strides,
+//       calories,
+//       allSpeedReadings: speedReadings,
+//       timestamp: new Date().toISOString(),
+//     };
+
+//     console.log('📦 Session Data ready to POST:', sessionData);
+
+//     // ✅ Post to backend via Zustand store
+//     const createdSession = await createSession(sessionData);
+
+//     console.log('✅ Session successfully saved to backend:', createdSession);
+
+//     // Show success alert
+//     Alert.alert(
+//       'Session Complete! 🏆',
+//       `Duration: ${formatTime(duration)}\n` +
+//         `Max Speed: ${sessionMaxSpeed.toFixed(1)} km/h\n` +
+//         `Avg Speed: ${averageSpeed.toFixed(1)} km/h\n` +
+//         `Distance: ${(currentSpeed * duration / 3600).toFixed(2)} km\n` +
+//         `Strides: ${strides}\n` +
+//         `Calories: ${calories}`,
+//       [{ text: 'OK', style: 'default' }]
+//     );
+//   } catch (error) {
+//     console.error('❌ Failed to stop tracking or save session:', error);
+//     Alert.alert('Error', error.message || 'Failed to stop tracking');
+//   }
+// };
+
+
 const stopTracking = async () => {
-  try {
-    // Stop BLE or other tracking mechanisms
-    await sendCommand('SET_MODE STEP_COUNTING');
-    setIsTracking(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await sendCommand('SET_MODE STEP_COUNTING');
+      setIsTracking(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      console.log('✅ Distance skating session stopped');
 
-    console.log('✅ Speed skating session stopped');
+      // Prepare session data for backend
+      const sessionData = {
+        mode: 'SD', // Distance Skating
+        duration, // seconds
+        formattedDuration: formatTime(duration),
+        maxSpeed: sessionMaxSpeed.toFixed(1),
+        minSpeed: sessionMinSpeed.toFixed(1),
+        avgSpeed: averageSpeed.toFixed(1),
+        currentSpeed: currentSpeed.toFixed(1),
+        distance: distanceKm,
+        strides,
+        calories,
+        allSpeedReadings: speedReadings,
+        timestamp: new Date().toISOString(),
+      };
 
-    // Prepare session data
-    const sessionData = {
-      mode: 'SS', // Speed Skating mode
-      duration: duration, // in seconds
-      formattedDuration: formatTime(duration),
-      maxSpeed: sessionMaxSpeed.toFixed(1),
-      minSpeed: sessionMinSpeed.toFixed(1),
-      avgSpeed: averageSpeed.toFixed(1),
-      currentSpeed: currentSpeed.toFixed(1),
-      distance: (currentSpeed * duration / 3600).toFixed(2), // km
-      strides,
-      calories,
-      allSpeedReadings: speedReadings,
-      timestamp: new Date().toISOString(),
-    };
+      console.log('📦 Sending Distance Skating session data:', sessionData);
 
-    console.log('📦 Session Data ready to POST:', sessionData);
+      // Save session via Zustand store (POST to backend)
+      const createdSession = await createSession(sessionData);
+      console.log('✅ Session successfully saved to backend:', createdSession);
 
-    // ✅ Post to backend via Zustand store
-    const createdSession = await createSession(sessionData);
-
-    console.log('✅ Session successfully saved to backend:', createdSession);
-
-    // Show success alert
-    Alert.alert(
-      'Session Complete! 🏆',
-      `Duration: ${formatTime(duration)}\n` +
-        `Max Speed: ${sessionMaxSpeed.toFixed(1)} km/h\n` +
+      Alert.alert(
+        'Session Saved! 🏆',
+        `Duration: ${formatTime(duration)}\n` +
+        `Distance: ${distanceKm} km\n` +
         `Avg Speed: ${averageSpeed.toFixed(1)} km/h\n` +
-        `Distance: ${(currentSpeed * duration / 3600).toFixed(2)} km\n` +
+        `Max Speed: ${sessionMaxSpeed.toFixed(1)} km/h\n` +
         `Strides: ${strides}\n` +
         `Calories: ${calories}`,
-      [{ text: 'OK', style: 'default' }]
-    );
-  } catch (error) {
-    console.error('❌ Failed to stop tracking or save session:', error);
-    Alert.alert('Error', error.message || 'Failed to stop tracking');
-  }
-};
+        [{ text: 'OK', style: 'default' }]
+      );
+    } catch (error) {
+      console.error('❌ Failed to stop tracking or save session:', error);
+      Alert.alert('Error', error.message || 'Failed to save session');
+    }
+  };
 
 
   const animatePulse = () => {
