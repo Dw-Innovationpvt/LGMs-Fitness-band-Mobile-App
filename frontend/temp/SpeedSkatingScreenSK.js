@@ -715,7 +715,6 @@
 //   );
 // };
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, Animated, Easing, Alert, ScrollView, Dimensions, StyleSheet
@@ -774,10 +773,7 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
     startNewSession
   } = useBLEStore();
   
-  const { createSession } = useSessionStore();
-
-  // Use the specialized hook for speed sessions
-  const { fetchSpeedSessions } = useSpeedSkatingSessions?.() || { fetchSpeedSessions: () => {} };
+  const { createSession, fetchSessions } = useSessionStore();
 
   const [isTracking, setIsTracking] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -892,10 +888,8 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
       
       console.log('✅ Speed skating session stopped');
       
-      // Refresh sessions data - safely call if available
-      if (fetchSpeedSessions) {
-        await fetchSpeedSessions();
-      }
+      // Refresh sessions data - fetch only speed skating sessions
+      await fetchSessions({ mode: 'SS' });
       
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to stop tracking');
@@ -1284,6 +1278,7 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
     </View>
   );
 };
+
 
 // Add your styles here...
 
