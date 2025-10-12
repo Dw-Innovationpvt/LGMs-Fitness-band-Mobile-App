@@ -48,6 +48,7 @@ const SignUpScreen = ({ navigation }) => {
     const colors = {
         bg: isDarkMode ? '#000' : '#fff',
         text: isDarkMode ? '#fff' : '#000',
+                linkText: '#4DA6FF',
         placeholder: isDarkMode ? '#ddd' : '#555',
         buttonBg: isDarkMode ? '#fff' : '#000',
         buttonText: isDarkMode ? '#000' : '#fff',
@@ -187,7 +188,7 @@ const SignUpScreen = ({ navigation }) => {
 
                         <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
                             <Text style={[styles.switchText, { color: colors.text }]}>
-                                Already have an account? <Text style={{ color: colors.text }}>Sign In</Text>
+                                Already have an account? <Text style={{ color: colors.linkText }}>Sign In</Text>
                             </Text>
                         </TouchableOpacity>
                     </View>

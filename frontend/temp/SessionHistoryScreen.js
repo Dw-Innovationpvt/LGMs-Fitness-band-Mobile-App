@@ -13,7 +13,8 @@ import {
   Dimensions,
   StatusBar,
   Platform,
-  Share
+  Share,
+  SafeAreaView
 } from 'react-native';
 import { useSessionStore, useSpeedSkatingSessions, useDistanceSkatingSessions, useStepCountingSessions } from '../store/useSessionStore';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
@@ -406,24 +407,21 @@ Recorded on ${format(parseISO(session.startTime), 'MMM dd, yyyy')}`;
   ];
 
   return (
+    <>
     <View style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
-      
-      {/* Header */}
       <LinearGradient
-        colors={getTabGradient(activeTab)}
-        style={styles.headerGradient}
-      >
+                colors={['#4B6CB7', '#182848']}
+                style={styles.headerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
         <View style={styles.headerSection}>
           <View>
-            <Text style={styles.greetingText}>Your Training History</Text>
             <Text style={styles.headerText}>
               {getTabName(activeTab)} Sessions
             </Text>
           </View>
-          <TouchableOpacity style={styles.profileIcon}>
-            <Text style={{ color: '#fff', fontSize: width * 0.04 }}>👤</Text>
-          </TouchableOpacity>
+
         </View>
 
         {/* Tab Navigation */}
@@ -501,17 +499,26 @@ Recorded on ${format(parseISO(session.startTime), 'MMM dd, yyyy')}`;
             renderEmptyState()
           )}
         </View>
+
+                  <View style={{marginBottom: 100}}>
+                  </View>
+
       </ScrollView>
     </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-    marginBottom: Platform.OS === 'ios' ? 40 : 40,
-    paddingBottom: Platform.OS === 'ios' ? 0 : 0,
-    backgroundColor: '#F5F7FB',
+        flex: 1,
+        // marginBottom: Platform.OS === 'ios' ? 40 : 40,
+        // paddingBottom: Platform.OS === 'ios' ? 0 : 0,
+        backgroundColor: '#F5F7FB',
+    // flex: 1,
+    // marginBottom: Platform.OS === 'ios' ? 40 : 40,
+    // paddingBottom: Platform.OS === 'ios' ? 0 : 0,
+    // backgroundColor: '#F5F7FB',
   },
   headerGradient: {
     marginTop: Platform.OS === 'ios' ? -60 : -10,

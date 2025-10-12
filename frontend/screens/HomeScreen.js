@@ -375,7 +375,16 @@ const totalProgress = calculateTotalProgress(dailyGoals);
   const startSkatingSession = (type) => {
     try {
       setSkatingModalVisible(false);
-      navigation.navigate('SkatingTracking', { skatingType: type });
+      // navigation.navigate('SkatingTracking', { skatingType: type });
+      if (type === 'speed') {
+        console.log('navigate to speed')
+        navigation.navigate('Speedsk');
+      }
+      if (type === 'distance') {
+        console.log('navigate to distance')
+        navigation.navigate('Distancesk');
+      } 
+      // console.log(type, 'Thisis i type of skatin naow naviagtiong to that screen')
     } catch (error) {
       console.error('Navigation error:', error);
       Alert.alert('Error', 'Could not start skating session');

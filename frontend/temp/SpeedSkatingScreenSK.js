@@ -1129,7 +1129,8 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
             disabled={!isConnected}
           >
             <LinearGradient 
-              colors={['#4B6CB7', darkenColor('#4B6CB7', 20)]} 
+              // colors={['#4B6CB7', darkenColor('#4B6CB7', 20)]} 
+              colors={['#4B6CB7', '#4B6CB7']} 
               style={[
                 styles.gradientButton,
                 !isConnected && styles.disabledButton
@@ -1206,11 +1207,11 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
               <Text style={styles.statSubLabel}>min/km</Text>
             </View>
             
-            <View style={styles.statCard}>
+            {/* <View style={styles.statCard}>
               <MaterialCommunityIcons name="fire" size={24} color="#FF3B30" />
               <Text style={styles.statValue}>{calories}</Text>
               <Text style={styles.statLabel}>Calories</Text>
-            </View>
+            </View> */}
 
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="map-marker-distance" size={24} color="#34C759" />
@@ -1268,12 +1269,16 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
             </Text>
             <TouchableOpacity 
               style={styles.helpButton}
-              onPress={() => navigation.navigate('Devices')}
+              onPress={() => navigation.navigate('Simple')}
             >
               <Text style={styles.helpButtonText}>Go to Devices</Text>
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={{marginBottom: 120}}>
+        </View>
+
       </ScrollView>
     </View>
   );
@@ -1472,7 +1477,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    // elevation: 6,
   },
   gradientButton: {
     flexDirection: 'row',
@@ -1496,12 +1501,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statsGrid: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
+    // flexDirection: 'column',
+    // flexWrap: 'wrap',
+    // justifyContent: 'space-between',
+        flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   statCard: {
-    width: (width - 88) / 2,
+    // width: (width - 88) / 2,
+    width: (width - 99) / 2,
     alignItems: 'center',
     marginBottom: 15,
     padding: 16,

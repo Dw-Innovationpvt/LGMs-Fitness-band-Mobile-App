@@ -155,8 +155,8 @@ const MainTabNavigator = () => {
       {/* <Tab.Screen name="SpeedSk" component={SpeedSk} /> */}
       {/* <Tab.Screen name="DistanceSk" component={DistanceSkatingScreen} /> */}
 
-      <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
-      <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} />
+      {/* <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
+      <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} /> */}
       <Tab.Screen name="History" component={SessionHistoryScreen} />
       {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}

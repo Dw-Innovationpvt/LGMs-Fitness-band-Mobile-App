@@ -1,3 +1,686 @@
+// import React, { useEffect, useState } from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   ScrollView,
+//   Dimensions,
+//   Animated,
+//   Easing,
+//   useWindowDimensions,
+//   Modal,
+//   TextInput
+// } from 'react-native';
+// import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import { ProgressChart } from 'react-native-chart-kit';
+// // import { useBLEStore } from './components/bleStore';
+// import { useBLEStore } from '../store/augBleStore';
+// import { useCaloriesStore } from '../store/caloriesStore';
+
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { SKATING_MODE_KEY } from '../constants/storageKeys';
+
+
+// const { width } = Dimensions.get('window');
+
+// const StepCountScreen = ({ navigation }) => {
+//   const { sendCommand, data } = useBLEStore();
+//       const {     stepGoal,
+//       fetchStepGoal, 
+//       setStepGoal,
+//       setMealTarget // Add this function to your caloriesStore
+//     } = useCaloriesStore();
+
+//   const { height } = useWindowDimensions();
+  
+//   // State for UI elements
+//   const [isSyncing, setIsSyncing] = useState(false);
+//   const [animation] = useState(new Animated.Value(0));
+//   const [selectedTab, setSelectedTab] = useState('today');
+//   const [showGoalModal, setShowGoalModal] = useState(false);
+//   // const [stepGoal, setStepGoal] = useState(10000);
+//   const [tempGoal, setTempGoal] = useState('10000');
+
+
+//   // Extract data from BLE with fallback values
+//   const stepData = data && data.mode === 'S' ? {
+//     steps: data.stepCount || 0,
+//     distance: data.walkingDistance || 0,
+//     strideCount: data.strideCount || 0,
+//     speed: data.speed || 0,
+//     mode: data.mode
+//   } : {
+//     steps: 0,
+//     distance: 0,
+//     strideCount: 0,
+//     speed: 0,
+//     mode: 'N/A'
+//   };
+
+//   // Calculate derived metrics
+//   const distanceInKm = +(stepData.distance / 1000).toFixed(2);
+//   const avgSpeed = stepData.speed || 4.8; // km/h
+//   const metValue = avgSpeed < 3 ? 2.9 : avgSpeed < 4 ? 3.3 : 3.8;
+//   const calories = Math.round(distanceInKm * metValue * 70 / 1.6); // Assuming 70kg person
+
+//   const print = async () => { 
+//     try {
+//       const value = await AsyncStorage.getItem(SKATING_MODE_KEY);
+//       console.log(value, 'printtttttttttttttttttttttttt', '     ', value);
+//       if(value !== null) {
+//         // value previously stored
+//       }
+//     } catch(e) {
+//       // error reading value
+//       console.error("Failed to fetch mode from AsyncStorage:", e);
+//     }
+//     // return value;
+//   }
+//   // Set mode when component mounts
+//   useEffect(() => {
+//     print();
+//     // console.log(print(),'print function call in step count screen');
+//     // console.log(SKATING_MODE_KEY,'skating mode key in step count screen');
+//     // console.log('Setting mode to STEP_COUNTING');
+//     // sendCommand('SET_MODE STEP_COUNTING');
+//     // return () => sendCommand('SET_MODE SKATING_SPEED');
+//   }, []);
+
+//   // Chart data
+//   const chartData = {
+//     labels: ["Steps"],
+//     data: [stepData.steps/stepGoal],
+//     colors: ["#4B6CB7"]
+//   };
+
+//   const chartConfig = {
+//     backgroundColor: "#fff",
+//     backgroundGradientFrom: "#fff",
+//     backgroundGradientTo: "#fff",
+//     decimalPlaces: 0,
+//     color: (opacity = 1) => `rgba(75, 108, 183, ${opacity})`,
+//     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+//     style: {
+//       borderRadius: 16
+//     },
+//     propsForDots: {
+//       r: "6",
+//       strokeWidth: "2",
+//       stroke: "#4B6CB7"
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (isSyncing) {
+//       Animated.loop(
+//         Animated.timing(animation, {
+//           toValue: 1,
+//           duration: 1000,
+//           easing: Easing.linear,
+//           useNativeDriver: true
+//         })
+//       ).start();
+//     } else {
+//       animation.setValue(0);
+//     }
+//   }, [isSyncing]);
+
+//   const syncWithDevice = () => {
+//     setIsSyncing(true);
+//     setTimeout(() => {
+//       setIsSyncing(false);
+//     }, 2000);
+//   };
+
+//   const rotateStyle = {
+//     transform: [{
+//       rotate: animation.interpolate({
+//         inputRange: [0, 1],
+//         outputRange: ['0deg', '360deg']
+//       })
+//     }]
+//   };
+
+//   const handleGoalSave = () => {
+//     const newGoal = parseInt(tempGoal) || 10000;
+//     setStepGoal(newGoal);
+//     setShowGoalModal(false);
+//   };
+
+//   const renderDailyStats = () => (
+//     <View style={styles.statsContainer}>
+//       <View style={styles.statCard}>
+//         <View style={styles.goalHeader}>
+//           <MaterialCommunityIcons name="walk" size={24} color="#4B6CB7" />
+//           <TouchableOpacity onPress={() => setShowGoalModal(true)}>
+//             <Feather name="edit-2" size={18} color="#4B6CB7" />
+//           </TouchableOpacity>
+//         </View>
+//         <Text style={styles.statValue}>{stepData.steps.toLocaleString()}</Text>
+//         <Text style={styles.statLabel}>Steps</Text>
+//         <View style={styles.progressBar}>
+//           <LinearGradient
+//             colors={['#4B6CB7', '#6B8CE8']}
+//             style={[styles.progressFill, { width: `${Math.min(100, (stepData.steps/stepGoal)*100)}%` }]}
+//             start={{ x: 0, y: 0 }}
+//             end={{ x: 1, y: 0 }}
+//           />
+//         </View>
+//         <Text style={styles.progressText}>
+//           {Math.round((stepData.steps/stepGoal)*100)}% of {stepGoal.toLocaleString()} goal
+//         </Text>
+//       </View>
+
+//       <View style={styles.statCard}>
+//         <MaterialCommunityIcons name="map-marker-distance" size={24} color="#4B6CB7" />
+//         <Text style={styles.statValue}>{distanceInKm}</Text>
+//         <Text style={styles.statLabel}>Kilometers</Text>
+//       </View>
+
+//       <View style={styles.statCard}>
+//         <MaterialCommunityIcons name="speedometer" size={24} color="#4B6CB7" />
+//         <Text style={styles.statValue}>{stepData.speed.toFixed(2)}</Text>
+//         <Text style={styles.statLabel}>Speed (m/s)</Text>
+//       </View>
+
+//       {/* <View style={styles.statCard}>
+//         <MaterialCommunityIcons name="fire" size={24} color="#4B6CB7" />
+//         <Text style={styles.statValue}>{calories}</Text>
+//         <Text style={styles.statLabel}>Calories Burned</Text>
+//       </View> */}
+//     </View>
+//   );
+
+//   const renderWeeklyStats = () => (
+//     <View style={styles.weeklyContainer}>
+//       <Text style={styles.sectionTitle}>Weekly Progress</Text>
+//       <View style={styles.chartContainer}>
+//         <ProgressChart
+//           data={chartData}
+//           width={width - 40}
+//           height={220}
+//           strokeWidth={16}
+//           radius={80}
+//           chartConfig={chartConfig}
+//           hideLegend={true}
+//         />
+//         <View style={styles.chartCenterText}>
+//           <Text style={styles.chartPercentage}>{Math.round((stepData.steps/stepGoal)*100)}%</Text>
+//           <Text style={styles.chartLabel}>Daily Goal</Text>
+//         </View>
+//       </View>
+//     </View>
+//   );
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Header */}
+//       <LinearGradient
+//         colors={['#4B6CB7', '#182848']}
+//         style={styles.header}
+//         start={{ x: 0, y: 0 }}
+//         end={{ x: 1, y: 0 }}
+//       >
+//         <TouchableOpacity onPress={() => navigation.goBack()}>
+//           <Feather name="arrow-left" size={24} color="#fff" />
+//         </TouchableOpacity>
+//         <Text style={styles.headerTitle}>Step Count</Text>
+//         <TouchableOpacity onPress={syncWithDevice}>
+//           <Animated.View style={rotateStyle}>
+//             <Feather 
+//               name="refresh-cw" 
+//               size={24} 
+//               color="#fff" 
+//               style={isSyncing ? null : { opacity: 0.8 }}
+//             />
+//           </Animated.View>
+//         </TouchableOpacity>
+//       </LinearGradient>
+
+//       {/* Tabs */}
+//       <View style={styles.tabContainer}>
+//         {/* <TouchableOpacity 
+//           style={[styles.tabButton, selectedTab === 'today' && styles.activeTab]}
+//           onPress={() => setSelectedTab('today')}
+//         >
+//           <Text style={[styles.tabText, selectedTab === 'today' && styles.activeTabText]}>Today</Text>
+//         </TouchableOpacity> */}
+//         {/* <TouchableOpacity 
+//           style={[styles.tabButton, selectedTab === 'weekly' && styles.activeTab]}
+//           onPress={() => setSelectedTab('weekly')}
+//         >
+//           <Text style={[styles.tabText, selectedTab === 'weekly' && styles.activeTabText]}>Weekly</Text>
+//         </TouchableOpacity> */}
+//       </View>
+
+//       {/* <View style={styles.rawDataContainer}>
+//         <Text style={styles.rawDataTitle}>Raw Step Data</Text>
+//         <View style={styles.rawDataContent}>
+//           <Text style={styles.rawDataText}>
+//             {JSON.stringify(data, null, 2) || 'No data available'}
+//           </Text>
+//         </View>
+//       </View> */}
+
+//       <ScrollView contentContainerStyle={styles.scrollContent}>
+//         {selectedTab === 'today' ? renderDailyStats() : renderWeeklyStats()}
+
+//         {/* Activity History */}
+//         {/* <View style={styles.historyContainer}>
+//           <View style={styles.historyHeader}>
+//             <Text style={styles.sectionTitle}>Recent Activity</Text>
+//             <TouchableOpacity onPress={() => navigation.navigate('ActivityHistory')}>
+//               <Text style={styles.seeAllText}>See All</Text>
+//             </TouchableOpacity>
+//           </View>
+          
+//           <View style={styles.historyCard}>
+//             <View style={styles.historyItem}>
+//               <View style={styles.historyIcon}>
+//                 <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
+//               </View>
+//               <View style={styles.historyDetails}>
+//                 <Text style={styles.historyDate}>Today</Text>
+//                 <Text style={styles.historyStats}>
+//                   {stepData.steps.toLocaleString()} steps • {distanceInKm} km • {stepData.speed.toFixed(2)} m/s
+//                 </Text>
+//               </View>
+//               <Feather name="chevron-right" size={20} color="#999" />
+//             </View>
+
+//             <View style={styles.historyItem}>
+//               <View style={styles.historyIcon}>
+//                 <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
+//               </View>
+//               <View style={styles.historyDetails}>
+//                 <Text style={styles.historyDate}>Yesterday</Text>
+//                 <Text style={styles.historyStats}>8,542 steps • 4.1 km • 1.2 m/s</Text>
+//               </View>
+//               <Feather name="chevron-right" size={20} color="#999" />
+//             </View>
+
+//             <View style={styles.historyItem}>
+//               <View style={styles.historyIcon}>
+//                 <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
+//               </View>
+//               <View style={styles.historyDetails}>
+//                 <Text style={styles.historyDate}>2 days ago</Text>
+//                 <Text style={styles.historyStats}>7,891 steps • 3.8 km • 1.1 m/s</Text>
+//               </View>
+//               <Feather name="chevron-right" size={20} color="#999" />
+//             </View>
+//           </View>
+//         </View> */}
+
+//         {/* <View>
+//           <TouchableOpacity>
+//             <Text>
+//             View previous Steps.
+//             </Text>
+              
+//           </TouchableOpacity>
+//         </View> */}
+
+//       </ScrollView>
+
+//       {/* Goal Setting Modal */}
+//       <Modal
+//         visible={showGoalModal}
+//         transparent={true}
+//         animationType="slide"
+//       >
+//         <View style={styles.modalOverlay}>
+//           <View style={styles.modalContainer}>
+//             <Text style={styles.modalTitle}>Set Daily Step Goal</Text>
+            
+//             <View style={styles.inputContainer}>
+//               <TextInput
+//                 style={styles.input}
+//                 keyboardType="numeric"
+//                 value={tempGoal}
+//                 onChangeText={setTempGoal}
+//                 placeholder="Enter step goal"
+//               />
+//               <Text style={styles.inputLabel}>steps per day</Text>
+//             </View>
+            
+//             <View style={styles.modalButtons}>
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.cancelButton]}
+//                 onPress={() => setShowGoalModal(false)}
+//               >
+//                 <Text style={styles.cancelButtonText}>Cancel</Text>
+//               </TouchableOpacity>
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.saveButton]}
+//                 onPress={handleGoalSave}
+//               >
+//                 <Text style={styles.saveButtonText}>Save Goal</Text>
+//               </TouchableOpacity>
+//             </View>
+//           </View>
+//         </View>
+//       </Modal>
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+
+//    rawDataContainer: {
+//     backgroundColor: '#fff',
+//     borderRadius: 12,
+//     padding: 16,
+//     marginTop: 20,
+//     marginHorizontal: 20,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 3,
+//   },
+//   rawDataTitle: {
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//     color: '#4B6CB7',
+//     marginBottom: 10,
+//   },
+//   rawDataContent: {
+//     backgroundColor: '#f8f9fa',
+//     borderRadius: 8,
+//     padding: 12,
+//   },
+//   rawDataText: {
+//     fontFamily: 'Courier New',
+//     fontSize: 12,
+//     color: '#333',
+//   },
+
+
+//   container: {
+//     flex: 1,
+//     backgroundColor: '#F5F7FB',
+//   },
+//   header: {
+//     paddingTop: Dimensions.get('window').height * 0.06,
+//     paddingHorizontal: '5%',
+//     paddingBottom: '5%',
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//     borderBottomLeftRadius: 20,
+//     borderBottomRightRadius: 20,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.2,
+//     shadowRadius: 8,
+//     elevation: 8,
+//   },
+//   headerTitle: {
+//     fontSize: width * 0.055,
+//     fontWeight: '600',
+//     color: '#fff',
+//   },
+//   tabContainer: {
+//     flexDirection: 'row',
+//     marginHorizontal: '5%',
+//     marginTop: '5%',
+//     backgroundColor: '#E0E0E0',
+//     borderRadius: 12,
+//     overflow: 'hidden',
+//   },
+//   tabButton: {
+//     flex: 1,
+//     paddingVertical: '3%',
+//     alignItems: 'center',
+//   },
+//   activeTab: {
+//     backgroundColor: '#4B6CB7',
+//   },
+//   tabText: {
+//     fontSize: width * 0.04,
+//     fontWeight: '600',
+//     color: '#666',
+//   },
+//   activeTabText: {
+//     color: '#fff',
+//   },
+//   scrollContent: {
+//     paddingBottom: '10%',
+//   },
+//   statsContainer: {
+//     flexDirection: 'row',
+//     flexWrap: 'wrap',
+//     justifyContent: 'space-between',
+//     paddingHorizontal: '5%',
+//     paddingTop: '5%',
+//   },
+//   statCard: {
+//     backgroundColor: '#fff',
+//     borderRadius: 16,
+//     padding: '4%',
+//     width: width > 400 ? '48%' : '100%',
+//     marginBottom: '4%',
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 2,
+//   },
+//   goalHeader: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//   },
+//   statValue: {
+//     fontSize: width * 0.07,
+//     fontWeight: 'bold',
+//     color: '#333',
+//     marginVertical: '2%',
+//   },
+//   statLabel: {
+//     fontSize: width * 0.035,
+//     color: '#666',
+//   },
+//   progressBar: {
+//     height: 6,
+//     backgroundColor: '#f0f0f0',
+//     borderRadius: 3,
+//     marginTop: '3%',
+//     overflow: 'hidden',
+//   },
+//   progressFill: {
+//     height: '100%',
+//     borderRadius: 3,
+//   },
+//   progressText: {
+//     fontSize: width * 0.03,
+//     color: '#4B6CB7',
+//     marginTop: '1%',
+//     fontWeight: '500',
+//   },
+//   weeklyContainer: {
+//     paddingHorizontal: '5%',
+//     paddingTop: '5%',
+//   },
+//   sectionTitle: {
+//     fontSize: width * 0.045,
+//     fontWeight: '600',
+//     color: '#333',
+//   },
+//   chartContainer: {
+//     backgroundColor: '#fff',
+//     borderRadius: 16,
+//     padding: '4%',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 2,
+//   },
+//   chartCenterText: {
+//     position: 'absolute',
+//     alignItems: 'center',
+//   },
+//   chartPercentage: {
+//     fontSize: width * 0.06,
+//     fontWeight: 'bold',
+//     color: '#333',
+//   },
+//   chartLabel: {
+//     fontSize: width * 0.035,
+//     color: '#666',
+//   },
+//   historyContainer: {
+//     paddingHorizontal: '5%',
+//     marginTop: '2.5%',
+//   },
+//   historyHeader: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//     marginBottom: '4%',
+//   },
+//   seeAllText: {
+//     color: '#4B6CB7',
+//     fontSize: width * 0.035,
+//     fontWeight: '500',
+//   },
+//   historyCard: {
+//     backgroundColor: '#fff',
+//     borderRadius: 16,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//     elevation: 2,
+//   },
+//   historyItem: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     padding: '4%',
+//     borderBottomWidth: 1,
+//     borderBottomColor: '#f0f0f0',
+//   },
+//   historyIcon: {
+//     backgroundColor: 'rgba(75, 108, 183, 0.1)',
+//     width: width * 0.1,
+//     height: width * 0.1,
+//     borderRadius: width * 0.05,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     marginRight: '3%',
+//   },
+//   historyDetails: { flex: 1 },
+//   historyDate: { fontSize: width * 0.04, color: '#333', fontWeight: '500' },
+//   historyStats: { fontSize: width * 0.035, color: '#666', marginTop: '1%' },
+//   // Modal Styles
+//   modalOverlay: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.5)',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   modalContainer: {
+//     backgroundColor: '#fff',
+//     borderRadius: 16,
+//     padding: '5%',
+//     width: '80%',
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 8,
+//     elevation: 8,
+//   },
+//   modalTitle: {
+//     fontSize: width * 0.05,
+//     fontWeight: '600',
+//     color: '#333',
+//     marginBottom: '8%',
+//     textAlign: 'center',
+//   },
+//   inputContainer: {
+//     marginBottom: '8%',
+//   },
+//   input: {
+//     borderBottomWidth: 1,
+//     borderBottomColor: '#4B6CB7',
+//     padding: '3%',
+//     fontSize: width * 0.045,
+//     textAlign: 'center',
+//     marginBottom: '2%',
+//   },
+//   inputLabel: {
+//     textAlign: 'center',
+//     color: '#666',
+//     fontSize: width * 0.035,
+//   },
+//   modalButtons: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     marginTop: '5%',
+//   },
+//   modalButton: {
+//     padding: '4%',
+//     borderRadius: 8,
+//     width: '48%',
+//     alignItems: 'center',
+//   },
+//   cancelButton: {
+//     backgroundColor: '#f0f0f0',
+//   },
+//   saveButton: {
+//     backgroundColor: '#4B6CB7',
+//   },
+//   cancelButtonText: {
+//     color: '#666',
+//     fontWeight: '600',
+//   },
+//   saveButtonText: {
+//     color: '#fff',
+//     fontWeight: '600',
+//   },
+// });
+
+// export default StepCountScreen;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -10,28 +693,30 @@ import {
   Easing,
   useWindowDimensions,
   Modal,
-  TextInput
+  TextInput,
+  Alert
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProgressChart } from 'react-native-chart-kit';
-// import { useBLEStore } from './components/bleStore';
 import { useBLEStore } from '../store/augBleStore';
 import { useCaloriesStore } from '../store/caloriesStore';
-
+import { useSessionStore } from '../store/useSessionStore'; // Import session store
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SKATING_MODE_KEY } from '../constants/storageKeys';
-
 
 const { width } = Dimensions.get('window');
 
 const StepCountScreen = ({ navigation }) => {
   const { sendCommand, data } = useBLEStore();
-      const {     stepGoal,
-      fetchStepGoal, 
-      setStepGoal,
-      setMealTarget // Add this function to your caloriesStore
-    } = useCaloriesStore();
+  const { 
+    stepGoal,
+    fetchStepGoal, 
+    setStepGoal,
+    setMealTarget 
+  } = useCaloriesStore();
+  
+  const { createSession } = useSessionStore(); // Get createSession function
 
   const { height } = useWindowDimensions();
   
@@ -40,9 +725,10 @@ const StepCountScreen = ({ navigation }) => {
   const [animation] = useState(new Animated.Value(0));
   const [selectedTab, setSelectedTab] = useState('today');
   const [showGoalModal, setShowGoalModal] = useState(false);
-  // const [stepGoal, setStepGoal] = useState(10000);
   const [tempGoal, setTempGoal] = useState('10000');
-
+  const [sessionDuration, setSessionDuration] = useState(0); // Track session duration
+  const [isSessionActive, setIsSessionActive] = useState(false); // Track if session is active
+  const [sessionStartTime, setSessionStartTime] = useState(null);
 
   // Extract data from BLE with fallback values
   const stepData = data && data.mode === 'S' ? {
@@ -73,20 +759,113 @@ const StepCountScreen = ({ navigation }) => {
         // value previously stored
       }
     } catch(e) {
-      // error reading value
       console.error("Failed to fetch mode from AsyncStorage:", e);
     }
-    // return value;
   }
+
   // Set mode when component mounts
   useEffect(() => {
     print();
-    // console.log(print(),'print function call in step count screen');
-    // console.log(SKATING_MODE_KEY,'skating mode key in step count screen');
-    // console.log('Setting mode to STEP_COUNTING');
-    // sendCommand('SET_MODE STEP_COUNTING');
-    // return () => sendCommand('SET_MODE SKATING_SPEED');
+    // Start session automatically when component mounts
+    startSession();
   }, []);
+
+  // Session duration timer
+  useEffect(() => {
+    let interval;
+    if (isSessionActive) {
+      interval = setInterval(() => {
+        setSessionDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isSessionActive]);
+
+  // Start a new session
+  const startSession = () => {
+    setIsSessionActive(true);
+    setSessionStartTime(new Date());
+    setSessionDuration(0);
+    console.log('✅ Step counting session started');
+  };
+
+  // Save session to backend
+  const saveSession = async () => {
+    try {
+      if (stepData.steps === 0) {
+        Alert.alert(
+          'No Data',
+          'No step data available to save. Please walk to collect some data first.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const sessionData = {
+        deviceId: 'ESP32C3_SkatingBand_001',
+        mode: 'S', // Step Counting mode
+        startTime: sessionStartTime.toISOString(),
+        endTime: new Date().toISOString(),
+        stepCount: stepData.steps,
+        walkingDistance: stepData.distance,
+        strideCount: stepData.strideCount,
+        skatingDistance: 0, // No skating distance for step counting
+        speedData: {
+          currentSpeed: stepData.speed,
+          maxSpeed: stepData.speed, // For step counting, current speed is used as max
+          minSpeed: stepData.speed, // For step counting, current speed is used as min
+          averageSpeed: stepData.speed
+        },
+        laps: 0,
+        config: {
+          wheelDiameter: 0.09,
+          trackLength: 100.0
+        },
+        calories: calories,
+        duration: sessionDuration
+      };
+
+      console.log('📦 Saving step counting session data:', sessionData);
+
+      // Save session via Zustand store (POST to backend)
+      const createdSession = await createSession(sessionData);
+      console.log('✅ Step counting session saved successfully:', createdSession);
+
+      Alert.alert(
+        'Session Saved! 👣',
+        `Steps: ${stepData.steps.toLocaleString()}\n` +
+        `Distance: ${distanceInKm} km\n` +
+        `Duration: ${formatTime(sessionDuration)}\n` +
+        `Calories: ${calories}`,
+        [{ text: 'OK', style: 'default' }]
+      );
+
+      // Reset session after saving
+      resetSession();
+
+    } catch (error) {
+      console.error('❌ Failed to save step counting session:', error);
+      Alert.alert('Error', error.message || 'Failed to save session data');
+    }
+  };
+
+  // Reset session data
+  const resetSession = () => {
+    setIsSessionActive(false);
+    setSessionDuration(0);
+    setSessionStartTime(null);
+    console.log('🔄 Session reset');
+  };
+
+  // Format time function
+  const formatTime = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Chart data
   const chartData = {
@@ -186,6 +965,12 @@ const StepCountScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.statCard}>
+        <MaterialCommunityIcons name="clock-outline" size={24} color="#4B6CB7" />
+        <Text style={styles.statValue}>{formatTime(sessionDuration)}</Text>
+        <Text style={styles.statLabel}>Session Time</Text>
+      </View>
+
+      <View style={styles.statCard}>
         <MaterialCommunityIcons name="fire" size={24} color="#4B6CB7" />
         <Text style={styles.statValue}>{calories}</Text>
         <Text style={styles.statLabel}>Calories Burned</Text>
@@ -241,77 +1026,58 @@ const StepCountScreen = ({ navigation }) => {
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, selectedTab === 'today' && styles.activeTab]}
-          onPress={() => setSelectedTab('today')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'today' && styles.activeTabText]}>Today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, selectedTab === 'weekly' && styles.activeTab]}
-          onPress={() => setSelectedTab('weekly')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'weekly' && styles.activeTabText]}>Weekly</Text>
-        </TouchableOpacity>
+        {/* Tab buttons remain the same */}
       </View>
-
-      {/* <View style={styles.rawDataContainer}>
-        <Text style={styles.rawDataTitle}>Raw Step Data</Text>
-        <View style={styles.rawDataContent}>
-          <Text style={styles.rawDataText}>
-            {JSON.stringify(data, null, 2) || 'No data available'}
-          </Text>
-        </View>
-      </View> */}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {selectedTab === 'today' ? renderDailyStats() : renderWeeklyStats()}
 
-        {/* Activity History */}
-        <View style={styles.historyContainer}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ActivityHistory')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Save Session Button */}
+        <View style={styles.saveSessionContainer}>
+          <TouchableOpacity 
+            style={[
+              styles.saveSessionButton,
+              stepData.steps === 0 && styles.saveSessionButtonDisabled
+            ]} 
+            onPress={saveSession}
+            disabled={stepData.steps === 0}
+          >
+            <LinearGradient
+              colors={['#4B6CB7', '#6B8CE8']}
+              style={styles.saveSessionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <MaterialCommunityIcons name="content-save" size={24} color="#fff" />
+              <Text style={styles.saveSessionText}>Save Session</Text>
+            </LinearGradient>
+          </TouchableOpacity>
           
-          <View style={styles.historyCard}>
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>Today</Text>
-                <Text style={styles.historyStats}>
-                  {stepData.steps.toLocaleString()} steps • {distanceInKm} km • {stepData.speed.toFixed(2)} m/s
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#999" />
+          {isSessionActive && (
+            <View style={styles.sessionInfo}>
+              <Text style={styles.sessionInfoText}>
+                Session Active • {formatTime(sessionDuration)}
+              </Text>
             </View>
+          )}
+        </View>
 
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>Yesterday</Text>
-                <Text style={styles.historyStats}>8,542 steps • 4.1 km • 1.2 m/s</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#999" />
-            </View>
-
-            <View style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons name="walk" size={20} color="#4B6CB7" />
-              </View>
-              <View style={styles.historyDetails}>
-                <Text style={styles.historyDate}>2 days ago</Text>
-                <Text style={styles.historyStats}>7,891 steps • 3.8 km • 1.1 m/s</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#999" />
-            </View>
+        {/* Raw Data Display (optional) */}
+        <View style={styles.rawDataContainer}>
+          <Text style={styles.rawDataTitle}>Current Step Data</Text>
+          <View style={styles.rawDataContent}>
+            <Text style={styles.rawDataText}>
+              Steps: {stepData.steps.toLocaleString()}{'\n'}
+              Distance: {distanceInKm} km{'\n'}
+              Speed: {stepData.speed.toFixed(2)} m/s{'\n'}
+              Strides: {stepData.strideCount}{'\n'}
+              Session Time: {formatTime(sessionDuration)}
+            </Text>
           </View>
+        </View>
+          
+        <View style={{ marginBottom: 120 }}>
+
         </View>
       </ScrollView>
 
@@ -357,14 +1123,78 @@ const StepCountScreen = ({ navigation }) => {
   );
 };
 
-
-
-
-
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
+  header: {
+    paddingTop: Dimensions.get('window').height * 0.06,
+    paddingHorizontal: '5%',
+    paddingBottom: '5%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerTitle: {
+    fontSize: width * 0.055,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  // ... (keep all your existing styles)
 
-   rawDataContainer: {
+  // Add new styles for Save Session button
+  saveSessionContainer: {
+    paddingHorizontal: '5%',
+    marginTop: '5%',
+    alignItems: 'center',
+  },
+  saveSessionButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveSessionButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveSessionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: '4%',
+    paddingHorizontal: '6%',
+  },
+  saveSessionText: {
+    color: '#fff',
+    fontSize: width * 0.045,
+    fontWeight: '600',
+    marginLeft: '3%',
+  },
+  sessionInfo: {
+    marginTop: '3%',
+    padding: '3%',
+    backgroundColor: 'rgba(75, 108, 183, 0.1)',
+    borderRadius: 8,
+  },
+  sessionInfoText: {
+    color: '#4B6CB7',
+    fontSize: width * 0.035,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  rawDataContainer: {
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
@@ -391,10 +1221,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Courier New',
     fontSize: 12,
     color: '#333',
+    lineHeight: 18,
   },
+  // ... (keep all your existing modal styles)
 
 
-  container: {
+
+    container: {
     flex: 1,
     backgroundColor: '#F5F7FB',
   },
@@ -639,6 +1472,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+
+
+
+
+
+
+
+
+
 });
 
 export default StepCountScreen;
+
+

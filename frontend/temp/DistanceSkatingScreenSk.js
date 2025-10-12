@@ -714,6 +714,9 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
           )}
         </View>
       </Modal>
+
+        <View style={{marginBottom: 120}}>
+        </View>
     </View>
   );
 };
