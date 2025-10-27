@@ -3,6 +3,8 @@ import { BleManager } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
 
+import { useBLEReconnectionStore } from './useBLEReconnectionStore';
+
 const SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
 const CHARACTERISTIC_UUID = 'abcdefab-1234-5678-1234-abcdefabcdef';
 
@@ -300,6 +302,11 @@ export const useBLEStore = create((set, get) => ({
       
       console.log('Connected successfully, discovering services...');
       
+      const reconnectionStore = useBLEReconnectionStore.getState();
+      reconnectionStore.saveConnectionData(deviceConnection, targetCharacteristic);
+
+      reconnectionStore.startMonitoring();
+
       // Set connection immediately to provide user feedback
       set({ 
         connectedDevice: deviceConnection, 

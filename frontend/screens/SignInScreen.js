@@ -293,16 +293,6 @@ const onSignInPress = async () => {
     }
     else {
 
-
-    
-    // if (result.user.hasCompletedSetup) {
-    // const s = await checkSetup();
-    // if (!s.success) {
-    //     Alert.alert("Error", s.error);
-    //     navigation.replace('SignIn'); // back to signin on failure
-    //     return;
-    // }
-    // console.log("Setup status:", s.data);
     const { setup } = await checkSetup();
     console.log("Setup status:", setup, '68');
     if (setup) {

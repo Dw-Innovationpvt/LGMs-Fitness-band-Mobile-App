@@ -115,14 +115,47 @@ export const useAuthStore = create((set) => ({
       await AsyncStorage.setItem("token", data.token);
 
       set({ token: data.token, user: data.user, isLoading: false });
-      // console.log('116authstore');
-      // console.log(data.user, "userData");
+
       return { success: true };
     } catch (error) {
       set({ isLoading: false });
       return { success: false, error: error.message };
     }
   },
+  homeMainLocal: async () => {
+  set({ isLoading: true });
+
+  try {
+    const token = await AsyncStorage.getItem("token");
+    const userString = await AsyncStorage.getItem("user");
+
+    if (!token || !userString) {
+      set({ isLoading: false });
+      return { success: false, error: "No stored credentials" };
+    }
+
+    const user = JSON.parse(userString);
+
+    // Set the token and user in state without verification
+    // Actual validation will happen when making API calls
+    set({ 
+      token: token, 
+      user: user, 
+      isLoading: false 
+    });
+
+    return { success: true };
+  } catch (error) {
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
+    set({ 
+      token: null, 
+      user: null, 
+      isLoading: false 
+    });
+    return { success: false, error: error.message };
+  }
+},
   changePassword: async (newPassword) => {
     set({ isLoading: true });
     try {
@@ -313,21 +346,7 @@ const data = await response.json();
           stepsActiveMinutes: data.activeMinutes,
         });
         console.log("✅ Steps data stored:", data);
-      // } else {
-      //   console.warn("⚠️ No steps data received");
-      // }
 
-      // if (!response.ok) throw new Error(data.message || "Failed to fetch steps data");
-      // If data is already an array, use it directly; otherwise, wrap it in an array
-      // set({ stepsData: Array.isArray(data) ? data : [data] });
-      // set({ stepsTotalCount: data.totalCount || 0 });
-      // set({ stepsKilometers: data.kilometers || 0 });
-      // set({ stepsCaloriesBurned: data.caloriesBurned || 0 });
-      // set({ StepsActiveMinutes: data.activeMinutes || 0 });
-      // console.log(data.caloriesBurned, "stepsCaloriesBurned");
-
-      // console.log(stepsData)
-      // console.log("Steps data fetched successfully:", data);
       return data;
 
     }catch (error) {console.error("Error fetching steps data:", error);}
@@ -471,28 +490,7 @@ const data = await response.json();
       return { success: false, error: error.message };
     }
   },
-  // getMeals: async () => {
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-  //     const response = await fetch(`${API_URL}/meals/get`, {
-  //       method: "GET",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-  //     const data = await response.json();
-  //     if (!response.ok) throw new Error(data.message || "Failed to fetch meal data");
-  //     console.log(data, "mealData");
-  //     set({ mealData: data });
-  //     return { success: true, data };
-  //   } catch (error) {
-  //     console.error("Error fetching meal data:", error);
-  //     return { success: false, error: error.message };
-  //   }
-  // },
 
-  /// -----new for meals to get based on calender date
   getMeals: async (date) => {
   try {
     const token = await AsyncStorage.getItem("token");

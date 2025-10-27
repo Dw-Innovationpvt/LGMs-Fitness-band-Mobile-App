@@ -510,6 +510,9 @@ Recorded on ${format(parseISO(session.startTime), 'MMM dd, yyyy')}`;
 };
 
 const styles = StyleSheet.create({
+  fullSpace: {
+    // justifyContent: 'space-between',
+  },  
   safeArea: {
         flex: 1,
         // marginBottom: Platform.OS === 'ios' ? 40 : 40,
@@ -563,17 +566,23 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tabScrollView: {
+    // backgroundColor: 'red',
+    paddingLeft: 10,
+    // justifyContent: 'space-around',
     // Only styling for the ScrollView container itself
   },
   tabContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    // justifyContent: 'space-around',
     marginHorizontal: '-2%',
   },
   actionCard: {
     alignItems: 'center',
-    width: '30%',
+    width: '35%',
     paddingHorizontal: '2%',
+    // backgroundColor: 'pink',
+    // flex: 1,
   },
   actionIconContainer: {
     width: width * 0.14,

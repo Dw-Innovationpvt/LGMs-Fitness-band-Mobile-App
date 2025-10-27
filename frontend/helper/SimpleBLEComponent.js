@@ -65,12 +65,17 @@ const SimpleBLEComponent = ({ navigation }) => {
       <View style={[styles.card, styles.cardElevated]}>
         <Text style={styles.cardTitle}>Connection Status</Text>
         <Text>
+          {isConnected ? '' : '  Please turn on Bluetooth and Location'}
+        </Text>
+
+        <Text>
           {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
         </Text>
         {isConnected && connectedDevice && (
           <Text>📱 {connectedDevice.name || connectedDevice.id}</Text>
         )}
         {error && <Text style={{ color: 'red' }}>❌ {error}</Text>}
+        {error === 'Location services are disabled' && <Text>Please enable Location</Text>}
       </View>
 
       {/* Data */}
@@ -235,7 +240,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: '4%',
     marginBottom: '4%',
+    marginTop: '4%',
     overflow: 'hidden',
+    // paddingHorizontal: 10,
+    marginHorizontal: 10,
   },
   cardElevated: {
     shadowColor: '#000',
@@ -752,7 +760,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: 'white',
+    // backgroundColor: 'white',
   },
   modalButton: {
     flex: 1,
@@ -942,3 +950,52 @@ const styles = StyleSheet.create({
 });
 
 export default SimpleBLEComponent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

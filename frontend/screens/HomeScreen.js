@@ -690,7 +690,7 @@ const totalProgress = calculateTotalProgress(dailyGoals);
           <View style={styles.headerSection}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-start', marginTop: 10 }}>
               <Text style={styles.greetingText}>Good Morning,</Text>
-              <Text style={styles.headerText}>{userName}</Text>
+              {/* <Text style={styles.headerText}>{userName}</Text> */}
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('Profile')}

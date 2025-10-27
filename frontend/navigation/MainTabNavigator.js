@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Animated, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Entypo } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import HomeStack from './HomeStack';
 import ChallengesScreen from '../screens/ChallengesScreen';
@@ -22,6 +22,8 @@ import DistanceSkatingScreen from '../temp/DistanceSk';
 import DistanceSkatingScreenSk from '../temp/DistanceSkatingScreenSk';
 import SpeedSkatingScreenSk from '../temp/SpeedSkatingScreenSK';
 import SessionHistoryScreen from '../temp/SessionHistoryScreen';
+
+import AppComponent from '../helper/ReconnectionFront';
 
 const { width, height } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -51,6 +53,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => (
           Home: 'home',
           Challenges: 'award',
           'Daily Activities': 'activity',
+          'History': 'archive',
         };
 
         return (
@@ -98,11 +101,21 @@ const TabButton = ({ iconName, isFocused, onPress, label }) => {
         />
         {/* <Animated.View style={[styles.iconWrapper, { transform: [{ translateY }] }]}> */}
         <Animated.View style={styles.iconWrapper}>
-          <Feather 
+          {
+          (label==='History') && <Entypo 
+            name={iconName} 
+            size={24} 
+            color={isFocused ? '#4B6CB7' : '#888'} 
+          />}
+          {
+            label !== 'History' && 
+                     <Feather 
             name={iconName} 
             size={24} 
             color={isFocused ? '#4B6CB7' : '#888'} 
           />
+          }
+ 
         </Animated.View>
       </Animated.View>
       {isFocused && <Text style={styles.label}>{label}</Text>}
@@ -158,6 +171,9 @@ const MainTabNavigator = () => {
       {/* <Tab.Screen name="SpeedSkatingScreenSk" component={SpeedSkatingScreenSk} />
       <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} /> */}
       <Tab.Screen name="History" component={SessionHistoryScreen} />
+      
+      <Tab.Screen name="AppComp" component={AppComponent} />
+      
       {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
       {/* <Tab.Screen name="Pair" component={DevicePairingModal} /> */}
@@ -165,6 +181,8 @@ const MainTabNavigator = () => {
       {/* <Tab.Screen name="Ble" component={Apps} />  */}
       {/* <Tab.Screen name="Blue" component={BleScreen} /> */}
       {/* <Tab.Screen name="Simple" component={SimpleBLEComponent} /> */}
+
+
     </Tab.Navigator>
   );
 }

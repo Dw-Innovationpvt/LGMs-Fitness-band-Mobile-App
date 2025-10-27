@@ -1029,7 +1029,10 @@ const SpeedSkatingScreenSk = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        <View style={styles.headerButton} />
+                <View>
+                  <Text>         </Text>
+                </View>
+        {/* <View style={styles.headerButton} /> */}
       </LinearGradient>
 
       <ScrollView 

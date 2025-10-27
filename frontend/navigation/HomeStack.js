@@ -16,6 +16,7 @@ import GoalSettingScreen from '../screens/GoalSettingScreen';
 import SimpleBLEComponent from '../helper/SimpleBLEComponent';
 import SkatePref from '../screens/SkatePref';
 import SpeedSkatingScreenSk from '../temp/SpeedSkatingScreenSK';
+import DistanceSkatingScreenSk from '../temp/DistanceSkatingScreenSk';
 
 // import TempMealScreen from '../screens/back/TempMealScreen'; // Adjust the import path as necessary
 
@@ -42,7 +43,7 @@ const HomeStack = () => (
   
     <Stack.Screen name="SkatePref" component={SkatePref} />
   <Stack.Screen name='Speedsk' component={SpeedSkatingScreenSk} />
-  <Stack.Screen name='Distancesk' component={SpeedSkatingScreenSk} />
+  <Stack.Screen name='Distancesk' component={DistanceSkatingScreenSk} />
 
   </Stack.Navigator>
 );

@@ -334,7 +334,10 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        <View style={styles.headerButton} />
+        <View>
+          <Text>      </Text>
+        </View>
+        {/* <View style={styles.headerButton} /> */}
       </LinearGradient>
 
       <ScrollView 
@@ -399,7 +402,7 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
             disabled={!isConnected}
           >
             <LinearGradient 
-              colors={['#00B0FF', darkenColor('#00B0FF', 20)]} 
+              colors={['#00B0FF', darkenColor('#06435fff', 20)]} 
               style={[
                 styles.gradientButton,
                 !isConnected && styles.disabledButton
@@ -561,7 +564,7 @@ const DistanceSkatingScreenSk = ({ navigation }) => {
             </Text>
             <TouchableOpacity 
               style={styles.helpButton}
-              onPress={() => navigation.navigate('Devices')}
+              onPress={() => navigation.navigate('Simple')}
             >
               <Text style={styles.helpButtonText}>Go to Devices</Text>
             </TouchableOpacity>
@@ -866,11 +869,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#000',
+    // shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    // shadowOpacity: 0.3,
+    // shadowRadius: 8,
+    // elevation: 6,
   },
   historyButton: {
     borderRadius: 16,
@@ -909,7 +912,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statCard: {
-    width: (width - 88) / 2,
+    width: (width - 99) / 2,
     alignItems: 'center',
     marginBottom: 15,
     padding: 16,
