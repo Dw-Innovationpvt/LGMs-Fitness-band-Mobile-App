@@ -332,9 +332,11 @@ const styles = StyleSheet.create({
   },
 });
 
+
+
 export default AppComponent;
 
-
+// i thinnk we need to do some changes in the main app component to integrate this properly
 
 // // In your main component
 // // import { useBLEReconnectionStore } from './stores/bleReconnectionStore';
