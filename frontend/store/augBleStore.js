@@ -269,277 +269,476 @@ export const useBLEStore = create((set, get) => ({
     }
   },
 
-  connectToDevice: async (device) => {
-    try {
-      console.log('Connecting to device:', device.name || device.id);
-      const bleManager = get().bleManager;
+  // connectToDevice: async (device) => {
+  //   try {
+  //     console.log('Connecting to device:', device.name || device.id);
+  //     const bleManager = get().bleManager;
       
-      // Clear any previous errors
-      set({ error: null });
+  //     // Clear any previous errors
+  //     set({ error: null });
       
-      // Disconnect any existing connection first
-      const { connectedDevice } = get();
-      if (connectedDevice) {
-        console.log('Disconnecting previous device');
-        try {
-          await connectedDevice.cancelConnection();
-        } catch (disconnectError) {
-          console.warn('Error disconnecting previous device:', disconnectError);
-        }
-      }
+  //     // Disconnect any existing connection first
+  //     const { connectedDevice } = get();
+  //     if (connectedDevice) {
+  //       console.log('Disconnecting previous device');
+  //       try {
+  //         await connectedDevice.cancelConnection();
+  //       } catch (disconnectError) {
+  //         console.warn('Error disconnecting previous device:', disconnectError);
+  //       }
+  //     }
       
-      // Stop scanning
-      bleManager.stopDeviceScan();
+  //     // Stop scanning
+  //     bleManager.stopDeviceScan();
       
-      // Connect to the device with timeout
-      console.log('Attempting connection...');
-      const deviceConnection = await Promise.race([
-        device.connect(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
-        )
-      ]);
+  //     // Connect to the device with timeout
+  //     console.log('Attempting connection...');
+  //     const deviceConnection = await Promise.race([
+  //       device.connect(),
+  //       new Promise((_, reject) => 
+  //         setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+  //       )
+  //     ]);
       
-      console.log('Connected successfully, discovering services...');
+  //     console.log('Connected successfully, discovering services...');
       
-      const reconnectionStore = useBLEReconnectionStore.getState();
-      reconnectionStore.saveConnectionData(deviceConnection, targetCharacteristic);
+  //     const reconnectionStore = useBLEReconnectionStore.getState();
+  //     reconnectionStore.saveConnectionData(deviceConnection, targetCharacteristic);
 
-      reconnectionStore.startMonitoring();
+  //     reconnectionStore.startMonitoring();
 
-      // Set connection immediately to provide user feedback
-      set({ 
-        connectedDevice: deviceConnection, 
-        isConnected: true,
-        error: null,
-        sessionData: {
-          startTime: new Date(),
-          totalSteps: 0,
-          totalSkatingDistance: 0,
-          totalWalkingDistance: 0,
-          maxSpeed: 0,
-          sessionDuration: 0
-        }
-      });
+  //     // Set connection immediately to provide user feedback
+  //     set({ 
+  //       connectedDevice: deviceConnection, 
+  //       isConnected: true,
+  //       error: null,
+  //       sessionData: {
+  //         startTime: new Date(),
+  //         totalSteps: 0,
+  //         totalSkatingDistance: 0,
+  //         totalWalkingDistance: 0,
+  //         maxSpeed: 0,
+  //         sessionDuration: 0
+  //       }
+  //     });
       
-      // Discover services and characteristics
-      await deviceConnection.discoverAllServicesAndCharacteristics();
+  //     // Discover services and characteristics
+  //     await deviceConnection.discoverAllServicesAndCharacteristics();
 
-      // Try to increase MTU size for larger data packets
-      try {
-        await deviceConnection.requestMTU(185);
-        console.log('MTU set to 185');
-      } catch (mtuError) {
-        console.warn('MTU request failed, continuing with default:', mtuError);
-      }
+  //     // Try to increase MTU size for larger data packets
+  //     try {
+  //       await deviceConnection.requestMTU(185);
+  //       console.log('MTU set to 185');
+  //     } catch (mtuError) {
+  //       console.warn('MTU request failed, continuing with default:', mtuError);
+  //     }
 
-      // Find services
-      console.log('Finding services and characteristics...');
-      const services = await deviceConnection.services();
-      console.log('Available services:', services.map(s => s.uuid));
+  //     // Find services
+  //     console.log('Finding services and characteristics...');
+  //     const services = await deviceConnection.services();
+  //     console.log('Available services:', services.map(s => s.uuid));
       
-      // Look for our specific service
-      const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
-      let targetService = null;
+  //     // Look for our specific service
+  //     const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
+  //     let targetService = null;
       
-      for (const service of services) {
-        const normalizedServiceUUID = normalizeUUID(service.uuid);
-        console.log(`Comparing service: ${normalizedServiceUUID} with target: ${normalizedTargetServiceUUID}`);
+  //     for (const service of services) {
+  //       const normalizedServiceUUID = normalizeUUID(service.uuid);
+  //       console.log(`Comparing service: ${normalizedServiceUUID} with target: ${normalizedTargetServiceUUID}`);
         
-        if (normalizedServiceUUID === normalizedTargetServiceUUID) {
-          targetService = service;
-          console.log('✅ Found target service:', service.uuid);
-          break;
-        }
-      }
+  //       if (normalizedServiceUUID === normalizedTargetServiceUUID) {
+  //         targetService = service;
+  //         console.log('✅ Found target service:', service.uuid);
+  //         break;
+  //       }
+  //     }
       
-      if (!targetService) {
-        console.error('Target service not found. Available services:', services.map(s => s.uuid));
-        throw new Error(`Service ${SERVICE_UUID} not found on device`);
-      }
+  //     if (!targetService) {
+  //       console.error('Target service not found. Available services:', services.map(s => s.uuid));
+  //       throw new Error(`Service ${SERVICE_UUID} not found on device`);
+  //     }
       
-      // Find characteristics for our service
-      const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
-      console.log('Available characteristics:', characteristics.map(c => ({
+  //     // Find characteristics for our service
+  //     const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
+  //     console.log('Available characteristics:', characteristics.map(c => ({
+  //       uuid: c.uuid,
+  //       isNotifiable: c.isNotifiable,
+  //       isWritableWithResponse: c.isWritableWithResponse,
+  //       isWritableWithoutResponse: c.isWritableWithoutResponse
+  //     })));
+      
+  //     // Look for our specific characteristic
+  //     const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
+  //     let targetCharacteristic = null;
+      
+  //     for (const char of characteristics) {
+  //       const normalizedCharUUID = normalizeUUID(char.uuid);
+  //       console.log(`Comparing characteristic: ${normalizedCharUUID} with target: ${normalizedTargetCharUUID}`);
+        
+  //       if (normalizedCharUUID === normalizedTargetCharUUID) {
+  //         targetCharacteristic = char;
+  //         console.log('✅ Found target characteristic:', char.uuid);
+  //         break;
+  //       }
+  //     }
+      
+  //     if (!targetCharacteristic) {
+  //       console.warn('Target characteristic not found, using first available characteristic');
+  //       targetCharacteristic = characteristics[0];
+  //     }
+      
+  //     console.log('Using characteristic:', targetCharacteristic.uuid);
+  //     set({ characteristic: targetCharacteristic });
+
+  //     // Set up characteristic monitoring FIRST before sending commands
+  //     if (targetCharacteristic.isNotifiable) {
+  //       console.log('Setting up characteristic monitoring...');
+  //       deviceConnection.monitorCharacteristicForService(
+  //         targetService.uuid,
+  //         targetCharacteristic.uuid,
+  //         (error, characteristic) => {
+  //           if (error) {
+  //             console.error('❌ Monitor error:', error);
+  //             return;
+  //           }
+
+  //           const base64Value = characteristic?.value;
+  //           if (!base64Value) {
+  //             console.warn('⚠ Empty characteristic value');
+  //             return;
+  //           }
+            
+  //           try {
+  //             const json = Buffer.from(base64Value, 'base64').toString('utf-8');
+  //             console.log('📨 Received data:', json);
+              
+  //             if (!json || json.trim() === '') {
+  //               console.warn('⚠ Empty JSON string after decoding');
+  //               return;
+  //             }
+
+  //             try {
+  //               const parsed = JSON.parse(json);
+  //               console.log('✅ Successfully parsed JSON data:', parsed);
+  //               const formattedData = formatBLEData(parsed);
+                
+  //               // Update session data with new metrics
+  //               set((state) => ({
+  //                 data: formattedData,
+  //                 currentMode: formattedData.mode,
+  //                 bandActive: true,
+  //                 sessionData: {
+  //                   ...state.sessionData,
+  //                   totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
+  //                   totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
+  //                   totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
+  //                   maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
+  //                   sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000)
+  //                 }
+  //               }));
+  //             } catch (err) {
+  //               console.warn('⚠ JSON parse error, trying to fix:', err);
+                
+  //               // Try to fix incomplete JSON
+  //               try {
+  //                 const fixedJson = fixIncompleteJson(json);
+  //                 if (fixedJson !== json) {
+  //                   console.log('Attempting to parse fixed JSON:', fixedJson);
+  //                   const parsed = JSON.parse(fixedJson);
+  //                   console.log('✅ Successfully parsed after fixing JSON');
+  //                   const formattedData = formatBLEData(parsed);
+  //                   set({ 
+  //                     data: formattedData,
+  //                     currentMode: formattedData.mode,
+  //                     bandActive: true 
+  //                   });
+  //                   return;
+  //                 }
+  //               } catch (fixErr) {
+  //                 console.warn('Could not fix JSON:', fixErr);
+  //               }
+                
+  //               // Try to extract JSON from a potentially larger string
+  //               try {
+  //                 const jsonMatch = json.match(/\{.*\}/s);
+  //                 if (jsonMatch && jsonMatch[0]) {
+  //                   console.log('Extracted potential JSON:', jsonMatch[0]);
+  //                   const parsed = JSON.parse(jsonMatch[0]);
+  //                   console.log('✅ Successfully parsed extracted JSON');
+  //                   const formattedData = formatBLEData(parsed);
+  //                   set({ 
+  //                     data: formattedData,
+  //                     currentMode: formattedData.mode,
+  //                     bandActive: true 
+  //                   });
+  //                   return;
+  //                 }
+  //               } catch (extractErr) {
+  //                 console.warn('JSON extraction failed:', extractErr);
+  //               }
+                
+  //               // Store raw data if all parsing attempts fail
+  //               console.log('📝 Storing as raw data:', json);
+  //               set({ data: { rawData: json } });
+  //             }
+  //           } catch (decodeErr) {
+  //             console.error('❌ Base64 decoding error:', decodeErr);
+  //           }
+  //         }
+  //       );
+  //     } else {
+  //       console.log('Characteristic does not support notifications');
+  //     }
+
+  //     // Wait a moment for monitoring setup, then send commands
+  //     setTimeout(async () => {
+  //       try {
+  //         const { sendCommand } = get();
+  //         console.log('Sending command: TURN_ON');
+  //         await sendCommand('TURN_ON');
+  //         console.log('✅ Turn on command sent after connection');
+          
+  //         // Wait a moment then send step counting mode (default)
+  //         setTimeout(async () => {
+  //           console.log('Sending command: SET_MODE STEP_COUNTING');
+  //           await sendCommand('SET_MODE STEP_COUNTING');
+  //           console.log('✅ Step counting mode activated after connection');
+  //         }, 1000);
+  //       } catch (cmdError) {
+  //         console.warn('⚠ Could not send commands after connection:', cmdError);
+  //       }
+  //     }, 1000);
+
+  //     console.log('✅ Device connected and configured successfully');
+  //     Alert.alert('Connected', `Connected to ${device.name || device.id}`);
+
+  //     // Set up disconnect handler
+  //     deviceConnection.onDisconnected((error, disconnectedDevice) => {
+  //       console.log('Device disconnected:', disconnectedDevice.id);
+  //       if (error) {
+  //         console.error('Disconnection error:', error);
+  //       }
+  //       set({ 
+  //         isConnected: false, 
+  //         connectedDevice: null, 
+  //         characteristic: null,
+  //         bandActive: false,
+  //         data: null,
+  //         currentMode: 'S'
+  //       });
+  //     });
+
+  //   } catch (err) {
+  //     console.error('❌ Connection error:', err);
+  //     set({ 
+  //       isConnected: false, 
+  //       connectedDevice: null,
+  //       characteristic: null,
+  //       error: err.message || 'Failed to connect to device'
+  //     });
+  //     Alert.alert('Connection Error', err.message || 'Failed to connect to device');
+  //     throw err; // Re-throw to handle in UI
+  //   }
+  // },
+
+  connectToDevice: async (device) => {
+  try {
+    console.log('🔗 Connecting to device:', device.name || device.id);
+    const bleManager = get().bleManager;
+    const reconnectionStore = useBLEReconnectionStore.getState();
+
+    // Clear any previous errors
+    set({ error: null });
+
+    // Disconnect any existing connection first
+    const { connectedDevice } = get();
+    if (connectedDevice) {
+      console.log('Disconnecting previous device...');
+      try {
+        await connectedDevice.cancelConnection();
+      } catch (disconnectError) {
+        console.warn('Error disconnecting previous device:', disconnectError);
+      }
+    }
+
+    // Stop scanning before connecting
+    bleManager.stopDeviceScan();
+
+    // Connect to the new device with a timeout
+    console.log('Attempting connection...');
+    const deviceConnection = await Promise.race([
+      device.connect(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+      ),
+    ]);
+
+    console.log('✅ Connected successfully, discovering services...');
+    await deviceConnection.discoverAllServicesAndCharacteristics();
+
+    // Try to increase MTU for better data transfer
+    try {
+      await deviceConnection.requestMTU(185);
+      console.log('MTU set to 185');
+    } catch (mtuError) {
+      console.warn('MTU request failed, continuing with default:', mtuError);
+    }
+
+    // Find available services
+    const services = await deviceConnection.services();
+    console.log('Available services:', services.map(s => s.uuid));
+
+    // Find target service
+    const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
+    let targetService = services.find(
+      (s) => normalizeUUID(s.uuid) === normalizedTargetServiceUUID
+    );
+
+    if (!targetService) {
+      console.error('❌ Target service not found on device');
+      throw new Error(`Service ${SERVICE_UUID} not found on device`);
+    }
+    console.log('✅ Found target service:', targetService.uuid);
+
+    // Find characteristics
+    const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
+    console.log(
+      'Available characteristics:',
+      characteristics.map((c) => ({
         uuid: c.uuid,
         isNotifiable: c.isNotifiable,
         isWritableWithResponse: c.isWritableWithResponse,
-        isWritableWithoutResponse: c.isWritableWithoutResponse
-      })));
-      
-      // Look for our specific characteristic
-      const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
-      let targetCharacteristic = null;
-      
-      for (const char of characteristics) {
-        const normalizedCharUUID = normalizeUUID(char.uuid);
-        console.log(`Comparing characteristic: ${normalizedCharUUID} with target: ${normalizedTargetCharUUID}`);
-        
-        if (normalizedCharUUID === normalizedTargetCharUUID) {
-          targetCharacteristic = char;
-          console.log('✅ Found target characteristic:', char.uuid);
-          break;
-        }
-      }
-      
-      if (!targetCharacteristic) {
-        console.warn('Target characteristic not found, using first available characteristic');
-        targetCharacteristic = characteristics[0];
-      }
-      
-      console.log('Using characteristic:', targetCharacteristic.uuid);
-      set({ characteristic: targetCharacteristic });
+        isWritableWithoutResponse: c.isWritableWithoutResponse,
+      }))
+    );
 
-      // Set up characteristic monitoring FIRST before sending commands
-      if (targetCharacteristic.isNotifiable) {
-        console.log('Setting up characteristic monitoring...');
-        deviceConnection.monitorCharacteristicForService(
-          targetService.uuid,
-          targetCharacteristic.uuid,
-          (error, characteristic) => {
-            if (error) {
-              console.error('❌ Monitor error:', error);
-              return;
-            }
+    // Find target characteristic
+    const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
+    let targetCharacteristic = characteristics.find(
+      (c) => normalizeUUID(c.uuid) === normalizedTargetCharUUID
+    );
 
-            const base64Value = characteristic?.value;
-            if (!base64Value) {
-              console.warn('⚠ Empty characteristic value');
-              return;
-            }
-            
-            try {
-              const json = Buffer.from(base64Value, 'base64').toString('utf-8');
-              console.log('📨 Received data:', json);
-              
-              if (!json || json.trim() === '') {
-                console.warn('⚠ Empty JSON string after decoding');
-                return;
-              }
+    if (!targetCharacteristic) {
+      console.warn('⚠️ Target characteristic not found, using first available one.');
+      targetCharacteristic = characteristics[0];
+    }
+    console.log('✅ Using characteristic:', targetCharacteristic.uuid);
 
-              try {
-                const parsed = JSON.parse(json);
-                console.log('✅ Successfully parsed JSON data:', parsed);
-                const formattedData = formatBLEData(parsed);
-                
-                // Update session data with new metrics
-                set((state) => ({
-                  data: formattedData,
-                  currentMode: formattedData.mode,
-                  bandActive: true,
-                  sessionData: {
-                    ...state.sessionData,
-                    totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
-                    totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
-                    totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
-                    maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
-                    sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000)
-                  }
-                }));
-              } catch (err) {
-                console.warn('⚠ JSON parse error, trying to fix:', err);
-                
-                // Try to fix incomplete JSON
-                try {
-                  const fixedJson = fixIncompleteJson(json);
-                  if (fixedJson !== json) {
-                    console.log('Attempting to parse fixed JSON:', fixedJson);
-                    const parsed = JSON.parse(fixedJson);
-                    console.log('✅ Successfully parsed after fixing JSON');
-                    const formattedData = formatBLEData(parsed);
-                    set({ 
-                      data: formattedData,
-                      currentMode: formattedData.mode,
-                      bandActive: true 
-                    });
-                    return;
-                  }
-                } catch (fixErr) {
-                  console.warn('Could not fix JSON:', fixErr);
-                }
-                
-                // Try to extract JSON from a potentially larger string
-                try {
-                  const jsonMatch = json.match(/\{.*\}/s);
-                  if (jsonMatch && jsonMatch[0]) {
-                    console.log('Extracted potential JSON:', jsonMatch[0]);
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    console.log('✅ Successfully parsed extracted JSON');
-                    const formattedData = formatBLEData(parsed);
-                    set({ 
-                      data: formattedData,
-                      currentMode: formattedData.mode,
-                      bandActive: true 
-                    });
-                    return;
-                  }
-                } catch (extractErr) {
-                  console.warn('JSON extraction failed:', extractErr);
-                }
-                
-                // Store raw data if all parsing attempts fail
-                console.log('📝 Storing as raw data:', json);
-                set({ data: { rawData: json } });
-              }
-            } catch (decodeErr) {
-              console.error('❌ Base64 decoding error:', decodeErr);
-            }
+    // ✅ Save connection data for future reconnection
+    await reconnectionStore.saveConnectionData(deviceConnection, targetCharacteristic);
+
+    // ✅ Start monitoring connection state
+    reconnectionStore.startMonitoring();
+
+    // Set connection in store for UI feedback
+    set({
+      connectedDevice: deviceConnection,
+      characteristic: targetCharacteristic,
+      isConnected: true,
+      bandActive: true,
+      error: null,
+      sessionData: {
+        startTime: new Date(),
+        totalSteps: 0,
+        totalSkatingDistance: 0,
+        totalWalkingDistance: 0,
+        maxSpeed: 0,
+        sessionDuration: 0,
+      },
+    });
+
+    // ✅ Set up characteristic monitoring
+    if (targetCharacteristic.isNotifiable) {
+      console.log('📡 Setting up characteristic monitoring...');
+      deviceConnection.monitorCharacteristicForService(
+        targetService.uuid,
+        targetCharacteristic.uuid,
+        (error, characteristic) => {
+          if (error) {
+            console.error('❌ Monitor error:', error);
+            return;
           }
-        );
-      } else {
-        console.log('Characteristic does not support notifications');
+
+          const base64Value = characteristic?.value;
+          if (!base64Value) return;
+
+          try {
+            const json = Buffer.from(base64Value, 'base64').toString('utf-8');
+            const parsed = JSON.parse(json);
+            console.log('📨 Received data:', parsed);
+
+            const formattedData = formatBLEData(parsed);
+            set((state) => ({
+              data: formattedData,
+              currentMode: formattedData.mode,
+              bandActive: true,
+              sessionData: {
+                ...state.sessionData,
+                totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
+                totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
+                totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
+                maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
+                sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000),
+              },
+            }));
+          } catch (parseError) {
+            console.warn('⚠️ Parse error:', parseError.message);
+          }
+        }
+      );
+    } else {
+      console.log('Characteristic does not support notifications.');
+    }
+
+    // ✅ Send commands after connection
+    setTimeout(async () => {
+      try {
+        const { sendCommand } = get();
+        await sendCommand('TURN_ON');
+        console.log('✅ Sent TURN_ON command');
+        setTimeout(async () => {
+          await sendCommand('SET_MODE STEP_COUNTING');
+          console.log('✅ Activated STEP_COUNTING mode');
+        }, 1000);
+      } catch (cmdError) {
+        console.warn('⚠️ Could not send command after connection:', cmdError);
       }
+    }, 1000);
 
-      // Wait a moment for monitoring setup, then send commands
-      setTimeout(async () => {
-        try {
-          const { sendCommand } = get();
-          console.log('Sending command: TURN_ON');
-          await sendCommand('TURN_ON');
-          console.log('✅ Turn on command sent after connection');
-          
-          // Wait a moment then send step counting mode (default)
-          setTimeout(async () => {
-            console.log('Sending command: SET_MODE STEP_COUNTING');
-            await sendCommand('SET_MODE STEP_COUNTING');
-            console.log('✅ Step counting mode activated after connection');
-          }, 1000);
-        } catch (cmdError) {
-          console.warn('⚠ Could not send commands after connection:', cmdError);
-        }
-      }, 1000);
+    // ✅ Handle disconnection and trigger reconnection
+    deviceConnection.onDisconnected(async (error, disconnectedDevice) => {
+      console.log('🔌 Device disconnected:', disconnectedDevice?.id);
+      if (error) console.error('Disconnection error:', error);
 
-      console.log('✅ Device connected and configured successfully');
-      Alert.alert('Connected', `Connected to ${device.name || device.id}`);
-
-      // Set up disconnect handler
-      deviceConnection.onDisconnected((error, disconnectedDevice) => {
-        console.log('Device disconnected:', disconnectedDevice.id);
-        if (error) {
-          console.error('Disconnection error:', error);
-        }
-        set({ 
-          isConnected: false, 
-          connectedDevice: null, 
-          characteristic: null,
-          bandActive: false,
-          data: null,
-          currentMode: 'S'
-        });
-      });
-
-    } catch (err) {
-      console.error('❌ Connection error:', err);
-      set({ 
-        isConnected: false, 
+      set({
+        isConnected: false,
         connectedDevice: null,
         characteristic: null,
-        error: err.message || 'Failed to connect to device'
+        bandActive: false,
+        data: null,
+        currentMode: 'S',
       });
-      Alert.alert('Connection Error', err.message || 'Failed to connect to device');
-      throw err; // Re-throw to handle in UI
-    }
-  },
+
+      console.log('🔁 Triggering auto-reconnection process...');
+      await reconnectionStore.handleDisconnection();
+    });
+
+    Alert.alert('Connected', `Connected to ${device.name || device.id}`);
+    console.log('✅ Device connected and configured successfully');
+  } catch (err) {
+    console.error('❌ Connection error:', err);
+    set({
+      isConnected: false,
+      connectedDevice: null,
+      characteristic: null,
+      error: err.message || 'Failed to connect to device',
+    });
+    Alert.alert('Connection Error', err.message || 'Failed to connect to device');
+    throw err;
+  }
+},
+
+
 
   sendCommand: async (cmd) => {
     const { connectedDevice, characteristic } = get();
