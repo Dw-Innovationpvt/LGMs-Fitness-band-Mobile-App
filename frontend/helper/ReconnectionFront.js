@@ -19,7 +19,7 @@ import { useBLEReconnectionStore } from '../store/useBLEReconnectionStore';
  * 
  * Once connected manually:
  * - Device info is saved
- * - If device goes out of range → Continuously scans every 3 seconds
+ * - If device goes out of range → Continuously scans every 5 seconds
  * - When device comes back → AUTOMATICALLY reconnects (no user action!)
  * - Repeats indefinitely until user manually disconnects
  */
@@ -33,6 +33,7 @@ const BLEConnectionManager = () => {
     scanForDevices,
     connectToDevice,
     disconnect,
+    initializeBLE,
   } = useBLEStore();
 
   const {
@@ -40,6 +41,7 @@ const BLEConnectionManager = () => {
     isAttemptingReconnect,
     continuousReconnectEnabled,
     reconnectAttemptCount,
+    isCurrentlyScanning,
     loadSavedDevice,
     setAutoReconnect,
     getReconnectionStatus,
@@ -47,37 +49,55 @@ const BLEConnectionManager = () => {
     connectionHistory,
     loadConnectionHistory,
     isAutoReconnectActive,
+    manualReconnect,
+    forceStopReconnection,
   } = useBLEReconnectionStore();
 
   const [status, setStatus] = useState('Initializing...');
   const [showHistory, setShowHistory] = useState(false);
   const [autoReconnectToggle, setAutoReconnectToggle] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // ========== Lifecycle: App Startup ==========
   useEffect(() => {
     const initializeConnection = async () => {
       console.log('🚀 Initializing BLE connection manager...');
+      setIsInitializing(true);
       
-      const device = await loadSavedDevice();
-      await loadConnectionHistory();
-
-      if (device) {
-        console.log('📱 Found previously connected device:', device.name);
-        setStatus(`Previous device: ${device.name}`);
-        setAutoReconnectToggle(true);
+      try {
+        // Initialize BLE store with auto-reconnection
+        await initializeBLE();
         
-        // Automatically start reconnection if not connected
-        if (!isConnected) {
-          Alert.alert(
-            'Auto-Reconnection Active',
-            `Your device "${device.name}" will reconnect automatically when in range.\n\nScanning in background...`,
-            [{ text: 'OK' }]
-          );
-          setStatus(`Waiting for ${device.name} to come in range...`);
+        // Load saved device and history
+        const device = await loadSavedDevice();
+        await loadConnectionHistory();
+
+        if (device) {
+          console.log('📱 Found previously connected device:', device.name);
+          setStatus(`Previous device: ${device.name}`);
+          setAutoReconnectToggle(true);
+          
+          // Check if we're already connected
+          if (!isConnected) {
+            const reconnectionStatus = getReconnectionStatus();
+            console.log('🔍 Reconnection status:', reconnectionStatus);
+            
+            if (reconnectionStatus.continuousReconnectEnabled && !reconnectionStatus.isAttemptingReconnect) {
+              console.log('🔄 Auto-starting reconnection for saved device...');
+              setStatus(`🔄 Auto-reconnecting to ${device.name}...`);
+            } else {
+              setStatus(`Ready to connect to ${device.name}`);
+            }
+          }
+        } else {
+          console.log('📭 No previous device found');
+          setStatus('No previous connection found');
         }
-      } else {
-        console.log('📭 No previous device found');
-        setStatus('No previous connection found');
+      } catch (error) {
+        console.error('❌ Initialization error:', error);
+        setStatus('Initialization failed');
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -90,11 +110,13 @@ const BLEConnectionManager = () => {
       setStatus(`✅ Connected to ${connectedDevice.name || 'Device'}`);
       setAutoReconnectToggle(true);
     } else if (isAttemptingReconnect) {
-      setStatus(`🔄 Auto-reconnecting... (Attempt #${reconnectAttemptCount})`);
+      setStatus(`🔄 Scanning for device... (Attempt #${reconnectAttemptCount})`);
     } else if (savedDevice && continuousReconnectEnabled) {
-      setStatus(`📡 Scanning for ${savedDevice.name}...`);
+      setStatus(`📡 Waiting for ${savedDevice.name}...`);
+    } else if (savedDevice && !continuousReconnectEnabled) {
+      setStatus(`💤 ${savedDevice.name} saved (auto-reconnect off)`);
     } else if (!isConnected && !isAttemptingReconnect) {
-      setStatus('Disconnected');
+      setStatus('Disconnected - Scan for devices');
     }
   }, [isConnected, connectedDevice, isAttemptingReconnect, reconnectAttemptCount, continuousReconnectEnabled, savedDevice]);
 
@@ -110,17 +132,28 @@ const BLEConnectionManager = () => {
     setStatus('Scanning for devices...');
     
     try {
+      // Stop any ongoing reconnection before manual scan
+      if (isAttemptingReconnect) {
+        forceStopReconnection();
+      }
+      
       const devices = await scanForDevices();
       console.log(`Found ${devices.length} devices`);
       
       if (devices.length === 0) {
         setStatus('No devices found');
+        Alert.alert(
+          'No Devices Found',
+          'Make sure your fitness band is:\n• Powered on\n• In range\n• Not connected to another device',
+          [{ text: 'OK' }]
+        );
       } else {
-        setStatus(`Found ${devices.length} device(s)`);
+        setStatus(`Found ${devices.length} device(s) - Tap to connect`);
       }
     } catch (error) {
       console.error('Scan error:', error);
       setStatus('Scan failed');
+      Alert.alert('Scan Error', error.message || 'Failed to scan for devices');
     }
   };
 
@@ -130,19 +163,28 @@ const BLEConnectionManager = () => {
     
     try {
       await connectToDevice(device);
-      setStatus(`Connected to ${device.name}`);
+      setStatus(`✅ Connected to ${device.name}`);
       setAutoReconnectToggle(true);
+      
+      Alert.alert(
+        'Connected Successfully!',
+        `You are now connected to ${device.name}\n\nAuto-reconnection is ENABLED. Your device will reconnect automatically if disconnected.`,
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('Connection error:', error);
       setStatus('Connection failed');
-      Alert.alert('Connection Error', error.message);
+      Alert.alert(
+        'Connection Failed',
+        error.message || 'Failed to connect to device. Please try again.'
+      );
     }
   };
 
   const handleDisconnect = async () => {
     Alert.alert(
       'Disconnect Device',
-      'Do you want to keep auto-reconnection enabled?',
+      'Choose disconnect option:',
       [
         {
           text: 'Cancel',
@@ -152,16 +194,39 @@ const BLEConnectionManager = () => {
           text: 'Disconnect & Forget',
           style: 'destructive',
           onPress: async () => {
+            setStatus('Disconnecting and forgetting device...');
             await disconnect(true); // forgetDevice = true
             setAutoReconnectToggle(false);
             setStatus('Disconnected (device forgotten)');
+            
+            Alert.alert(
+              'Device Forgotten',
+              'Device has been disconnected and removed from saved devices. Auto-reconnection is disabled.',
+              [{ text: 'OK' }]
+            );
           },
         },
         {
           text: 'Disconnect Only',
           onPress: async () => {
+            setStatus('Disconnecting...');
             await disconnect(false); // Keep device saved
             setStatus('Disconnected (device saved)');
+            
+            Alert.alert(
+              'Disconnected',
+              'Device disconnected but saved for future connections. Enable auto-reconnect to reconnect automatically.',
+              [
+                { text: 'OK' },
+                {
+                  text: 'Enable Auto-Reconnect',
+                  onPress: () => {
+                    setAutoReconnect(true);
+                    setAutoReconnectToggle(true);
+                  }
+                }
+              ]
+            );
           },
         },
       ]
@@ -175,16 +240,55 @@ const BLEConnectionManager = () => {
     if (value) {
       Alert.alert(
         'Auto-Reconnection Enabled',
-        'Your device will automatically reconnect when it comes back in range.',
+        'Your device will automatically reconnect when it comes back in range. Continuous scanning will start now.',
         [{ text: 'OK' }]
       );
+      setStatus(`🔄 Auto-reconnecting to ${savedDevice?.name}...`);
     } else {
       Alert.alert(
         'Auto-Reconnection Disabled',
         'Your device will not reconnect automatically. You can reconnect manually from the device list.',
         [{ text: 'OK' }]
       );
+      setStatus('Auto-reconnect disabled');
     }
+  };
+
+  const handleManualReconnect = async () => {
+    if (!savedDevice) {
+      Alert.alert('No Saved Device', 'No device found to reconnect to.');
+      return;
+    }
+    
+    console.log('🔄 Manual reconnection triggered');
+    setStatus(`Manually reconnecting to ${savedDevice.name}...`);
+    
+    try {
+      await manualReconnect();
+      // Status will update automatically through the effect
+    } catch (error) {
+      console.error('Manual reconnection error:', error);
+      setStatus('Manual reconnection failed');
+    }
+  };
+
+  const handleForceStopReconnection = () => {
+    Alert.alert(
+      'Stop Auto-Reconnection',
+      'This will stop all ongoing reconnection attempts. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Stop',
+          style: 'destructive',
+          onPress: () => {
+            forceStopReconnection();
+            setStatus('Auto-reconnection stopped');
+            setAutoReconnectToggle(false);
+          }
+        }
+      ]
+    );
   };
 
   const formatTimestamp = (timestamp) => {
@@ -210,12 +314,14 @@ const BLEConnectionManager = () => {
   const getStatusColor = () => {
     if (isConnected) return '#4CAF50';
     if (isAttemptingReconnect) return '#FF9500';
+    if (savedDevice) return '#2196F3';
     return '#F44336';
   };
 
   const getStatusIcon = () => {
     if (isConnected) return '●';
     if (isAttemptingReconnect) return '◐';
+    if (savedDevice) return 'ⓘ';
     return '○';
   };
 
@@ -227,11 +333,19 @@ const BLEConnectionManager = () => {
         <Text style={styles.statusTitle}>Connection Status</Text>
         <Text style={styles.statusText}>{status}</Text>
         
+        {isInitializing && (
+          <View style={styles.initializingIndicator}>
+            <ActivityIndicator size="small" color="#007AFF" />
+            <Text style={styles.initializingText}>Initializing BLE...</Text>
+          </View>
+        )}
+
         {isAttemptingReconnect && (
           <View style={styles.reconnectingIndicator}>
             <ActivityIndicator size="small" color="#FF9500" />
             <Text style={styles.reconnectingText}>
               Continuous scanning active (Attempt #{reconnectAttemptCount})
+              {isCurrentlyScanning && ' - Scanning now...'}
             </Text>
           </View>
         )}
@@ -241,7 +355,7 @@ const BLEConnectionManager = () => {
           { backgroundColor: getStatusColor() }
         ]}>
           <Text style={styles.indicatorText}>
-            {getStatusIcon()} {isConnected ? 'Connected' : isAttemptingReconnect ? 'Reconnecting' : 'Disconnected'}
+            {getStatusIcon()} {isConnected ? 'Connected' : isAttemptingReconnect ? 'Reconnecting' : savedDevice ? 'Device Saved' : 'Disconnected'}
           </Text>
         </View>
       </View>
@@ -263,20 +377,38 @@ const BLEConnectionManager = () => {
             <Switch
               value={autoReconnectToggle}
               onValueChange={handleAutoReconnectToggle}
-              trackColor={{ false: '#ccc', true: '#4CAF50' }}
-              thumbColor={autoReconnectToggle ? '#fff' : '#f4f3f4'}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={autoReconnectToggle ? '#4CAF50' : '#f4f3f4'}
             />
           </View>
           
-          {autoReconnectToggle && !isConnected && (
+          {autoReconnectToggle && (
             <View style={styles.autoReconnectInfo}>
               <Text style={styles.autoReconnectInfoText}>
-                📡 Scanning every 3 seconds for "{savedDevice.name}"
+                📡 Scanning every 5 seconds for "{savedDevice.name}"
               </Text>
               <Text style={styles.autoReconnectInfoText}>
                 💡 Device will connect automatically when in range
               </Text>
+              
+              {isAttemptingReconnect && (
+                <TouchableOpacity
+                  style={styles.stopScanButton}
+                  onPress={handleForceStopReconnection}
+                >
+                  <Text style={styles.stopScanButtonText}>Stop Scanning</Text>
+                </TouchableOpacity>
+              )}
             </View>
+          )}
+          
+          {!autoReconnectToggle && !isConnected && (
+            <TouchableOpacity
+              style={styles.manualReconnectButton}
+              onPress={handleManualReconnect}
+            >
+              <Text style={styles.manualReconnectButtonText}>Reconnect Now</Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -296,11 +428,11 @@ const BLEConnectionManager = () => {
             onPress={async () => {
               Alert.alert(
                 'Forget Device',
-                'Are you sure? Auto-reconnection will be disabled.',
+                'Are you sure? This will:\n• Remove device from saved devices\n• Disable auto-reconnection\n• Require manual connection next time',
                 [
                   { text: 'Cancel', style: 'cancel' },
                   {
-                    text: 'Forget',
+                    text: 'Forget Device',
                     style: 'destructive',
                     onPress: async () => {
                       await clearSavedDevice();
@@ -323,12 +455,14 @@ const BLEConnectionManager = () => {
           <TouchableOpacity
             style={styles.button}
             onPress={handleScan}
-            disabled={isScanning}
+            disabled={isScanning || isAttemptingReconnect}
           >
             {isScanning ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Scan for New Devices</Text>
+              <Text style={styles.buttonText}>
+                {isAttemptingReconnect ? 'Auto-Reconnecting...' : 'Scan for Devices'}
+              </Text>
             )}
           </TouchableOpacity>
         )}
@@ -338,7 +472,7 @@ const BLEConnectionManager = () => {
             style={[styles.button, styles.disconnectButton]}
             onPress={handleDisconnect}
           >
-            <Text style={styles.buttonText}>Disconnect</Text>
+            <Text style={styles.buttonText}>Disconnect Device</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -349,11 +483,11 @@ const BLEConnectionManager = () => {
           <Text style={styles.cardTitle}>Available Devices</Text>
           {foundDevices.map((device, index) => (
             <TouchableOpacity
-              key={index}
+              key={device.id}
               style={styles.deviceItem}
               onPress={() => handleConnect(device)}
             >
-              <View>
+              <View style={styles.deviceInfo}>
                 <Text style={styles.deviceItemName}>
                   {device.name || 'Unknown Device'}
                 </Text>
@@ -375,13 +509,16 @@ const BLEConnectionManager = () => {
           2. Device info is saved automatically
         </Text>
         <Text style={styles.infoText}>
-          3. If device goes out of range → Scans every 3 seconds
+          3. If device disconnects → Continuous scanning starts
         </Text>
         <Text style={styles.infoText}>
           4. When back in range → Reconnects automatically!
         </Text>
         <Text style={styles.infoText}>
-          5. No user action needed 🎉
+          5. Works across app restarts and Bluetooth toggles
+        </Text>
+        <Text style={styles.infoText}>
+          6. No user action needed after first connection 🎉
         </Text>
       </View>
 
@@ -398,17 +535,19 @@ const BLEConnectionManager = () => {
       {showHistory && (
         <View style={styles.historyCard}>
           {connectionHistory.length === 0 ? (
-            <Text style={styles.emptyHistory}>No connection history</Text>
+            <Text style={styles.emptyHistory}>No connection history yet</Text>
           ) : (
-            connectionHistory.map((entry, index) => (
+            connectionHistory.slice(0, 10).map((entry, index) => (
               <View key={index} style={styles.historyItem}>
                 <Text style={styles.historyIcon}>
                   {getEventIcon(entry.event)}
                 </Text>
                 <View style={styles.historyContent}>
-                  <Text style={styles.historyEvent}>{entry.event}</Text>
+                  <Text style={styles.historyEvent}>
+                    {entry.event.charAt(0).toUpperCase() + entry.event.slice(1)}
+                  </Text>
                   <Text style={styles.historyDevice}>
-                    {entry.device?.name || 'Unknown'}
+                    {entry.device?.name || 'Unknown Device'}
                   </Text>
                   <Text style={styles.historyTime}>
                     {formatTimestamp(entry.timestamp)}
@@ -451,6 +590,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 12,
+    lineHeight: 20,
+  },
+  initializingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  initializingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '600',
   },
   reconnectingIndicator: {
     flexDirection: 'row',
@@ -465,6 +619,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FF9500',
     fontWeight: '600',
+    flex: 1,
   },
   indicator: {
     paddingVertical: 8,
@@ -517,6 +672,30 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     marginBottom: 4,
   },
+  stopScanButton: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 6,
+    padding: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  stopScanButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  manualReconnectButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  manualReconnectButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   deviceCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -544,6 +723,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginBottom: 4,
+    fontFamily: 'monospace',
   },
   deviceDate: {
     fontSize: 12,
@@ -551,7 +731,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   forgetButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#FF6B6B',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
@@ -573,7 +753,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   disconnectButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#FF6B6B',
   },
   buttonText: {
     color: '#fff',
@@ -599,6 +779,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  deviceInfo: {
+    flex: 1,
+  },
   deviceItemName: {
     fontSize: 16,
     fontWeight: '600',
@@ -608,10 +791,12 @@ const styles = StyleSheet.create({
   deviceItemId: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'monospace',
   },
   connectArrow: {
     fontSize: 24,
     color: '#007AFF',
+    marginLeft: 12,
   },
   infoCard: {
     backgroundColor: '#E3F2FD',
@@ -665,6 +850,7 @@ const styles = StyleSheet.create({
   historyIcon: {
     fontSize: 24,
     marginRight: 12,
+    width: 24,
   },
   historyContent: {
     flex: 1,
@@ -674,6 +860,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
+    textTransform: 'capitalize',
   },
   historyDevice: {
     fontSize: 12,

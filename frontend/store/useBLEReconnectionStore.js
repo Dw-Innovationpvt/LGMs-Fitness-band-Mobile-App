@@ -642,4 +642,124 @@ export const useBLEReconnectionStore = create((set, get) => ({
     
     console.log('✅ All reconnection activities stopped');
   },
+
+// Add this function to your useBLEReconnectionStore
+/**
+ * 20. Initialize Auto-Reconnection System
+ */
+initializeAutoReconnection: async () => {
+  try {
+    console.log('🚀 Initializing auto-reconnection system...');
+    
+    // Load saved device
+    const savedDevice = await get().loadSavedDevice();
+    
+    if (savedDevice) {
+      console.log('📱 Saved device found:', savedDevice.name);
+      console.log('🔄 Auto-reconnection will be active');
+      
+      // Check if we should start reconnection immediately
+      const { isConnected } = await import('./augBleStore').then(module => module.useBLEStore.getState());
+      
+      if (!isConnected) {
+        console.log('🔌 Device not connected, starting auto-reconnection...');
+        // Small delay to ensure BLE system is ready
+        setTimeout(() => {
+          get().startContinuousReconnection();
+        }, 2000);
+      } else {
+        console.log('✅ Device already connected');
+      }
+    } else {
+      console.log('📭 No saved device for auto-reconnection');
+    }
+    
+    return savedDevice;
+  } catch (error) {
+    console.error('❌ Error initializing auto-reconnection:', error);
+    return null;
+  }
+},
+
+/**
+ * 21. Enhanced scan with better device matching
+ */
+scanForSavedDevice: async (deviceId) => {
+  const { bleManager } = get();
+
+  return new Promise((resolve) => {
+    let foundDevice = null;
+    const scanTimeout = 6000; // Increased to 6 seconds for better detection
+    let devicesFound = 0;
+    let scanStarted = false;
+
+    console.log('📡 Starting BLE scan for saved device...');
+    console.log('🎯 Target device ID:', deviceId);
+
+    const timeout = setTimeout(() => {
+      console.log(`📊 Scan complete. Total devices found: ${devicesFound}`);
+      if (scanStarted) {
+        bleManager.stopDeviceScan();
+      }
+      
+      if (!foundDevice) {
+        console.log('❌ Target device not found in this scan');
+      }
+      
+      resolve(foundDevice);
+    }, scanTimeout);
+
+    try {
+      scanStarted = true;
+      bleManager.startDeviceScan(
+        null,
+        { 
+          allowDuplicates: false,
+          scanMode: 1, // BALANCED scan mode for better reliability
+        },
+        (error, device) => {
+          if (error) {
+            console.error('❌ Scan error:', error.message);
+            clearTimeout(timeout);
+            if (scanStarted) {
+              bleManager.stopDeviceScan();
+              scanStarted = false;
+            }
+            resolve(null);
+            return;
+          }
+
+          if (device) {
+            devicesFound++;
+            
+            // More flexible device matching
+            const deviceName = device.name || device.localName || 'Unknown';
+            const isTargetDevice = device.id === deviceId || 
+                                 deviceName.includes('ESP32C3_SkatingBand') ||
+                                 device.id.toLowerCase() === deviceId.toLowerCase();
+            
+            if (isTargetDevice) {
+              console.log('🎯 ✅ TARGET DEVICE FOUND!');
+              console.log('📱 Device:', deviceName);
+              console.log('🔗 ID:', device.id);
+              
+              foundDevice = device;
+              clearTimeout(timeout);
+              if (scanStarted) {
+                bleManager.stopDeviceScan();
+                scanStarted = false;
+              }
+              resolve(device);
+            }
+          }
+        }
+      );
+    } catch (scanError) {
+      console.error('❌ Failed to start scan:', scanError);
+      clearTimeout(timeout);
+      resolve(null);
+    }
+  });
+},
+
 }));
