@@ -172,7 +172,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="DistanceSkatingScreenSk" component={DistanceSkatingScreenSk} /> */}
       <Tab.Screen name="History" component={SessionHistoryScreen} />
       
-      <Tab.Screen name="AppComp" component={AppComponent} />
+      {/* <Tab.Screen name="AppComp" component={AppComponent} /> */}
       
       {/* <Tab.Screen name="weekly" component={WeeklyGoalsScreen} /> */}
       {/* <Tab.Screen name="TabCalScreen" component={CaloriesScreenTemp} /> */}
