@@ -8,20 +8,20 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Switch,
 } from 'react-native';
 import { useBLEStore } from '../store/augBleStore';
 import { useBLEReconnectionStore } from '../store/useBLEReconnectionStore';
 
 /**
  * BLE Connection Manager Component
- * Demonstrates auto-reconnection functionality
+ * Features CONTINUOUS auto-reconnection
  * 
- * Features:
- * 1. Automatic reconnection on app startup if device was previously connected
- * 2. Manual reconnection button
- * 3. Connection status display
- * 4. Reconnection attempt counter
- * 5. Connection history viewer
+ * Once connected manually:
+ * - Device info is saved
+ * - If device goes out of range → Continuously scans every 3 seconds
+ * - When device comes back → AUTOMATICALLY reconnects (no user action!)
+ * - Repeats indefinitely until user manually disconnects
  */
 const BLEConnectionManager = () => {
   // ========== State Management ==========
@@ -38,65 +38,43 @@ const BLEConnectionManager = () => {
   const {
     savedDevice,
     isAttemptingReconnect,
-    reconnectAttempts,
-    maxReconnectAttempts,
+    continuousReconnectEnabled,
+    reconnectAttemptCount,
     loadSavedDevice,
-    manualReconnect,
+    setAutoReconnect,
     getReconnectionStatus,
     clearSavedDevice,
     connectionHistory,
     loadConnectionHistory,
-    hasSavedDevice,
+    isAutoReconnectActive,
   } = useBLEReconnectionStore();
 
   const [status, setStatus] = useState('Initializing...');
   const [showHistory, setShowHistory] = useState(false);
+  const [autoReconnectToggle, setAutoReconnectToggle] = useState(false);
 
   // ========== Lifecycle: App Startup ==========
   useEffect(() => {
-    /**
-     * On component mount:
-     * 1. Load saved device from AsyncStorage
-     * 2. Load connection history
-     * 3. Attempt auto-reconnection if device was previously connected
-     */
     const initializeConnection = async () => {
       console.log('🚀 Initializing BLE connection manager...');
       
-      // Load saved device data
       const device = await loadSavedDevice();
-      
-      // Load connection history
       await loadConnectionHistory();
 
       if (device) {
         console.log('📱 Found previously connected device:', device.name);
         setStatus(`Previous device: ${device.name}`);
+        setAutoReconnectToggle(true);
         
-        // Prompt user for auto-reconnection
-        Alert.alert(
-          'Previous Connection Found',
-          `Would you like to reconnect to ${device.name}?`,
-          [
-            {
-              text: 'No',
-              style: 'cancel',
-              onPress: () => setStatus('Waiting for connection...'),
-            },
-            {
-              text: 'Yes',
-              onPress: async () => {
-                setStatus('Attempting auto-reconnection...');
-                const success = await manualReconnect();
-                if (success) {
-                  setStatus(`Connected to ${device.name}`);
-                } else {
-                  setStatus('Auto-reconnection failed');
-                }
-              },
-            },
-          ]
-        );
+        // Automatically start reconnection if not connected
+        if (!isConnected) {
+          Alert.alert(
+            'Auto-Reconnection Active',
+            `Your device "${device.name}" will reconnect automatically when in range.\n\nScanning in background...`,
+            [{ text: 'OK' }]
+          );
+          setStatus(`Waiting for ${device.name} to come in range...`);
+        }
       } else {
         console.log('📭 No previous device found');
         setStatus('No previous connection found');
@@ -109,19 +87,24 @@ const BLEConnectionManager = () => {
   // ========== Monitor Connection Status ==========
   useEffect(() => {
     if (isConnected && connectedDevice) {
-      setStatus(`Connected to ${connectedDevice.name || 'Device'}`);
+      setStatus(`✅ Connected to ${connectedDevice.name || 'Device'}`);
+      setAutoReconnectToggle(true);
     } else if (isAttemptingReconnect) {
-      setStatus(`Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`);
+      setStatus(`🔄 Auto-reconnecting... (Attempt #${reconnectAttemptCount})`);
+    } else if (savedDevice && continuousReconnectEnabled) {
+      setStatus(`📡 Scanning for ${savedDevice.name}...`);
     } else if (!isConnected && !isAttemptingReconnect) {
       setStatus('Disconnected');
     }
-  }, [isConnected, connectedDevice, isAttemptingReconnect, reconnectAttempts]);
+  }, [isConnected, connectedDevice, isAttemptingReconnect, reconnectAttemptCount, continuousReconnectEnabled, savedDevice]);
+
+  // ========== Monitor Auto-Reconnect Toggle ==========
+  useEffect(() => {
+    setAutoReconnectToggle(continuousReconnectEnabled);
+  }, [continuousReconnectEnabled]);
 
   // ========== Event Handlers ==========
 
-  /**
-   * Handle device scanning
-   */
   const handleScan = async () => {
     console.log('🔍 Starting device scan...');
     setStatus('Scanning for devices...');
@@ -141,9 +124,6 @@ const BLEConnectionManager = () => {
     }
   };
 
-  /**
-   * Handle device connection
-   */
   const handleConnect = async (device) => {
     console.log('🔗 Connecting to device:', device.name);
     setStatus(`Connecting to ${device.name}...`);
@@ -151,6 +131,7 @@ const BLEConnectionManager = () => {
     try {
       await connectToDevice(device);
       setStatus(`Connected to ${device.name}`);
+      setAutoReconnectToggle(true);
     } catch (error) {
       console.error('Connection error:', error);
       setStatus('Connection failed');
@@ -158,67 +139,59 @@ const BLEConnectionManager = () => {
     }
   };
 
-  /**
-   * Handle manual reconnection
-   */
-  const handleManualReconnect = async () => {
-    console.log('🔄 Manual reconnection requested...');
-    setStatus('Attempting manual reconnection...');
-    
-    const success = await manualReconnect();
-    
-    if (success) {
-      setStatus('Reconnection successful!');
-    } else {
-      setStatus('Reconnection failed');
-    }
-  };
-
-  /**
-   * Handle disconnection
-   */
   const handleDisconnect = async () => {
-    console.log('🔌 Disconnecting device...');
-    
     Alert.alert(
       'Disconnect Device',
-      'Do you want to forget this device?',
+      'Do you want to keep auto-reconnection enabled?',
       [
         {
-          text: 'Disconnect Only',
-          onPress: async () => {
-            await disconnect();
-            setStatus('Disconnected (device saved)');
-          },
+          text: 'Cancel',
+          style: 'cancel',
         },
         {
           text: 'Disconnect & Forget',
           style: 'destructive',
           onPress: async () => {
-            await disconnect();
-            await clearSavedDevice();
+            await disconnect(true); // forgetDevice = true
+            setAutoReconnectToggle(false);
             setStatus('Disconnected (device forgotten)');
           },
         },
         {
-          text: 'Cancel',
-          style: 'cancel',
+          text: 'Disconnect Only',
+          onPress: async () => {
+            await disconnect(false); // Keep device saved
+            setStatus('Disconnected (device saved)');
+          },
         },
       ]
     );
   };
 
-  /**
-   * Format timestamp for display
-   */
+  const handleAutoReconnectToggle = (value) => {
+    setAutoReconnectToggle(value);
+    setAutoReconnect(value);
+    
+    if (value) {
+      Alert.alert(
+        'Auto-Reconnection Enabled',
+        'Your device will automatically reconnect when it comes back in range.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert(
+        'Auto-Reconnection Disabled',
+        'Your device will not reconnect automatically. You can reconnect manually from the device list.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleString();
   };
 
-  /**
-   * Get event icon based on event type
-   */
   const getEventIcon = (event) => {
     switch (event) {
       case 'connected':
@@ -234,6 +207,18 @@ const BLEConnectionManager = () => {
     }
   };
 
+  const getStatusColor = () => {
+    if (isConnected) return '#4CAF50';
+    if (isAttemptingReconnect) return '#FF9500';
+    return '#F44336';
+  };
+
+  const getStatusIcon = () => {
+    if (isConnected) return '●';
+    if (isAttemptingReconnect) return '◐';
+    return '○';
+  };
+
   // ========== Render ==========
   return (
     <ScrollView style={styles.container}>
@@ -244,23 +229,57 @@ const BLEConnectionManager = () => {
         
         {isAttemptingReconnect && (
           <View style={styles.reconnectingIndicator}>
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color="#FF9500" />
             <Text style={styles.reconnectingText}>
-              Attempt {reconnectAttempts} of {maxReconnectAttempts}
+              Continuous scanning active (Attempt #{reconnectAttemptCount})
             </Text>
           </View>
         )}
 
-        {/* Connection Indicator */}
         <View style={[
           styles.indicator,
-          { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }
+          { backgroundColor: getStatusColor() }
         ]}>
           <Text style={styles.indicatorText}>
-            {isConnected ? '● Connected' : '○ Disconnected'}
+            {getStatusIcon()} {isConnected ? 'Connected' : isAttemptingReconnect ? 'Reconnecting' : 'Disconnected'}
           </Text>
         </View>
       </View>
+
+      {/* Auto-Reconnection Control */}
+      {savedDevice && (
+        <View style={styles.autoReconnectCard}>
+          <View style={styles.autoReconnectHeader}>
+            <View>
+              <Text style={styles.autoReconnectTitle}>
+                🔄 Auto-Reconnection
+              </Text>
+              <Text style={styles.autoReconnectSubtitle}>
+                {autoReconnectToggle 
+                  ? 'Device will reconnect automatically' 
+                  : 'Manual reconnection required'}
+              </Text>
+            </View>
+            <Switch
+              value={autoReconnectToggle}
+              onValueChange={handleAutoReconnectToggle}
+              trackColor={{ false: '#ccc', true: '#4CAF50' }}
+              thumbColor={autoReconnectToggle ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+          
+          {autoReconnectToggle && !isConnected && (
+            <View style={styles.autoReconnectInfo}>
+              <Text style={styles.autoReconnectInfoText}>
+                📡 Scanning every 3 seconds for "{savedDevice.name}"
+              </Text>
+              <Text style={styles.autoReconnectInfoText}>
+                💡 Device will connect automatically when in range
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Saved Device Info */}
       {savedDevice && (
@@ -271,39 +290,47 @@ const BLEConnectionManager = () => {
           <Text style={styles.deviceDate}>
             Saved: {formatTimestamp(savedDevice.savedAt)}
           </Text>
+          
+          <TouchableOpacity
+            style={styles.forgetButton}
+            onPress={async () => {
+              Alert.alert(
+                'Forget Device',
+                'Are you sure? Auto-reconnection will be disabled.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Forget',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await clearSavedDevice();
+                      setAutoReconnectToggle(false);
+                      setStatus('Device forgotten');
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Text style={styles.forgetButtonText}>Forget Device</Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         {!isConnected && (
-          <>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleScan}
-              disabled={isScanning}
-            >
-              {isScanning ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Scan for Devices</Text>
-              )}
-            </TouchableOpacity>
-
-            {hasSavedDevice() && (
-              <TouchableOpacity
-                style={[styles.button, styles.reconnectButton]}
-                onPress={handleManualReconnect}
-                disabled={isAttemptingReconnect}
-              >
-                {isAttemptingReconnect ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Reconnect to Saved Device</Text>
-                )}
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleScan}
+            disabled={isScanning}
+          >
+            {isScanning ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Scan for New Devices</Text>
             )}
-          </>
+          </TouchableOpacity>
         )}
 
         {isConnected && (
@@ -319,21 +346,44 @@ const BLEConnectionManager = () => {
       {/* Found Devices List */}
       {foundDevices.length > 0 && !isConnected && (
         <View style={styles.devicesCard}>
-          <Text style={styles.cardTitle}>Found Devices</Text>
+          <Text style={styles.cardTitle}>Available Devices</Text>
           {foundDevices.map((device, index) => (
             <TouchableOpacity
               key={index}
               style={styles.deviceItem}
               onPress={() => handleConnect(device)}
             >
-              <Text style={styles.deviceItemName}>
-                {device.name || 'Unknown Device'}
-              </Text>
-              <Text style={styles.deviceItemId}>{device.id}</Text>
+              <View>
+                <Text style={styles.deviceItemName}>
+                  {device.name || 'Unknown Device'}
+                </Text>
+                <Text style={styles.deviceItemId}>{device.id}</Text>
+              </View>
+              <Text style={styles.connectArrow}>→</Text>
             </TouchableOpacity>
           ))}
         </View>
       )}
+
+      {/* Info Card */}
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>ℹ️ How Auto-Reconnection Works</Text>
+        <Text style={styles.infoText}>
+          1. Connect to device manually (first time only)
+        </Text>
+        <Text style={styles.infoText}>
+          2. Device info is saved automatically
+        </Text>
+        <Text style={styles.infoText}>
+          3. If device goes out of range → Scans every 3 seconds
+        </Text>
+        <Text style={styles.infoText}>
+          4. When back in range → Reconnects automatically!
+        </Text>
+        <Text style={styles.infoText}>
+          5. No user action needed 🎉
+        </Text>
+      </View>
 
       {/* Connection History */}
       <TouchableOpacity
@@ -406,11 +456,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+    padding: 12,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
   },
   reconnectingText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#666',
+    color: '#FF9500',
+    fontWeight: '600',
   },
   indicator: {
     paddingVertical: 8,
@@ -422,6 +476,46 @@ const styles = StyleSheet.create({
   indicatorText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 14,
+  },
+  autoReconnectCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  autoReconnectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  autoReconnectTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  autoReconnectSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  autoReconnectInfo: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  autoReconnectInfoText: {
+    fontSize: 13,
+    color: '#2E7D32',
+    marginBottom: 4,
   },
   deviceCard: {
     backgroundColor: '#fff',
@@ -454,6 +548,19 @@ const styles = StyleSheet.create({
   deviceDate: {
     fontSize: 12,
     color: '#999',
+    marginBottom: 12,
+  },
+  forgetButton: {
+    backgroundColor: '#F44336',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  forgetButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   buttonContainer: {
     marginBottom: 16,
@@ -464,9 +571,6 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
-  },
-  reconnectButton: {
-    backgroundColor: '#FF9500',
   },
   disconnectButton: {
     backgroundColor: '#F44336',
@@ -488,6 +592,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   deviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -501,6 +608,30 @@ const styles = StyleSheet.create({
   deviceItemId: {
     fontSize: 12,
     color: '#999',
+  },
+  connectArrow: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  infoCard: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976D2',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#1565C0',
+    marginBottom: 6,
+    paddingLeft: 8,
   },
   historyToggle: {
     backgroundColor: '#fff',
