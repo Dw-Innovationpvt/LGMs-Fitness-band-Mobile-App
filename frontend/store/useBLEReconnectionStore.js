@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BleManager } from 'react-native-ble-plx';
-import { Alert } from 'react-native';
+import { Alert, Platform, PermissionsAndroid } from 'react-native';
 
 // Storage keys for persistence
 const STORAGE_KEYS = {
@@ -13,31 +13,27 @@ const STORAGE_KEYS = {
 /**
  * BLE Reconnection Store with CONTINUOUS Auto-Reconnection
  * 
- * KEY FEATURE: Once a device is connected manually, it will ALWAYS attempt
- * to reconnect automatically whenever it comes back in range - NO user action needed!
- * 
- * How it works:
- * 1. User connects manually first time (device saved to AsyncStorage)
- * 2. Device goes out of range → disconnects
- * 3. Store continuously scans in background
- * 4. When device comes back → AUTOMATICALLY reconnects
- * 5. Repeats indefinitely until user manually disconnects
+ * IMPROVED VERSION: Better device detection with proper scanning
+ * - Uses proper BLE state checking
+ * - Ensures permissions before scanning
+ * - Longer scan windows for better detection
+ * - Cleans up previous scans properly
  */
 export const useBLEReconnectionStore = create((set, get) => ({
   // ========== State Variables ==========
   savedDevice: null,
   isAttemptingReconnect: false,
-  continuousReconnectEnabled: false, // Flag to enable continuous reconnection
-  scanInterval: null, // Interval for continuous scanning
+  continuousReconnectEnabled: false,
+  scanInterval: null,
   bleManager: new BleManager(),
   connectionHistory: [],
-  reconnectAttemptCount: 0, // Just for logging, no max limit
+  reconnectAttemptCount: 0,
+  isCurrentlyScanning: false, // Track if scan is in progress
 
   // ========== Core Functions ==========
 
   /**
    * 1. Save Connection Data
-   * Saves device info and ENABLES continuous auto-reconnection
    */
   saveConnectionData: async (device, characteristic) => {
     try {
@@ -61,13 +57,13 @@ export const useBLEReconnectionStore = create((set, get) => ({
 
       set({ 
         savedDevice: connectionData,
-        continuousReconnectEnabled: true // ✅ Enable auto-reconnect
+        continuousReconnectEnabled: true
       });
 
       await get().addToConnectionHistory('connected', connectionData);
 
       console.log('💾 Device saved - Auto-reconnection ENABLED');
-      console.log('📱 Device will reconnect automatically when in range');
+      console.log('📱 Saved device ID:', connectionData.id);
       
       return true;
     } catch (error) {
@@ -78,7 +74,6 @@ export const useBLEReconnectionStore = create((set, get) => ({
 
   /**
    * 2. Load Saved Device
-   * Loads device and enables auto-reconnection if device exists
    */
   loadSavedDevice: async () => {
     try {
@@ -88,9 +83,10 @@ export const useBLEReconnectionStore = create((set, get) => ({
         const parsed = JSON.parse(data);
         set({ 
           savedDevice: parsed,
-          continuousReconnectEnabled: true // Enable auto-reconnect on load
+          continuousReconnectEnabled: true
         });
-        console.log('📦 Saved device loaded - Auto-reconnection ENABLED');
+        console.log('📦 Saved device loaded:', parsed.name);
+        console.log('📱 Device ID:', parsed.id);
         return parsed;
       }
       
@@ -104,13 +100,11 @@ export const useBLEReconnectionStore = create((set, get) => ({
 
   /**
    * 3. Clear Saved Device
-   * Removes device and DISABLES auto-reconnection
    */
   clearSavedDevice: async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.SAVED_DEVICE);
       
-      // Stop any ongoing reconnection attempts
       get().stopContinuousReconnection();
       
       set({ 
@@ -125,8 +119,79 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 4. Handle Disconnection
-   * Called when device disconnects - IMMEDIATELY starts continuous reconnection
+   * 4. Request BLE Permissions (Android)
+   */
+  requestBLEPermissions: async () => {
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    try {
+      console.log('🔐 Checking BLE permissions...');
+      
+      const locationPermissions = [
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      ];
+
+      let permissions = [...locationPermissions];
+
+      // Android 12+ requires additional Bluetooth permissions
+      if (Platform.Version >= 31) {
+        permissions.push(
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+        );
+      }
+
+      const granted = await PermissionsAndroid.requestMultiple(permissions);
+      
+      const hasLocationPermission = 
+        granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED ||
+        granted['android.permission.ACCESS_COARSE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED;
+
+      if (Platform.Version >= 31) {
+        const hasBluetoothPermission = 
+          granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+          granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED;
+        
+        const allGranted = hasLocationPermission && hasBluetoothPermission;
+        console.log('✅ Permissions granted:', allGranted);
+        return allGranted;
+      }
+
+      console.log('✅ Permissions granted:', hasLocationPermission);
+      return hasLocationPermission;
+    } catch (error) {
+      console.error('❌ Permission request error:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 5. Check BLE State
+   */
+  checkBLEState: async () => {
+    const { bleManager } = get();
+    
+    try {
+      const state = await bleManager.state();
+      console.log('📡 BLE State:', state);
+      
+      if (state !== 'PoweredOn') {
+        console.warn('⚠️ Bluetooth is not powered on');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error checking BLE state:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 6. Handle Disconnection
    */
   handleDisconnection: async () => {
     const { savedDevice, continuousReconnectEnabled, isAttemptingReconnect } = get();
@@ -146,15 +211,15 @@ export const useBLEReconnectionStore = create((set, get) => ({
     await get().addToConnectionHistory('disconnected', savedDevice);
 
     console.log('🔄 Starting CONTINUOUS auto-reconnection...');
-    console.log('📡 Will keep trying until device is back in range');
+    console.log('📡 Target device:', savedDevice.name);
+    console.log('📱 Target ID:', savedDevice.id);
 
     // Start continuous reconnection immediately
     get().startContinuousReconnection();
   },
 
   /**
-   * 5. Start Continuous Reconnection
-   * CONTINUOUSLY scans and reconnects - no delays, no max attempts!
+   * 7. Start Continuous Reconnection
    */
   startContinuousReconnection: () => {
     const { scanInterval, continuousReconnectEnabled } = get();
@@ -166,20 +231,21 @@ export const useBLEReconnectionStore = create((set, get) => ({
 
     // Clear any existing interval
     if (scanInterval) {
+      console.log('🧹 Clearing existing scan interval');
       clearInterval(scanInterval);
     }
 
     set({ isAttemptingReconnect: true, reconnectAttemptCount: 0 });
 
     console.log('🔄 Continuous reconnection started');
-    console.log('📡 Scanning every 3 seconds...');
+    console.log('📡 Will scan every 5 seconds for better detection...');
 
     // Start first attempt immediately
     get().attemptReconnection();
 
-    // Then scan every 3 seconds continuously
+    // Then scan every 5 seconds (longer interval for more reliable scanning)
     const interval = setInterval(async () => {
-      const { isAttemptingReconnect, continuousReconnectEnabled } = get();
+      const { isAttemptingReconnect, continuousReconnectEnabled, isCurrentlyScanning } = get();
       
       if (!continuousReconnectEnabled) {
         console.log('🛑 Auto-reconnect disabled, stopping...');
@@ -188,131 +254,215 @@ export const useBLEReconnectionStore = create((set, get) => ({
         return;
       }
 
+      // Skip if previous scan is still running
+      if (isCurrentlyScanning) {
+        console.log('⏭️ Previous scan still running, skipping...');
+        return;
+      }
+
       if (isAttemptingReconnect) {
         await get().attemptReconnection();
       }
-    }, 3000); // Scan every 3 seconds
+    }, 5000); // Scan every 5 seconds
 
     set({ scanInterval: interval });
   },
 
   /**
-   * 6. Stop Continuous Reconnection
-   * Stops the continuous scanning loop
+   * 8. Stop Continuous Reconnection
    */
   stopContinuousReconnection: () => {
     const { scanInterval, bleManager } = get();
 
+    console.log('🛑 Stopping continuous reconnection...');
+
     if (scanInterval) {
       clearInterval(scanInterval);
-      bleManager.stopDeviceScan();
-      set({ 
-        scanInterval: null, 
-        isAttemptingReconnect: false,
-        reconnectAttemptCount: 0 
-      });
-      console.log('🛑 Continuous reconnection stopped');
     }
+
+    // Make sure to stop any ongoing scan
+    try {
+      bleManager.stopDeviceScan();
+    } catch (error) {
+      console.warn('⚠️ Error stopping device scan:', error);
+    }
+
+    set({ 
+      scanInterval: null, 
+      isAttemptingReconnect: false,
+      isCurrentlyScanning: false,
+      reconnectAttemptCount: 0 
+    });
+    
+    console.log('✅ Continuous reconnection stopped');
   },
 
   /**
-   * 7. Attempt Reconnection
-   * Single reconnection attempt - called repeatedly by continuous loop
+   * 9. Attempt Reconnection
    */
   attemptReconnection: async () => {
-    const { savedDevice, bleManager, reconnectAttemptCount } = get();
+    const { savedDevice, bleManager, reconnectAttemptCount, isCurrentlyScanning } = get();
 
     if (!savedDevice) {
       console.warn('⚠️ No saved device');
       return false;
     }
 
+    if (isCurrentlyScanning) {
+      console.log('⏭️ Scan already in progress, skipping...');
+      return false;
+    }
+
     try {
       const currentAttempt = reconnectAttemptCount + 1;
-      set({ reconnectAttemptCount: currentAttempt });
+      set({ reconnectAttemptCount: currentAttempt, isCurrentlyScanning: true });
 
-      console.log(`🔍 Reconnect attempt #${currentAttempt} - Scanning...`);
+      console.log(`\n🔍 ========== Reconnect Attempt #${currentAttempt} ==========`);
+      console.log('📱 Looking for device ID:', savedDevice.id);
+      console.log('📝 Device name:', savedDevice.name);
 
-      // Quick scan for the specific device
+      // Check BLE state
+      const bleStateOk = await get().checkBLEState();
+      if (!bleStateOk) {
+        console.warn('⚠️ BLE not ready, will retry...');
+        set({ isCurrentlyScanning: false });
+        return false;
+      }
+
+      // Check permissions
+      const hasPermissions = await get().requestBLEPermissions();
+      if (!hasPermissions) {
+        console.warn('⚠️ Permissions not granted, will retry...');
+        set({ isCurrentlyScanning: false });
+        return false;
+      }
+
+      // Try to scan for the device
+      console.log('📡 Starting device scan...');
       const device = await get().scanForSavedDevice(savedDevice.id);
 
       if (device) {
-        console.log('✅ Device found in range! Connecting...');
+        console.log('✅ DEVICE FOUND IN RANGE!');
+        console.log('📱 Found device:', device.name || device.id);
+        console.log('🔗 Attempting connection...');
 
-        // Connect to device
-        const connectedDevice = await bleManager.connectToDevice(device.id, {
-          timeout: 10000
-        });
-
-        if (connectedDevice) {
-          console.log('🎉 RECONNECTED SUCCESSFULLY!');
-
-          // Stop continuous reconnection
-          get().stopContinuousReconnection();
-
-          // Import main BLE store and restore full connection
-          const { useBLEStore } = await import('./augBleStore');
-          const { connectToDevice } = useBLEStore.getState();
-
-          await connectToDevice(connectedDevice);
-
-          set({ 
-            isAttemptingReconnect: false,
-            reconnectAttemptCount: 0
+        try {
+          // Connect to device with extended timeout
+          const connectedDevice = await bleManager.connectToDevice(device.id, {
+            timeout: 15000,
+            requestMTU: 185
           });
 
-          await get().addToConnectionHistory('reconnected', savedDevice);
+          if (connectedDevice) {
+            console.log('🎉 RECONNECTION SUCCESSFUL!');
 
-          console.log('✅ Device reconnected automatically!');
-          
-          return true;
+            // Stop continuous reconnection
+            get().stopContinuousReconnection();
+
+            // Import main BLE store and restore full connection
+            const { useBLEStore } = await import('./augBleStore');
+            const { connectToDevice } = useBLEStore.getState();
+
+            console.log('🔄 Restoring full BLE connection...');
+            await connectToDevice(connectedDevice);
+
+            set({ 
+              isAttemptingReconnect: false,
+              isCurrentlyScanning: false,
+              reconnectAttemptCount: 0
+            });
+
+            await get().addToConnectionHistory('reconnected', savedDevice);
+
+            console.log('✅ Device reconnected and monitoring restored!');
+            
+            // Show success notification
+            Alert.alert(
+              '✅ Reconnected!',
+              `Successfully reconnected to ${savedDevice.name}`,
+              [{ text: 'OK' }]
+            );
+            
+            return true;
+          }
+        } catch (connectError) {
+          console.error('❌ Connection failed:', connectError.message);
+          set({ isCurrentlyScanning: false });
+          return false;
         }
       } else {
-        // Device not found yet, will try again in 3 seconds
-        console.log(`📵 Device not in range yet (attempt #${currentAttempt})`);
+        console.log(`📵 Device not detected yet (attempt #${currentAttempt})`);
+        console.log('⏳ Will scan again in 5 seconds...');
+        set({ isCurrentlyScanning: false });
       }
 
     } catch (error) {
-      console.warn(`⚠️ Reconnection attempt failed:`, error.message);
+      console.error(`❌ Reconnection error:`, error.message);
+      set({ isCurrentlyScanning: false });
     }
 
     return false;
   },
 
   /**
-   * 8. Scan for Saved Device
-   * Quick targeted scan for the specific device
+   * 10. Scan for Saved Device
+   * IMPROVED: Longer scan window, better logging
    */
   scanForSavedDevice: async (deviceId) => {
     const { bleManager } = get();
 
     return new Promise((resolve) => {
       let foundDevice = null;
-      const scanTimeout = 2000; // Quick 2 second scan
+      const scanTimeout = 4000; // 4 second scan window
+      let devicesFound = 0;
+
+      console.log('📡 Starting BLE scan...');
+      console.log('🎯 Target device ID:', deviceId);
 
       const timeout = setTimeout(() => {
+        console.log(`📊 Scan complete. Total devices found: ${devicesFound}`);
         bleManager.stopDeviceScan();
+        
+        if (!foundDevice) {
+          console.log('❌ Target device not found in this scan');
+        }
+        
         resolve(foundDevice);
       }, scanTimeout);
 
       bleManager.startDeviceScan(
-        null,
-        { allowDuplicates: false },
+        null, // Scan for all devices
+        { 
+          allowDuplicates: false,
+          scanMode: 2, // Low latency scan mode for faster detection
+        },
         (error, device) => {
           if (error) {
-            console.error('Scan error:', error.message);
+            console.error('❌ Scan error:', error.message);
             clearTimeout(timeout);
             bleManager.stopDeviceScan();
             resolve(null);
             return;
           }
 
-          if (device && device.id === deviceId) {
-            console.log('✅ Target device found!');
-            foundDevice = device;
-            clearTimeout(timeout);
-            bleManager.stopDeviceScan();
-            resolve(device);
+          if (device) {
+            devicesFound++;
+            
+            // Log every device found for debugging
+            const deviceName = device.name || device.localName || 'Unknown';
+            console.log(`📱 Device #${devicesFound}: ${deviceName} (${device.id})`);
+
+            // Check if this is our target device
+            if (device.id === deviceId) {
+              console.log('🎯 ✅ TARGET DEVICE MATCHED!');
+              console.log('📱 Device ID matches:', device.id);
+              console.log('📝 Device name:', deviceName);
+              
+              foundDevice = device;
+              clearTimeout(timeout);
+              bleManager.stopDeviceScan();
+              resolve(device);
+            }
           }
         }
       );
@@ -320,8 +470,7 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 9. Manual Reconnection
-   * User can manually trigger reconnection
+   * 11. Manual Reconnection
    */
   manualReconnect: async () => {
     const { savedDevice } = get();
@@ -332,29 +481,36 @@ export const useBLEReconnectionStore = create((set, get) => ({
     }
 
     console.log('🔄 Manual reconnection triggered');
+    console.log('📱 Target device:', savedDevice.name);
     
     // Enable continuous reconnection and start
     set({ continuousReconnectEnabled: true });
     get().startContinuousReconnection();
     
+    Alert.alert(
+      'Reconnection Started',
+      `Scanning for ${savedDevice.name}...\n\nMake sure Bluetooth is on and device is nearby.`,
+      [{ text: 'OK' }]
+    );
+    
     return true;
   },
 
   /**
-   * 10. Start Monitoring
-   * Sets up disconnection monitoring
+   * 12. Start Monitoring
    */
   startMonitoring: () => {
     const { savedDevice } = get();
     
     if (savedDevice) {
       console.log('👁️ Monitoring enabled for:', savedDevice.name);
+      console.log('📱 Device ID:', savedDevice.id);
       console.log('🔄 Auto-reconnection is ACTIVE');
     }
   },
 
   /**
-   * 11. Get Reconnection Status
+   * 13. Get Reconnection Status
    */
   getReconnectionStatus: () => {
     const state = get();
@@ -363,13 +519,14 @@ export const useBLEReconnectionStore = create((set, get) => ({
       isAttemptingReconnect: state.isAttemptingReconnect,
       continuousReconnectEnabled: state.continuousReconnectEnabled,
       reconnectAttemptCount: state.reconnectAttemptCount,
+      isCurrentlyScanning: state.isCurrentlyScanning,
       savedDeviceName: state.savedDevice?.name || 'Unknown',
       savedDeviceId: state.savedDevice?.id || null,
     };
   },
 
   /**
-   * 12. Connection History Management
+   * 14. Connection History Management
    */
   addToConnectionHistory: async (event, deviceData) => {
     try {
@@ -397,7 +554,7 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 13. Load Connection History
+   * 15. Load Connection History
    */
   loadConnectionHistory: async () => {
     try {
@@ -417,7 +574,7 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 14. Clear Connection History
+   * 16. Clear Connection History
    */
   clearConnectionHistory: async () => {
     try {
@@ -430,16 +587,17 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 15. Enable/Disable Auto-Reconnection
+   * 17. Enable/Disable Auto-Reconnection
    */
   setAutoReconnect: (enabled) => {
     set({ continuousReconnectEnabled: enabled });
     
     if (enabled) {
       console.log('✅ Auto-reconnection ENABLED');
-      // If currently disconnected, start reconnecting
-      const { isAttemptingReconnect } = get();
-      if (!isAttemptingReconnect) {
+      const { isAttemptingReconnect, savedDevice } = get();
+      
+      if (!isAttemptingReconnect && savedDevice) {
+        console.log('🔄 Starting reconnection process...');
         get().startContinuousReconnection();
       }
     } else {
@@ -449,10 +607,39 @@ export const useBLEReconnectionStore = create((set, get) => ({
   },
 
   /**
-   * 16. Check if Auto-Reconnect is Active
+   * 18. Check if Auto-Reconnect is Active
    */
   isAutoReconnectActive: () => {
     const { continuousReconnectEnabled, savedDevice } = get();
     return continuousReconnectEnabled && savedDevice !== null;
+  },
+
+  /**
+   * 19. Force Stop All Reconnection Activities
+   */
+  forceStopReconnection: () => {
+    const { scanInterval, bleManager } = get();
+    
+    console.log('🛑 Force stopping all reconnection activities...');
+    
+    if (scanInterval) {
+      clearInterval(scanInterval);
+    }
+    
+    try {
+      bleManager.stopDeviceScan();
+    } catch (error) {
+      console.warn('Error stopping scan:', error);
+    }
+    
+    set({
+      scanInterval: null,
+      isAttemptingReconnect: false,
+      isCurrentlyScanning: false,
+      reconnectAttemptCount: 0,
+      continuousReconnectEnabled: false,
+    });
+    
+    console.log('✅ All reconnection activities stopped');
   },
 }));
