@@ -346,70 +346,138 @@ export const useBLEStore = create((set, get) => ({
   /**
    * Attempt Reconnection (Single Attempt)
    */
-  attemptReconnection: async () => {
-    const { savedDevice, bleManager, reconnectAttemptCount, isCurrentlyScanning } = get();
+  // attemptReconnection: async () => {
+  //   const { savedDevice, bleManager, reconnectAttemptCount, isCurrentlyScanning } = get();
 
-    if (!savedDevice || isCurrentlyScanning) return false;
+  //   if (!savedDevice || isCurrentlyScanning) return false;
 
-    try {
-      const currentAttempt = reconnectAttemptCount + 1;
-      set({ reconnectAttemptCount: currentAttempt, isCurrentlyScanning: true });
+  //   try {
+  //     const currentAttempt = reconnectAttemptCount + 1;
+  //     set({ reconnectAttemptCount: currentAttempt, isCurrentlyScanning: true });
 
-      console.log(`\n🔍 ========== Reconnect Attempt #${currentAttempt} ==========`);
-      console.log('📱 Looking for:', savedDevice.name, '-', savedDevice.id);
+  //     console.log(`\n🔍 ========== Reconnect Attempt #${currentAttempt} ==========`);
+  //     console.log('📱 Looking for:', savedDevice.name, '-', savedDevice.id);
 
-      const bleStateOk = await get().checkBLEState();
-      if (!bleStateOk) {
-        set({ isCurrentlyScanning: false });
-        return false;
-      }
+  //     const bleStateOk = await get().checkBLEState();
+  //     if (!bleStateOk) {
+  //       set({ isCurrentlyScanning: false });
+  //       return false;
+  //     }
 
-      const hasPermissions = await requestBLEPermissions();
-      if (!hasPermissions) {
-        set({ isCurrentlyScanning: false });
-        return false;
-      }
+  //     const hasPermissions = await requestBLEPermissions();
+  //     if (!hasPermissions) {
+  //       set({ isCurrentlyScanning: false });
+  //       return false;
+  //     }
 
-      console.log('📡 Scanning...');
-      const device = await get().scanForSavedDevice(savedDevice.id);
+  //     console.log('📡 Scanning...');
+  //     const device = await get().scanForSavedDevice(savedDevice.id);
 
-      if (device) {
-        console.log('✅ DEVICE FOUND! Connecting...');
+  //     if (device) {
+  //       console.log('✅ DEVICE FOUND! Connecting...');
 
-        const connectedDevice = await bleManager.connectToDevice(device.id, {
-          timeout: 15000,
-          requestMTU: 185
-        });
+  //       const connectedDevice = await bleManager.connectToDevice(device.id, {
+  //         timeout: 15000,
+  //         requestMTU: 185
+  //       });
 
-        if (connectedDevice) {
-          console.log('🎉 RECONNECTED SUCCESSFULLY!');
-          get().stopContinuousReconnection();
+  //       if (connectedDevice) {
+  //         console.log('🎉 RECONNECTED SUCCESSFULLY!');
+  //         get().stopContinuousReconnection();
 
-          // Restore full connection
-          await get().connectToDevice(connectedDevice);
+  //         // Restore full connection
+  //         await get().connectToDevice(connectedDevice);
 
-          set({ 
-            isAttemptingReconnect: false,
-            isCurrentlyScanning: false,
-            reconnectAttemptCount: 0
-          });
+  //         set({ 
+  //           isAttemptingReconnect: false,
+  //           isCurrentlyScanning: false,
+  //           reconnectAttemptCount: 0
+  //         });
 
-          await get().addToConnectionHistory('reconnected', savedDevice);
+  //         await get().addToConnectionHistory('reconnected', savedDevice);
 
-          Alert.alert('✅ Reconnected!', `Successfully reconnected to ${savedDevice.name}`);
-          return true;
-        }
-      } else {
-        console.log(`📵 Device not found (attempt #${currentAttempt})`);
-        set({ isCurrentlyScanning: false });
-      }
-    } catch (error) {
-      console.error(`❌ Reconnection error:`, error.message);
+  //         Alert.alert('✅ Reconnected!', `Successfully reconnected to ${savedDevice.name}`);
+  //         return true;
+  //       }
+  //     } else {
+  //       console.log(`📵 Device not found (attempt #${currentAttempt})`);
+  //       set({ isCurrentlyScanning: false });
+  //     }
+  //   } catch (error) {
+  //     console.error(`❌ Reconnection error:`, error.message);
+  //     set({ isCurrentlyScanning: false });
+  //   }
+
+  //   return false;
+  // },
+
+  /**
+ * Attempt Reconnection (Single Attempt)
+ */
+attemptReconnection: async () => {
+  const { savedDevice, bleManager, reconnectAttemptCount, isCurrentlyScanning } = get();
+
+  if (!savedDevice || isCurrentlyScanning) return false;
+
+  try {
+    const currentAttempt = reconnectAttemptCount + 1;
+    set({ reconnectAttemptCount: currentAttempt, isCurrentlyScanning: true });
+
+    console.log(`\n🔍 ========== Reconnect Attempt #${currentAttempt} ==========`);
+    console.log('📱 Looking for:', savedDevice.name, '-', savedDevice.id);
+
+    const bleStateOk = await get().checkBLEState();
+    if (!bleStateOk) {
       set({ isCurrentlyScanning: false });
+      return false;
     }
 
-    return false;
-  },
+    const hasPermissions = await requestBLEPermissions();
+    if (!hasPermissions) {
+      set({ isCurrentlyScanning: false });
+      return false;
+    }
+
+    console.log('📡 Scanning...');
+    const device = await get().scanForSavedDevice(savedDevice.id);
+
+    if (device) {
+      console.log('✅ DEVICE FOUND! Connecting...');
+
+      const connectedDevice = await bleManager.connectToDevice(device.id, {
+        timeout: 15000,
+        requestMTU: 185
+      });
+
+      if (connectedDevice) {
+        console.log('🎉 RECONNECTED SUCCESSFULLY!');
+        get().stopContinuousReconnection();
+
+        // 🛠️ FIX: Pass isReconnection = true to preserve session data
+        await get().connectToDevice(connectedDevice, true);
+
+        set({ 
+          isAttemptingReconnect: false,
+          isCurrentlyScanning: false,
+          reconnectAttemptCount: 0
+        });
+
+        await get().addToConnectionHistory('reconnected', savedDevice);
+
+        Alert.alert('✅ Reconnected!', `Successfully reconnected to ${savedDevice.name}\n\nSession data preserved.`);
+        return true;
+      }
+    } else {
+      console.log(`📵 Device not found (attempt #${currentAttempt})`);
+      set({ isCurrentlyScanning: false });
+    }
+  } catch (error) {
+    console.error(`❌ Reconnection error:`, error.message);
+    set({ isCurrentlyScanning: false });
+  }
+
+  return false;
+},
 
   /**
    * Scan for Saved Device
@@ -646,129 +714,310 @@ export const useBLEStore = create((set, get) => ({
   /**
    * Connect to BLE Device
    */
-  connectToDevice: async (device) => {
-    try {
-      console.log('🔗 Connecting to device:', device.name || device.id);
-      const bleManager = get().bleManager;
+  // connectToDevice: async (device) => {
+  //   try {
+  //     console.log('🔗 Connecting to device:', device.name || device.id);
+  //     const bleManager = get().bleManager;
 
-      set({ error: null });
+  //     set({ error: null });
 
-      // Disconnect any existing connection
-      const { connectedDevice } = get();
-      if (connectedDevice) {
-        try {
-          await connectedDevice.cancelConnection();
-        } catch (disconnectError) {
-          console.warn('Error disconnecting previous device:', disconnectError);
-        }
-      }
+  //     // Disconnect any existing connection
+  //     const { connectedDevice } = get();
+  //     if (connectedDevice) {
+  //       try {
+  //         await connectedDevice.cancelConnection();
+  //       } catch (disconnectError) {
+  //         console.warn('Error disconnecting previous device:', disconnectError);
+  //       }
+  //     }
 
-      bleManager.stopDeviceScan();
+  //     bleManager.stopDeviceScan();
 
-      console.log('Attempting connection...');
-      const deviceConnection = await Promise.race([
-        device.connect(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
-        ),
-      ]);
+  //     console.log('Attempting connection...');
+  //     const deviceConnection = await Promise.race([
+  //       device.connect(),
+  //       new Promise((_, reject) =>
+  //         setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+  //       ),
+  //     ]);
 
-      console.log('✅ Connected successfully, discovering services...');
-      await deviceConnection.discoverAllServicesAndCharacteristics();
+  //     console.log('✅ Connected successfully, discovering services...');
+  //     await deviceConnection.discoverAllServicesAndCharacteristics();
 
+  //     try {
+  //       await deviceConnection.requestMTU(185);
+  //       console.log('MTU set to 185');
+  //     } catch (mtuError) {
+  //       console.warn('MTU request failed:', mtuError);
+  //     }
+
+  //     const services = await deviceConnection.services();
+  //     console.log('Available services:', services.map(s => s.uuid));
+
+  //     const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
+  //     let targetService = services.find(
+  //       (s) => normalizeUUID(s.uuid) === normalizedTargetServiceUUID
+  //     );
+
+  //     if (!targetService) {
+  //       throw new Error(`Service ${SERVICE_UUID} not found on device`);
+  //     }
+  //     console.log('✅ Found target service:', targetService.uuid);
+
+  //     const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
+  //     const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
+  //     let targetCharacteristic = characteristics.find(
+  //       (c) => normalizeUUID(c.uuid) === normalizedTargetCharUUID
+  //     );
+
+  //     if (!targetCharacteristic) {
+  //       console.warn('⚠️ Target characteristic not found, using first available');
+  //       targetCharacteristic = characteristics[0];
+  //     }
+  //     console.log('✅ Using characteristic:', targetCharacteristic.uuid);
+
+  //     // ✅ Save connection data for auto-reconnection
+  //     await get().saveConnectionData(deviceConnection, targetCharacteristic);
+
+  //     set({
+  //       connectedDevice: deviceConnection,
+  //       characteristic: targetCharacteristic,
+  //       isConnected: true,
+  //       bandActive: true,
+  //       error: null,
+  //       sessionData: {
+  //         startTime: new Date(),
+  //         totalSteps: 0,
+  //         totalSkatingDistance: 0,
+  //         totalWalkingDistance: 0,
+  //         maxSpeed: 0,
+  //         sessionDuration: 0,
+  //       },
+  //     });
+
+  //     // Set up characteristic monitoring
+  //     if (targetCharacteristic.isNotifiable) {
+  //       console.log('📡 Setting up characteristic monitoring...');
+  //       deviceConnection.monitorCharacteristicForService(
+  //         targetService.uuid,
+  //         targetCharacteristic.uuid,
+  //         (error, characteristic) => {
+  //           if (error) {
+  //             console.error('❌ Monitor error:', error);
+  //             return;
+  //           }
+
+  //           const base64Value = characteristic?.value;
+  //           if (!base64Value) return;
+
+  //           try {
+  //             const json = Buffer.from(base64Value, 'base64').toString('utf-8');
+  //             const parsed = JSON.parse(json);
+  //             console.log('📨 Received data:', parsed);
+
+  //             const formattedData = formatBLEData(parsed);
+  //             set((state) => ({
+  //               data: formattedData,
+  //               currentMode: formattedData.mode,
+  //               bandActive: true,
+  //               sessionData: {
+  //                 ...state.sessionData,
+  //                 totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
+  //                 totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
+  //                 totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
+  //                 maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
+  //                 sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000),
+  //               },
+  //             }));
+  //           } catch (parseError) {
+  //             console.warn('⚠️ Parse error:', parseError.message);
+  //           }
+  //         }
+  //       );
+  //     }
+
+  //     // Send initial commands
+  //     setTimeout(async () => {
+  //       try {
+  //         await get().sendCommand('TURN_ON');
+  //         console.log('✅ Sent TURN_ON command');
+  //         setTimeout(async () => {
+  //           await get().sendCommand('SET_MODE STEP_COUNTING');
+  //           console.log('✅ Activated STEP_COUNTING mode');
+  //         }, 1000);
+  //       } catch (cmdError) {
+  //         console.warn('⚠️ Could not send command:', cmdError);
+  //       }
+  //     }, 1000);
+
+  //     // ✅ Handle disconnection and trigger auto-reconnection
+  //     deviceConnection.onDisconnected(async (error, disconnectedDevice) => {
+  //       console.log('🔌 Device disconnected:', disconnectedDevice?.id);
+  //       if (error) console.error('Disconnection error:', error);
+
+  //       set({
+  //         isConnected: false,
+  //         connectedDevice: null,
+  //         characteristic: null,
+  //         bandActive: false,
+  //         data: null,
+  //         currentMode: 'S',
+  //       });
+
+  //       console.log('🔄 Triggering auto-reconnection...');
+  //       await get().handleDisconnection();
+  //     });
+
+  //     Alert.alert(
+  //       'Connected', 
+  //       `Connected to ${device.name || device.id}\n\nAuto-reconnection is now enabled.`
+  //     );
+  //     console.log('✅ Device connected successfully');
+      
+  //   } catch (err) {
+  //     console.error('❌ Connection error:', err);
+  //     set({
+  //       isConnected: false,
+  //       connectedDevice: null,
+  //       characteristic: null,
+  //       error: err.message || 'Failed to connect to device',
+  //     });
+  //     Alert.alert('Connection Error', err.message || 'Failed to connect to device');
+  //     throw err;
+  //   }
+  // },
+
+  /**
+ * Connect to BLE Device (Fixed to preserve session data)
+ */
+connectToDevice: async (device, isReconnection = false) => {
+  try {
+    console.log('🔗 Connecting to device:', device.name || device.id);
+    const bleManager = get().bleManager;
+
+    set({ error: null });
+
+    // Disconnect any existing connection
+    const { connectedDevice } = get();
+    if (connectedDevice) {
       try {
-        await deviceConnection.requestMTU(185);
-        console.log('MTU set to 185');
-      } catch (mtuError) {
-        console.warn('MTU request failed:', mtuError);
+        await connectedDevice.cancelConnection();
+      } catch (disconnectError) {
+        console.warn('Error disconnecting previous device:', disconnectError);
       }
+    }
 
-      const services = await deviceConnection.services();
-      console.log('Available services:', services.map(s => s.uuid));
+    bleManager.stopDeviceScan();
 
-      const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
-      let targetService = services.find(
-        (s) => normalizeUUID(s.uuid) === normalizedTargetServiceUUID
-      );
+    console.log('Attempting connection...');
+    const deviceConnection = await Promise.race([
+      device.connect(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+      ),
+    ]);
 
-      if (!targetService) {
-        throw new Error(`Service ${SERVICE_UUID} not found on device`);
-      }
-      console.log('✅ Found target service:', targetService.uuid);
+    console.log('✅ Connected successfully, discovering services...');
+    await deviceConnection.discoverAllServicesAndCharacteristics();
 
-      const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
-      const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
-      let targetCharacteristic = characteristics.find(
-        (c) => normalizeUUID(c.uuid) === normalizedTargetCharUUID
-      );
+    try {
+      await deviceConnection.requestMTU(185);
+      console.log('MTU set to 185');
+    } catch (mtuError) {
+      console.warn('MTU request failed:', mtuError);
+    }
 
-      if (!targetCharacteristic) {
-        console.warn('⚠️ Target characteristic not found, using first available');
-        targetCharacteristic = characteristics[0];
-      }
-      console.log('✅ Using characteristic:', targetCharacteristic.uuid);
+    const services = await deviceConnection.services();
+    console.log('Available services:', services.map(s => s.uuid));
 
-      // ✅ Save connection data for auto-reconnection
-      await get().saveConnectionData(deviceConnection, targetCharacteristic);
+    const normalizedTargetServiceUUID = normalizeUUID(SERVICE_UUID);
+    let targetService = services.find(
+      (s) => normalizeUUID(s.uuid) === normalizedTargetServiceUUID
+    );
 
-      set({
-        connectedDevice: deviceConnection,
-        characteristic: targetCharacteristic,
-        isConnected: true,
-        bandActive: true,
-        error: null,
-        sessionData: {
-          startTime: new Date(),
-          totalSteps: 0,
-          totalSkatingDistance: 0,
-          totalWalkingDistance: 0,
-          maxSpeed: 0,
-          sessionDuration: 0,
-        },
-      });
+    if (!targetService) {
+      throw new Error(`Service ${SERVICE_UUID} not found on device`);
+    }
+    console.log('✅ Found target service:', targetService.uuid);
 
-      // Set up characteristic monitoring
-      if (targetCharacteristic.isNotifiable) {
-        console.log('📡 Setting up characteristic monitoring...');
-        deviceConnection.monitorCharacteristicForService(
-          targetService.uuid,
-          targetCharacteristic.uuid,
-          (error, characteristic) => {
-            if (error) {
-              console.error('❌ Monitor error:', error);
-              return;
-            }
+    const characteristics = await deviceConnection.characteristicsForService(targetService.uuid);
+    const normalizedTargetCharUUID = normalizeUUID(CHARACTERISTIC_UUID);
+    let targetCharacteristic = characteristics.find(
+      (c) => normalizeUUID(c.uuid) === normalizedTargetCharUUID
+    );
 
-            const base64Value = characteristic?.value;
-            if (!base64Value) return;
+    if (!targetCharacteristic) {
+      console.warn('⚠️ Target characteristic not found, using first available');
+      targetCharacteristic = characteristics[0];
+    }
+    console.log('✅ Using characteristic:', targetCharacteristic.uuid);
 
-            try {
-              const json = Buffer.from(base64Value, 'base64').toString('utf-8');
-              const parsed = JSON.parse(json);
-              console.log('📨 Received data:', parsed);
+    // ✅ Save connection data for auto-reconnection
+    await get().saveConnectionData(deviceConnection, targetCharacteristic);
 
-              const formattedData = formatBLEData(parsed);
-              set((state) => ({
-                data: formattedData,
-                currentMode: formattedData.mode,
-                bandActive: true,
-                sessionData: {
-                  ...state.sessionData,
-                  totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
-                  totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
-                  totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
-                  maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
-                  sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000),
-                },
-              }));
-            } catch (parseError) {
-              console.warn('⚠️ Parse error:', parseError.message);
-            }
+    // 🛠️ FIX: Only reset session data for new sessions, not reconnections
+    const currentState = get();
+    const shouldResetSession = !isReconnection || !currentState.sessionData.startTime;
+
+    set({
+      connectedDevice: deviceConnection,
+      characteristic: targetCharacteristic,
+      isConnected: true,
+      bandActive: true,
+      error: null,
+      sessionData: shouldResetSession ? {
+        startTime: new Date(),
+        totalSteps: 0,
+        totalSkatingDistance: 0,
+        totalWalkingDistance: 0,
+        maxSpeed: 0,
+        sessionDuration: 0,
+      } : currentState.sessionData, // ← Preserve existing session data during reconnection
+    });
+
+    // Set up characteristic monitoring
+    if (targetCharacteristic.isNotifiable) {
+      console.log('📡 Setting up characteristic monitoring...');
+      deviceConnection.monitorCharacteristicForService(
+        targetService.uuid,
+        targetCharacteristic.uuid,
+        (error, characteristic) => {
+          if (error) {
+            console.error('❌ Monitor error:', error);
+            return;
           }
-        );
-      }
 
-      // Send initial commands
+          const base64Value = characteristic?.value;
+          if (!base64Value) return;
+
+          try {
+            const json = Buffer.from(base64Value, 'base64').toString('utf-8');
+            const parsed = JSON.parse(json);
+            console.log('📨 Received data:', parsed);
+
+            const formattedData = formatBLEData(parsed);
+            set((state) => ({
+              data: formattedData,
+              currentMode: formattedData.mode,
+              bandActive: true,
+              sessionData: {
+                ...state.sessionData,
+                totalSteps: Math.max(state.sessionData.totalSteps, formattedData.stepCount),
+                totalWalkingDistance: Math.max(state.sessionData.totalWalkingDistance, formattedData.walkingDistance),
+                totalSkatingDistance: Math.max(state.sessionData.totalSkatingDistance, formattedData.skatingDistance),
+                maxSpeed: Math.max(state.sessionData.maxSpeed, formattedData.maxSpeed),
+                sessionDuration: Math.floor((new Date() - state.sessionData.startTime) / 1000),
+              },
+            }));
+          } catch (parseError) {
+            console.warn('⚠️ Parse error:', parseError.message);
+          }
+        }
+      );
+    }
+
+    // Send initial commands (only for new connections, not reconnections)
+    if (!isReconnection) {
       setTimeout(async () => {
         try {
           await get().sendCommand('TURN_ON');
@@ -781,43 +1030,53 @@ export const useBLEStore = create((set, get) => ({
           console.warn('⚠️ Could not send command:', cmdError);
         }
       }, 1000);
+    }
 
-      // ✅ Handle disconnection and trigger auto-reconnection
-      deviceConnection.onDisconnected(async (error, disconnectedDevice) => {
-        console.log('🔌 Device disconnected:', disconnectedDevice?.id);
-        if (error) console.error('Disconnection error:', error);
+    // ✅ Handle disconnection and trigger auto-reconnection
+    deviceConnection.onDisconnected(async (error, disconnectedDevice) => {
+      console.log('🔌 Device disconnected:', disconnectedDevice?.id);
+      if (error) console.error('Disconnection error:', error);
 
-        set({
-          isConnected: false,
-          connectedDevice: null,
-          characteristic: null,
-          bandActive: false,
-          data: null,
-          currentMode: 'S',
-        });
-
-        console.log('🔄 Triggering auto-reconnection...');
-        await get().handleDisconnection();
+      set({
+        isConnected: false,
+        connectedDevice: null,
+        characteristic: null,
+        bandActive: false,
+        data: null,
+        currentMode: 'S',
+        // 🛠️ FIX: Don't reset sessionData here - preserve it for reconnection
       });
 
+      console.log('🔄 Triggering auto-reconnection...');
+      await get().handleDisconnection();
+    });
+
+    if (isReconnection) {
+      console.log('✅ Device reconnected successfully - Session data preserved');
+    } else {
       Alert.alert(
         'Connected', 
         `Connected to ${device.name || device.id}\n\nAuto-reconnection is now enabled.`
       );
       console.log('✅ Device connected successfully');
-      
-    } catch (err) {
-      console.error('❌ Connection error:', err);
-      set({
-        isConnected: false,
-        connectedDevice: null,
-        characteristic: null,
-        error: err.message || 'Failed to connect to device',
-      });
-      Alert.alert('Connection Error', err.message || 'Failed to connect to device');
-      throw err;
     }
-  },
+    
+  } catch (err) {
+    console.error('❌ Connection error:', err);
+    set({
+      isConnected: false,
+      connectedDevice: null,
+      characteristic: null,
+      error: err.message || 'Failed to connect to device',
+    });
+    
+    if (!isReconnection) {
+      Alert.alert('Connection Error', err.message || 'Failed to connect to device');
+    }
+    
+    throw err;
+  }
+},
 
   /**
    * Send Command to Device
@@ -967,37 +1226,104 @@ export const useBLEStore = create((set, get) => ({
   /**
    * Disconnect Device
    */
-  disconnect: async (forgetDevice = false) => {
-    const { connectedDevice, bleManager } = get();
+  // disconnect: async (forgetDevice = false) => {
+  //   const { connectedDevice, bleManager } = get();
     
-    try {
-      console.log('🔌 Manual disconnect requested...');
+  //   try {
+  //     console.log('🔌 Manual disconnect requested...');
       
-      // Stop auto-reconnection if forgetting device
-      if (forgetDevice) {
-        console.log('🗑️ Forgetting device - Auto-reconnection DISABLED');
-        await get().clearSavedDevice();
-      } else {
-        console.log('💾 Keeping device saved - Auto-reconnection temporarily DISABLED');
-        get().stopContinuousReconnection();
-        get().setAutoReconnect(false);
-      }
+  //     // Stop auto-reconnection if forgetting device
+  //     if (forgetDevice) {
+  //       console.log('🗑️ Forgetting device - Auto-reconnection DISABLED');
+  //       await get().clearSavedDevice();
+  //     } else {
+  //       console.log('💾 Keeping device saved - Auto-reconnection temporarily DISABLED');
+  //       get().stopContinuousReconnection();
+  //       get().setAutoReconnect(false);
+  //     }
       
-      if (connectedDevice) {
-        await connectedDevice.cancelConnection();
-      }
-    } catch (error) {
-      console.warn('Error during disconnect:', error);
-    } finally {
-      bleManager.stopDeviceScan();
-      set({ 
-        isConnected: false, 
-        bandActive: false, 
-        connectedDevice: null,
-        characteristic: null,
-        data: null,
-        error: null,
-        currentMode: 'S',
+  //     if (connectedDevice) {
+  //       await connectedDevice.cancelConnection();
+  //     }
+  //   } catch (error) {
+  //     console.warn('Error during disconnect:', error);
+  //   } finally {
+  //     bleManager.stopDeviceScan();
+  //     set({ 
+  //       isConnected: false, 
+  //       bandActive: false, 
+  //       connectedDevice: null,
+  //       characteristic: null,
+  //       data: null,
+  //       error: null,
+  //       currentMode: 'S',
+  //       sessionData: {
+  //         startTime: null,
+  //         totalSteps: 0,
+  //         totalSkatingDistance: 0,
+  //         totalWalkingDistance: 0,
+  //         maxSpeed: 0,
+  //         sessionDuration: 0
+  //       }
+  //     });
+      
+  //     if (forgetDevice) {
+  //       console.log('✅ Disconnected and device forgotten');
+  //       Alert.alert('Disconnected', 'Device has been disconnected and forgotten.');
+  //     } else {
+  //       console.log('✅ Disconnected (device saved)');
+  //       Alert.alert(
+  //         'Disconnected', 
+  //         'Device disconnected. Auto-reconnection is temporarily disabled.',
+  //         [
+  //           { text: 'OK' },
+  //           {
+  //             text: 'Enable Auto-Reconnect',
+  //             onPress: () => get().setAutoReconnect(true)
+  //           }
+  //         ]
+  //       );
+  //     }
+  //   }
+  // },
+
+
+  /**
+ * Disconnect Device
+ */
+disconnect: async (forgetDevice = false, resetSession = false) => {
+  const { connectedDevice, bleManager } = get();
+  
+  try {
+    console.log('🔌 Manual disconnect requested...');
+    
+    // Stop auto-reconnection if forgetting device
+    if (forgetDevice) {
+      console.log('🗑️ Forgetting device - Auto-reconnection DISABLED');
+      await get().clearSavedDevice();
+    } else {
+      console.log('💾 Keeping device saved - Auto-reconnection temporarily DISABLED');
+      get().stopContinuousReconnection();
+      get().setAutoReconnect(false);
+    }
+    
+    if (connectedDevice) {
+      await connectedDevice.cancelConnection();
+    }
+  } catch (error) {
+    console.warn('Error during disconnect:', error);
+  } finally {
+    bleManager.stopDeviceScan();
+    set({ 
+      isConnected: false, 
+      bandActive: false, 
+      connectedDevice: null,
+      characteristic: null,
+      data: null,
+      error: null,
+      currentMode: 'S',
+      // 🛠️ FIX: Only reset session data if explicitly requested
+      ...(resetSession && {
         sessionData: {
           startTime: null,
           totalSteps: 0,
@@ -1006,28 +1332,28 @@ export const useBLEStore = create((set, get) => ({
           maxSpeed: 0,
           sessionDuration: 0
         }
-      });
-      
-      if (forgetDevice) {
-        console.log('✅ Disconnected and device forgotten');
-        Alert.alert('Disconnected', 'Device has been disconnected and forgotten.');
-      } else {
-        console.log('✅ Disconnected (device saved)');
-        Alert.alert(
-          'Disconnected', 
-          'Device disconnected. Auto-reconnection is temporarily disabled.',
-          [
-            { text: 'OK' },
-            {
-              text: 'Enable Auto-Reconnect',
-              onPress: () => get().setAutoReconnect(true)
-            }
-          ]
-        );
-      }
+      })
+    });
+    
+    if (forgetDevice) {
+      console.log('✅ Disconnected and device forgotten');
+      Alert.alert('Disconnected', 'Device has been disconnected and forgotten.');
+    } else {
+      console.log('✅ Disconnected (device saved)');
+      Alert.alert(
+        'Disconnected', 
+        'Device disconnected. Auto-reconnection is temporarily disabled.',
+        [
+          { text: 'OK' },
+          {
+            text: 'Enable Auto-Reconnect',
+            onPress: () => get().setAutoReconnect(true)
+          }
+        ]
+      );
     }
-  },
-
+  }
+},
   /**
    * Get Current Mode Display Name
    */
