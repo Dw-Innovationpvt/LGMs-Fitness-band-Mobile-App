@@ -192,7 +192,7 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (waterError) {
-      Alert.alert('Water Error', waterError);
+      // Alert.alert('Water Error', waterError);
     }
   }, [waterError]);
 
